@@ -1,0 +1,3 @@
+detect_window <- function(){
+  
+}
