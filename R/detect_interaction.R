@@ -1,3 +1,13 @@
+#' Detect fly-fly interactions
+#'
+#'
+#' @param obj A target image of Image object or an array.
+#' @param ref A reference image of Image object or an array.
+#' @export
+#' @examples
+#' detect_interaction()
+#'
+
 detect_interaction <- function(){
   # If flies are interacting
   if(interacting==T){

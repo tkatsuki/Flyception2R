@@ -1,12 +1,21 @@
+#' Perform image processing to segment the imaging window
+#'
+#'
+#' @param obj A target image of Image object or an array.
+#' @param ref A reference image of Image object or an array.
+#' @export
+#' @examples
+#' detect_window()
+
 detect_window <- function(fvimgl, output, reuse=F){
-  
+
   message("Performing window detection...")
   if(file.exists(paste0(output, "_fvimgbwbrfh.RDS"))==T &
      file.exists(paste0(output, "_ftrs.RDS"))==T & reuse==T){
     message("Loading RDS file")
     fvimgbwbrfh <- readRDS(paste0(output, "_fvimgbwbrfh.RDS"))
     ftrs  <- readRDS(paste0(output, "_ftrs.RDS"))
-    
+
   }else{
     fvimgbw <- thresh(fvimgl, 30, 30, 0.1)
     writeImage(fvimgl[,,1]/255, file=paste0(output, "_fvimgl.png"))
@@ -28,7 +37,7 @@ detect_window <- function(fvimgl, output, reuse=F){
     fvimgbwhdlb <- bwlabel(fvimgbwhdo)
     fvimgbwbrfh <- fillHull(fvimgbwhdlb)
     rm(fvimgbwhdo)
-    
+
     # Calculate object size
     message("Calculating window size")
     ftrs <- sfeatures(fvimgbwbrfh, fvimgbwbrfh)

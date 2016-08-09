@@ -4,7 +4,8 @@ Title: R scripts and utilities for Flyception data analysis
 Version: 0.1.0
 Authors@R: person("Takeo", "Katsuki", email = "takeo.katsuki@gmail.com", role = c("aut", "cre"))
 Maintainer: Takeo Katsuki <takeo.katsuki@gmail.com>
-Description: FlyceptionR provides functions useful for analyzing data collected with Flyception.
+Description: FlyceptionR provides functions useful for analyzing data collected
+    with Flyception.
 Depends:
     R (>= 3.3.1)
 Imports:
@@ -15,11 +16,10 @@ Imports:
     plyr,
     reshape2,
     devtools
-Remotes:
-    tkatsuki/dipr,
+Remotes: tkatsuki/dipr,
     mjkallen/rlogging
-biocViews:
-    EBImage
+biocViews: EBImage
 License: BSD 3
 Encoding: UTF-8
 LazyData: TRUE
+RoxygenNote: 5.0.1.9000

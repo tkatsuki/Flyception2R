@@ -1,3 +1,13 @@
+#' Align camera axis
+#'
+#'
+#' @param obj A target image of Image object or an array.
+#' @param ref A reference image of Image object or an array.
+#' @export
+#' @examples
+#' align_cameras()
+#'
+
 align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=T){
   # Manual position calibration with fly contour during flash
   if(autopos==F){
@@ -21,7 +31,7 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
     display(flrefpadmv)
     display(normalize(fvrefrs + flrefpadmv))
     writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
-    
+
   } else {
     # Automated position calibration using template matching
     message("Automatically aligning two cameras...")
@@ -51,10 +61,10 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
                         round((dim(flref)[2]-dim(fvrefrs)[2])/2):
                           (round((dim(flref)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
     }
-    
+
     flrefpadmv <- translate(flrefpad, center)
     writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
-    
+
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))
   return(center)

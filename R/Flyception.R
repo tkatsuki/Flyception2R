@@ -1,46 +1,16 @@
+#' FlyceptionR main script
+#'
+#'
+#' @param obj A target image of Image object or an array.
+#' @param ref A reference image of Image object or an array.
+#' @export
+#' @examples
+#' Flyception()
+#'
+
 Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T, stimulus=100, stimlen=200,
                        stimplotlen=800, reuse=T, fmf2tif=T, fpsfl=100, zoom=0.85, FOI=F, binning=1){
-  if(!require(devtools)){
-    install.packages("devtools")
-    library("devtools")
-  }
-  if(!require(dipr)){
-    install_github("tkatsuki/dipr")
-    library("dipr")
-  }
-  if(!require(EBImage)){
-    source("https://bioconductor.org/biocLite.R")
-    biocLite("EBImage")
-    library("EBImage")
-  }
-  if(!require(zoo)){
-    install.packages("zoo")
-    library("zoo")
-  }
-  if(!require(RNiftyReg)){
-    install.packages("RNiftyReg")
-    library("RNiftyReg")
-  }
-  if(!require(plotrix)){
-    install.packages("plotrix")
-    library("plotrix")
-  }
-  if(!require(ggplot2)){
-    install.packages("ggplot2")
-    library("ggplot2")
-  }
-  if(!require(plyr)){
-    install.packages("plyr")
-    library("plyr")
-  }
-  if(!require(reshape2)){
-    install.packages("reshape2")
-    library("reshape2")
-  }
-  if(!require(rlogging)){
-    install_github("mjkallen/rlogging")
-    library("rlogging")
-  }
+
   source(paste0(rdir, "plotter.R"))
 
   # Note that some environment dependent variables need to be correctly set
@@ -58,7 +28,7 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
 
   ## Part 0. Initialization
   # Start logging
-  SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
+  rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
   message(dir)
 
   # Prepare filenames
@@ -156,11 +126,11 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
 
   ## Part 11. Calculate fluorescence intensity in the brain window
   message("Measuring fluorescence intensity...")
-  if(file.exists(paste0(dir, prefix, "_intensity_br.RDS"))==T & reuse==T){
+  if(file.exists(paste0(output_prefix, "_intensity_br.RDS"))==T & reuse==T){
     message("Using RDS file")
-    intensity_br <- readRDS(paste0(dir, prefix, "_intensity_br.RDS"))
+    intensity_br <- readRDS(paste0(output_prefix, "_intensity_br.RDS"))
   }else{
-    intensity_br <- colSums(fvimgbwbrfhregimg*flimgreg, dims=2)/as.integer(objsize)
+    intensity_br <- colSums(registered_images$fvimgbwbrfhregimg*registered_images$flimgreg, dims=2)/as.integer(objsize)
     saveRDS(intensity_br, paste0(dir, prefix, "_intensity_br.RDS"))
   }
   intensity <- na.approx(intensity_br)

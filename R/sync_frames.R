@@ -1,12 +1,21 @@
+#' Synchronize camera frames
+#'
+#'
+#' @param obj A target image of Image object or an array.
+#' @param ref A reference image of Image object or an array.
+#' @export
+#' @examples
+#' sync_frames()
+
 sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
-  
+
   # Start time
   message("Analyzing metadata")
   metadata <-scan(paste0(dir, list.files(dir, pattern="metadata\\.txt$")), what=character(),sep="")
   log <- scan(paste0(dir, list.files(dir, pattern="fv-log-")), what=character(),sep="")
   avlog <- scan(paste0(dir, list.files(dir, pattern="av-log-")), what=character(),sep="")
   starttimefl <- metadata[which(metadata == "Time")[1]+2]
-  
+
   # Exposure and binning
   exposure <- substr(metadata[which(metadata == "Exposure-ms")[1]+2], 1, nchar(metadata[which(metadata == "Exposure-ms")[1]+2])-1)
   message(sprintf("fluo-view exposure: %s ms", exposure))
@@ -17,7 +26,7 @@ sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
   fpsfl <- round(length(elapsedtimefl)/tail(elapsedtimefl, n=1)*1000)
   message(paste("fluo-view fps:", fpsfl))
   elapsedtime <- elapsedtimefl - elapsedtimefl[fluo_flash$fvflashes[1]]
-  
+
   # Elapsed time (in ms) of each frame from the fly view camera
   timestampusec <- as.numeric(log[grep("TimeStamp", log)+1])
   elapsedtimefv <- (timestampusec - timestampusec[1])/1000
@@ -25,7 +34,7 @@ sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
   fpsfv <- round(length(elapsedtimefv)/((tail(elapsedtimefv, n=1) - elapsedtimefv[1])/1000))
   message(paste("fly-view fps:", fpsfv))
   framediff <- diff(elapsedtimefvflash)
-  
+
   # Elapsed time (in ms) of each frame from the arenaview camera
   avtimestampcyclesec <- avlog[grep("TimeStamp", avlog)+1]
   avtimestampcyclesec <- as.numeric(avtimestampcyclesec)
@@ -43,7 +52,7 @@ sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
   elapsedtimeavflash <- elapsedtimeav - elapsedtimeav[arena_flash$avflashes[1]]
   fpsav <- round(length(elapsedtimeav)/((tail(elapsedtimeav, n=1) - elapsedtimeav[1])/1000))
   message(paste("arena-view fps:", fpsav))
-  
+
   # Align frames between fly-view and fluo-view
   message("Aligning frames between fly-view and fluo-view")
   if(file.exists(paste0(output, "_frid.RDS"))==T & reuse==T){
@@ -69,7 +78,7 @@ sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
     }
     saveRDS(frid, paste0(output, "_frid.RDS"))
   }
-  
+
   # Align frames between fluo-view and arena-view
   message("Aligning frames between fluo-view and arena-view")
   if(file.exists(paste0(output, "_frida.RDS")) & reuse==T){
@@ -94,7 +103,7 @@ sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
       frida <- c(frida, rep(tail(frida, 1), fluo_flash$nframesfl-length(frida)))
     }
     saveRDS(frida, paste0(output, "_frida.RDS"))
-    
+
   }
   return(list("fpsfv"=fpsfv, "elapsedtimeavflash"=elapsedtimeavflash, "frid"=frid, "frida"=frida))
 }
