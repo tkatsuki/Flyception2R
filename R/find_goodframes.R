@@ -20,11 +20,12 @@ find_goodframes <- function(window_mask, fvimgl, output, motion_thresh=10, dist_
   # Reshape into a vector of object size
   objsize <- unlist(lapply(maxobj, function(x) x[c('m.pxs')]))
   # Compute the distance of the object from the center of the image
-  objdist <- unlist(lapply(maxobj, function(x) sqrt((x['m.x']-dim(window_mask)[1]/2)^2 + (x['m.y']-dim(window_mask)[2]/2)^2)))
+  objdist <- unlist(lapply(maxobj, function(x) sqrt((x['m.x']-dim(window_mask)[1]/2)^2 +
+                                                           (x['m.y']-dim(window_mask)[2]/2)^2)))
   # Compute the motion from the previous frame
   objx <- unlist(lapply(maxobj, function(x) x[c('m.x')]))
   objy <- unlist(lapply(maxobj, function(x) x[c('m.y')]))
-  motion <- sqrt(diff(objx)^2 + diff(objy)^2)
+  motion <- c(0, sqrt(diff(objx)^2 + diff(objy)^2))
 
   objsizemedian <- median(objsize, na.rm=T)
   message(sprintf("Median window size is %.1f", objsizemedian))
@@ -42,7 +43,7 @@ find_goodframes <- function(window_mask, fvimgl, output, motion_thresh=10, dist_
     message("Loading RDS file")
     quantcnt <- readRDS(paste0(output, "_quantcnt.RDS"))
   }else{
-    LoGkern <- round(LoG(9,9,1.4)*428.5)
+    LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
     fvimgllog <- EBImage::filter2(fvimgl, LoGkern)
     centermask <- EBImage::drawCircle(fvimgl[,,1]*0, dim(fvimgl)[1]/2, dim(fvimgl)[2]/2, 100, col=1, fill=T)
     fvimgcntlog <- dipr::ssweep(fvimgllog, centermask, op="*")
@@ -57,7 +58,10 @@ find_goodframes <- function(window_mask, fvimgl, output, motion_thresh=10, dist_
   message(sprintf("The following frames have passed size, centering, motion, and sharpness filters: %s", paste(goodfr, collapse=" ")))
 
   # Summarize results in a dataframe
-  df <- data.frame(objsize=objsize, objdist=objdist, motion=motion, blurriness=quantcnt, goodfr=1:length(motion)[goodfr])
+  goodfr_TF <- rep(F, length(motion))
+  goodfr_TF[goodfr] <- T
+  df <- data.frame(objsize=objsize, objdist=objdist, motion=motion, blurriness=quantcnt,
+                   goodfr=goodfr_TF)
 
   # Plot results
   png(file=paste0(output, "_motion.png"), width=400, height=400)

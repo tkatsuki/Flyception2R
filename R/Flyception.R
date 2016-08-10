@@ -128,7 +128,7 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
                                        output=output_prefix, reuse=reuse)
 
   ## Part 10. Filtering suggest good frames based on size and position
-  goodfr <- find_goodframes(fvimgbwbrfh, output=output_prefix, reuse=reuse)
+  goodfr <- find_goodframes(window_mask=fvimgbwbrfh, fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 11. Calculate fluorescence intensity in the brain window
   message("Measuring fluorescence intensity...")
