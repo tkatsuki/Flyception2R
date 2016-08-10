@@ -2,6 +2,7 @@
 
 export(Flyception)
 export(align_cameras)
+export(analyze_trajectories)
 export(detect_flash)
 export(detect_interaction)
 export(detect_window)

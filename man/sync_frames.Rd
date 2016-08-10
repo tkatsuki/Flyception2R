@@ -4,7 +4,7 @@
 \alias{sync_frames}
 \title{Synchronize camera frames}
 \usage{
-sync_frames(fluo_flash, fly_flash, arena_flash, output, reuse = F)
+sync_frames(dir, fluo_flash, fly_flash, arena_flash, output, reuse = F)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}

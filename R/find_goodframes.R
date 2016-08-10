@@ -12,7 +12,7 @@ find_goodframes <- function(window_mask, fvimgl, output, motion_thresh=10, dist_
   # This function calculate 4 variables to assess suitability of each frame
 
   # Compute features
-  ftrs <- sfeatures(window_mask, window_mask)
+  ftrs <- dipr::sfeatures(window_mask, window_mask)
   # Detect a biggest object in each frame
   maxobj <- lapply(ftrs, function(x) x[which(x[, 'm.pxs'] == max(x[, 'm.pxs'])),])
   # NA if no object was present
@@ -43,9 +43,9 @@ find_goodframes <- function(window_mask, fvimgl, output, motion_thresh=10, dist_
     quantcnt <- readRDS(paste0(output, "_quantcnt.RDS"))
   }else{
     LoGkern <- round(LoG(9,9,1.4)*428.5)
-    fvimgllog <- filter2(fvimgl, LoGkern)
-    centermask <- drawCircle(fvimgl[,,1]*0, dim(fvimgl)[1]/2, dim(fvimgl)[2]/2, 100, col=1, fill=T)
-    fvimgcntlog <- ssweep(fvimgllog, centermask, op="*")
+    fvimgllog <- EBImage::filter2(fvimgl, LoGkern)
+    centermask <- EBImage::drawCircle(fvimgl[,,1]*0, dim(fvimgl)[1]/2, dim(fvimgl)[2]/2, 100, col=1, fill=T)
+    fvimgcntlog <- dipr::ssweep(fvimgllog, centermask, op="*")
     quantcnt <- apply(fvimgcntlog, 3, function(x) quantile(x, 0.9))
     saveRDS(quantcnt, paste0(output, "_quantcnt.RDS"))
   }

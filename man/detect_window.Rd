@@ -4,7 +4,7 @@
 \alias{detect_window}
 \title{Perform image processing to segment the imaging window}
 \usage{
-detect_window()
+detect_window(fvimgl, output, reuse = F)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}

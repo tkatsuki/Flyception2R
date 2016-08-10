@@ -47,17 +47,21 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
 
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif, type="fluo", output=output_prefix, flash_thresh=fluo_flash_thresh, reuse=F)
+  fluo_flash <- detect_flash(input=fluo_view_tif, type="fluo", output=output_prefix,
+                             flash_thresh=fluo_flash_thresh, reuse=reuse)
   message("Detecting flash in fly-view")
-  fly_flash <- detect_flash(input=fly_view_fmf, type="fly", output=output_prefix, flash_thresh=fv_flash_thresh, reuse=F)
+  fly_flash <- detect_flash(input=fly_view_fmf, type="fly", output=output_prefix,
+                            flash_thresh=fv_flash_thresh, reuse=reuse)
   message("Detecting flash in arena-view")
-  arena_flash <- detect_flash(input=arena_view_fmf, type="arena", output=output_prefix, flash_thresh=av_flash_thresh, reuse=F)
+  arena_flash <- detect_flash(input=arena_view_fmf, type="arena", output=output_prefix,
+                              flash_thresh=av_flash_thresh, reuse=reuse)
 
   ## Part 2. Syncing frames and generate frame IDs
-  syncing <- sync_frames(fluo_flash=fluo_flash, fly_flash=fly_flash, arena_flash=arena_flash, output=output_prefix, reuse=F)
+  syncing <- sync_frames(dir, fluo_flash=fluo_flash, fly_flash=fly_flash, arena_flash=arena_flash,
+                         output=output_prefix, reuse=reuse)
 
   ## Part 3. Analyze trajectories
-  trj_res <- analyze_trajectories(input=dir, output=output_prefix, fpsfv=syncing$fpsfv, interaction=interaction)
+  trj_res <- analyze_trajectories(dir=dir, output=output_prefix, fpsfv=syncing$fpsfv, interaction=interaction)
 
   ## Part 4. Detect stimulus
   message("Detecting stimulus")
@@ -70,9 +74,9 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
     stimfr <- sapply(stimulus, function(x) which.min(abs(syncing$frid-x)))
     message(paste0("Stimuli were given at the following frames:"))
     message(stimfr)
+    dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
+    write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
   }
-  dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
-  write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
 
   ## Part 5. Detect interaction
   if(interaction==T){
@@ -84,8 +88,8 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
 
   ## Part 6. Load images
   message(sprintf("Reading %s", fluo_view_tif))
-  flimg <- readImage(fluo_view_tif)
-  flref <- normalize(rotate(flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
+  flimg <- EBImage::readImage(fluo_view_tif)
+  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
 
   # Analyze only part of the movie?
   if(FOI!=F && length(FOI)==2){
@@ -103,23 +107,25 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
     flimg <- flimg[round((dim(flimg)[1] - 128)/2):(round((dim(flimg)[1]/2+128/2))-1),
                    round((dim(flimg)[2] - 128)/2):(round((dim(flimg)[2]/2+128/2))-1),]
   }
-  flimgrt <- rotate(flip(flimg), rotate_camera)
+  flimgrt <- EBImage::rotate(EBImage::flip(flimg), rotate_camera)
   # Load fly-view camera images
-  fvimgl <- readFMF(fly_view_fmf, frames=frid)
+  fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
   # Load arena-view camera images
-  avimgl <- readFMF(arena_view_fmf, frames=frida)
-  writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
+  avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
+  EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
   rm(avimgl)
 
   ## Part 7. Detect window on the head
   fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 8. Position calibration
-  fvref <- readFMF(fly_view_fmf, frames=fly_flash$fvflashes[1])[,,1]/255
+  fvref <- dipr::readFMF(fly_view_fmf, frames=fly_flash$fvflashes[1])[,,1]/255
   center <- align_cameras(flref=flref, fvref=fvref, output=output_prefix, center=c(0, 0), zoom=0.95, autopos=F)
 
   ## Part 9. Image registration
-  registered_images <- register_images(fvimgl=fvimgl, flimgrt=flimgrt, fvimgbwbrfh=fvimgbwbrfh, angles=trj_res$angles, zoom=zoom, center=center, output=output_prefix, reuse=F)
+  registered_images <- register_images(fvimgl=fvimgl, flimgrt=flimgrt, fvimgbwbrfh=fvimgbwbrfh,
+                                       angles=trj_res$angles, zoom=zoom, center=center,
+                                       output=output_prefix, reuse=reuse)
 
   ## Part 10. Filtering suggest good frames based on size and position
   goodfr <- find_goodframes(fvimgbwbrfh, output=output_prefix, reuse=reuse)

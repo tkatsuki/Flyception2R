@@ -7,7 +7,7 @@
 #' @examples
 #' sync_frames()
 
-sync_frames <- function(fluo_flash, fly_flash, arena_flash, output, reuse=F){
+sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F){
 
   # Start time
   message("Analyzing metadata")
