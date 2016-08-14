@@ -127,7 +127,7 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
                                        angles=trj_res$angles, zoom=zoom, center=center,
                                        output=output_prefix, reuse=reuse)
 
-  ## Part 10. Filtering suggest good frames based on size and position
+  ## Part 10. Look for good frames based on size, position, motion, and focus
   goodfr <- find_goodframes(window_mask=fvimgbwbrfh, fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 11. Calculate fluorescence intensity in the brain window
@@ -136,123 +136,26 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
     message("Using RDS file")
     intensity_br <- readRDS(paste0(output_prefix, "_intensity_br.RDS"))
   }else{
-    intensity_br <- colSums(registered_images$fvimgbwbrfhregimg*registered_images$flimgreg, dims=2)/as.integer(objsize)
+    intensity_br <- colSums(registered_images$fvimgbwbrfhregimg*registered_images$flimgreg, dims=2)/as.integer(goodfr$objsize)
     saveRDS(intensity_br, paste0(dir, prefix, "_intensity_br.RDS"))
   }
-  intensity <- na.approx(intensity_br)
+  intensity <- zoo::na.approx(intensity_br)
 
-  # Plot delta F over F0
+  ## Part 12. Plot delta F over F0
   message("Creating dF/F0 plots")
-  for(fintfr in 1:length(fridstim)){
-    Fintfr <- fridstim[fintfr]:(fridstim[fintfr]+stimplotlen-1)
-    Fintfr <- Fintfr[which(Fintfr < nframesfl)]
-    Fintfrg <- intersect(goodfr, Fintfr)
-    Fintfr[!Fintfr%in%goodfr] <- NA
-    F0int <- mean(intensity[Fintfrg[1:5]])
-    deltaFint <- intensity[Fintfr] - F0int
-    dFF0int <- deltaFint/F0int * 100
-    dat <- data.frame(x=(1:length(dFF0int)), y=dFF0int, d=flydist[Fintfr])
-    p <- ggplot(data=dat, aes(x=x, y=y)) +
-      geom_smooth(method="loess", span = 0.4, level=0.95) +
-      ylim(-5, 10) +
-      geom_line(data=dat, aes(x=x, y=d))
-    ggsave(filename = paste0(dir, prefix, "_dFF0int_", fintfr, ".pdf"), width = 8, height = 8)
-  }
+  F0int <- mean(intensity[1:5])
+  deltaFint <- intensity - F0int
+  dFF0int <- deltaFint/F0int * 100
+  dat <- data.frame(x=(1:length(dFF0int)), y=dFF0int, d=trj_res$flydist[frida])
+  p <- ggplot2::ggplot(data=dat, ggplot2::aes(x=x, y=y)) +
+    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
+    ggplot2::ylim(-5, 10) +
+    ggplot2::geom_line(data=dat, ggplot2::aes(x=x, y=d))
+  ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
 
-  # Create delta F over F0 pseudocolor representation only for good frames
+  ## Part 13. Create delta F over F0 pseudocolor representation
   message("Calculating dF/F0 images...")
-  for(ffr in 1:length(fridstim)){
-    Ffr <- fridstim[ffr]:(fridstim[ffr]+stimplotlen-1)
-    Ffr <- Ffr[which(Ffr < nframesfl)]
-    oFfr <- Ffr
-    Ffr <- intersect(goodfr, Ffr)
-    wFfr <- which(oFfr%in%Ffr)
-    dFfr <- data.frame(ori=wFfr, Ffr=1:length(Ffr), fl=Ffr, fv=frid[Ffr], av=frida[Ffr])
-    write.table(dFfr, file=paste0(dir, prefix, "_dFfr_", ffr, ".txt"), row.names=F)
-
-    Fmean <- rollmeanimg(flimgreg[,,Ffr], 5)
-    F0 <- rowMeans(flimgreg[,,Ffr[1:5]], dims=2)
-    deltaF <- ssweep(Fmean, F0, op="-")
-    dFF0 <- ssweep(deltaF, 1/F0, op="*")
-    dFF0[is.na(dFF0)] <- 0
-    dFF0[is.infinite(dFF0)] <- 0
-    dFF0masked <- fvimgbwbrfhregimg[,,Ffr]*dFF0
-    dFF0maskedpos <- dFF0masked * 100 # Convert to %
-    dFF0maskedpos[which(dFF0maskedpos < 0)] <- 0
-
-    colmax <- median(apply(dFF0maskedpos, 3, max))
-    #colmax <- 300
-    dFF0maskedpos <- medianFilter(dFF0maskedpos/colmax, 3) # medianFilter cuts > 1
-    dFF0fin <- array(0, dim=c(dim(fvimgbwbrfhregimg)[c(1,2)], 3, length(Ffr)))
-    for(cfr in 1:length(Ffr)){
-      dFF0fin[,,,cfr] <- pseudoColor(dFF0maskedpos[,,cfr], 64, 256)
-    }
-    dFF0fin <- Image(dFF0fin, colormode="Color")
-    message(sprintf("Pseudocolor range for ffr=%d is 20 to %d", ffr, colmax))
-
-    # Use window size for filtering
-    F0size <- mean(objsize[Ffr[1]:(Ffr[1]+4)])
-    dFF0size <- which(objsize[Ffr] > (F0size - 50) & objsize[Ffr] < (F0size + 50))
-
-    # Use focus for filtering
-    F0focus <- mean(quantcnt[Ffr[1]:(Ffr[1]+4)])
-    dFF0focus <- which(quantcnt[Ffr] > (F0focus - 20) & quantcnt[Ffr] < (F0focus + 20))
-
-    # Use both window size and focus for filtering
-    dFF0size_focus <- intersect(dFF0size, dFF0focus)
-    write.table(dFF0size_focus, file=paste0(dir, prefix, "_dFF0size_focus_", ffr, ".txt"))
-    writeImage((100*Fmean)^2, file=paste0(dir, prefix, "_Fmean_", ffr, ".tif"))
-    dFF0finmask <- array(0, dim=c(dim(fvimgbwbrfhregimg)[c(1,2)], 3, length(Ffr)))
-    dFF0finmask[,,1,] <- fvimgbwbrfhregimg[,,Ffr]
-    dFF0finmask[,,2,] <- fvimgbwbrfhregimg[,,Ffr]
-    dFF0finmask[,,3,] <- fvimgbwbrfhregimg[,,Ffr]
-    dFF0regimg <- array(0, dim=c(dim(fvimgbwbrfhregimg)[c(1,2)], 3, length(Ffr)))
-    dFF0regimg[,,1,] <- 255-regimgi[,,Ffr]
-    dFF0regimg[,,2,] <- 255-regimgi[,,Ffr]
-    dFF0regimg[,,3,] <- 255-regimgi[,,Ffr]
-    dFF0finmaskfly <- Image(dFF0fin*dFF0finmask+dFF0regimg/255, colormode="Color")
-    dFF0finmask <- Image(dFF0fin*dFF0finmask, colormode="Color")
-    writeImage(dFF0finmaskfly[,,,dFF0size_focus], bits.per.sample = 8,
-               file=paste0(dir, prefix, "_dFF0finmaskfly_sizefocus_", ffr, ".tif"))
-    writeImage(dFF0finmaskfly, bits.per.sample = 8,
-               file=paste0(dir, prefix, "_dFF0finmaskfly_", ffr, ".tif"))
-    writeImage(dFF0finmask, bits.per.sample = 8,
-               file=paste0(dir, prefix, "_dFF0finmask_", ffr, ".tif"))
-
-    # Uncomment for measuring dF/F in ROI
-    #      measureROI <- function(img, x, y, w, h){
-    #        ROI <- img[x:(x+w-1),y:(y+h-1),]
-    #        meanint <- colMeans(ROI, dim=2)
-    #        return(meanint)
-    #      }
-    #      leftROI <- measureROI(Fmean, 80, 96, 10, 10)
-    #      rightROI <- measureROI(Fmean, 110, 97, 10, 10)
-    #      ROI <- (leftROI + rightROI)/2
-    #
-    #      ROIF0 <- mean(ROI[1:5])
-    #      deltaROIF <- ROI - ROIF0
-    #      ROIdFF0 <- deltaROIF/ROIF0 * 100
-    #      dat <- data.frame(x=wFfr, y=ROIdFF0, d=flydist[frida[Ffr]])
-    #      p <- ggplot(data=dat, aes(x=x, y=y)) +
-    #        geom_smooth(method="loess", span = 0.4, level=0.95) +
-    #        ylim(-5, 10) +
-    #        geom_line(data=dat, aes(x=x, y=d))
-    #      ggsave(filename = paste0(dir, prefix, "_dFF0int_ROI_", ffr, ".pdf"), width = 8, height = 8)
-
-    # Save videos of stimulus frames of flyview and arenaview
-    writeImage((fvimgl[,,Ffr])/255, file=paste0(dir, prefix, "_fvimgl_stim_", ffr, ".tif"))
-    avimglstim <- readFMF(paste0(dir, list.files(dir, pattern="^av.*fmf$")), frames=frida[Ffr])
-    writeImage(avimglstim/255, file=paste0(dir, prefix, "_avimglstim_", ffr, ".tif"))
-
-  }
-
-  rm(dFF0)
-  rm(dFF0masked)
-  rm(dFF0maskedpos)
-  rm(dFF0fin)
-  rm(dFF0regimg)
-  rm(dFF0finmask)
-  rm(fvimgbwbrfhregimg)
+  dF_F0_image(flimgreg, fvimgbwbrfhregimg, regimgi, colmax, cmin, cmax)
 
   # Create trajectory of the flies at the time of stimulus delivery
   message("Creating trajectory of the flies...")
