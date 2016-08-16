@@ -4,8 +4,8 @@
 \alias{dF_F0_image}
 \title{Create delta F over F pseudocolor representation}
 \usage{
-dF_F0_image(flimgreg, fvimgbwbrfhregimg, regimgi, colmax, cmin, cmax, goodfr,
-  ROI)
+dF_F0_image(flimgreg, fvimgbwbrfhregimg, regimgi, colmax = F, cmin, cmax,
+  goodfr = F, output)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}

@@ -4,7 +4,7 @@
 \alias{measureROI}
 \title{Create delta F over F plot for ROI}
 \usage{
-measureROI(img, x, y, w, h)
+measureROI(img, mask, output)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}

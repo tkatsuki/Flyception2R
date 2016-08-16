@@ -5,13 +5,11 @@
 #' @param ref A reference image of Image object or an array.
 #' @export
 #' @examples
-#' Flyception()
+#' FlyceptionR()
 #'
 
-Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T, stimulus=100, stimlen=200,
+FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stimulus=100, stimlen=200,
                        stimplotlen=800, reuse=T, fmf2tif=T, fpsfl=100, zoom=0.85, FOI=F, binning=1){
-
-  source(paste0(rdir, "plotter.R"))
 
   # Note that some environment dependent variables need to be correctly set
   # flimgrt: camera orientation
@@ -21,7 +19,6 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
   # TO DO
   # Output: frid, frida, registered images, good frames
   # Memory usage
-  # Analyze specified range only
   # Create frame
   # Parallelism
   # FOI for readTiff
@@ -155,75 +152,37 @@ Flyception <- function(rdir, dir, prefix, autopos=T, video_out=F, interaction=T,
 
   ## Part 13. Create delta F over F0 pseudocolor representation
   message("Calculating dF/F0 images...")
-  dF_F0_image(flimgreg, fvimgbwbrfhregimg, regimgi, colmax, cmin, cmax)
+  dF_F0_image(registered_images$flimgreg, registered_images$fvimgbwbrfhregimg, registered_images$regimgi,
+              colmax=100, cmin=30, cmax=200, goodfr=goodfr$goodfr, output=output_prefix)
 
-  # Create trajectory of the flies at the time of stimulus delivery
+  ## Part 14. ROI measurement
+  # Creat ROI mask
+  # Rectangle ROI example
+  ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
+  ROI_mask[120:(120+10-1),120:(120+10-1)] <- 1
+  # Circular ROI example
+  # ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
+  # EBImage::drawCircle(img=ROI_mask, x=120, y=120, radius=5, col=1, fill=T)
+
+  ROI_dFF0 <- measureROI(img=registered_images$flimgreg,
+                         mask=ROI_mask,
+                         output=output_prefix)
+
+  ## Part 15. Create trajectory of the flies
   message("Creating trajectory of the flies...")
-  for(tj in 1:length(fridstim)){
-    Ffr <- fridstim[tj]:(fridstim[tj]+stimplotlen-1)
-    pdf(file= paste0(dir, prefix, "_trackResult_", tj, ".pdf"), width = 4.4, height = 4, bg = "white")
-    par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-    plot(trja[frida[Ffr[1]:(Ffr[1]+stimlen-1)],1]*10, -trja[frida[Ffr[1]:(Ffr[1]+stimlen-1)],2]*10,
-         type = "l", lty = 1, pch=tj, col="red",
-         axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-    par(new=T)
-    plot(trja[frida[(Ffr[1]+stimlen):tail(Ffr, n=1)],1]*10, -trja[frida[(Ffr[1]+stimlen):tail(Ffr, n=1)],2]*10,
-         type = "l", lty = 2, pch=tj, col="red",
-         axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
+  plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
+       type = "l", lty = 1, col="red",
+       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  par(new=T)
+  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+  dev.off()
 
-    if(interacting==T){
-      par(new=T)
-      plot(trja[frida[Ffr[1]:(Ffr[1]+stimlen-1)],3]*10, -trja[frida[Ffr[1]:(Ffr[1]+stimlen-1)],4]*10,
-           type = "l", lty = 1, pch=tj, col="blue",
-           axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-      par(new=T)
-      plot(trja[frida[(Ffr[1]+stimlen):tail(Ffr, n=1)],3]*10, -trja[frida[(Ffr[1]+stimlen):tail(Ffr, n=1)],4]*10,
-           type = "l", lty = 2, pch=tj, col="blue",
-           axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-    }
-    par(new=T)
-    draw.ellipse(0,0,11.0795*20,10*20)
-    dev.off()
-
-  }
-
-  rm(fvimgl)
-  rm(flimgrt)
-  rm(regimgi)
-
-  # Plot intensity, speed, window size, etc. for both all frames and good frames
-  message("Plotting results...")
-  plotter(dir, prefix, intensity*16384, speed, error, objsize, quantcnt,
-          elapsedtime, elapsedtimefvflash, elapsedtimeavflash, exposure, binning, fpsfl,
-          starttimefl, type="all", stim = fridstim, stimlen = stimlen, flydist=flydist)
-  intensity_g <- intensity
-  intensity_g[-goodfr] <- NA
-  speed_g <- speed
-  speed_g[-frid[goodfr]] <- NA
-  error_g <- error
-  error_g[-frid[goodfr]] <- NA
-  objsize_g <- objsize
-  objsize_g[-goodfr] <- NA
-  quant_g <- quantcnt
-  quant_g[-goodfr] <- NA
-  flydist_g <- flydist
-  flydist_g[-goodfr] <- NA
-  elapsedtime_g <- elapsedtime
-  elapsedtime_g[-goodfr] <- NA
-  elapsedtimefvflash_g <- elapsedtimefvflash
-  elapsedtimefvflash_g[frid[-goodfr]] <- NA
-  elapsedtimeavflash_g <- elapsedtimeavflash
-  elapsedtimeavflash_g[frida[-goodfr]] <- NA
-  plotter(dir, prefix, intensity_g, speed_g, error_g, objsize_g, quant_g,
-          elapsedtime_g, elapsedtimefvflash_g, elapsedtimeavflash_g, exposure, binning, fpsfl,
-          starttimefl, type="goodfr", stim = fridstim, stimlen = stimlen, flydist=flydist_g)
-
-  rm(dFF0finmaskfly)
-
-  # Convert fmf to tif format
+  ## Part 16. Convert fmf to tif format
   if(fmf2tif==T){
-    fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
-    fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
+    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
+    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
   }
 
   message("Finished processing!")
