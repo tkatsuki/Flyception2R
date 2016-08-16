@@ -1,6 +1,5 @@
 #' FlyceptionR main script
 #'
-#'
 #' @param obj A target image of Image object or an array.
 #' @param ref A reference image of Image object or an array.
 #' @export
@@ -44,21 +43,37 @@ FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stim
 
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif, type="fluo", output=output_prefix,
-                             flash_thresh=fluo_flash_thresh, reuse=reuse)
+  fluo_flash <- detect_flash(input=fluo_view_tif,
+                             type="fluo",
+                             output=output_prefix,
+                             flash_thresh=fluo_flash_thresh,
+                             reuse=reuse)
   message("Detecting flash in fly-view")
-  fly_flash <- detect_flash(input=fly_view_fmf, type="fly", output=output_prefix,
-                            flash_thresh=fv_flash_thresh, reuse=reuse)
+  fly_flash <- detect_flash(input=fly_view_fmf,
+                            type="fly",
+                            output=output_prefix,
+                            flash_thresh=fv_flash_thresh,
+                            reuse=reuse)
   message("Detecting flash in arena-view")
-  arena_flash <- detect_flash(input=arena_view_fmf, type="arena", output=output_prefix,
-                              flash_thresh=av_flash_thresh, reuse=reuse)
+  arena_flash <- detect_flash(input=arena_view_fmf,
+                              type="arena",
+                              output=output_prefix,
+                              flash_thresh=av_flash_thresh,
+                              reuse=reuse)
 
   ## Part 2. Syncing frames and generate frame IDs
-  syncing <- sync_frames(dir, fluo_flash=fluo_flash, fly_flash=fly_flash, arena_flash=arena_flash,
-                         output=output_prefix, reuse=reuse)
+  syncing <- sync_frames(dir=dir,
+                         fluo_flash=fluo_flash,
+                         fly_flash=fly_flash,
+                         arena_flash=arena_flash,
+                         output=output_prefix,
+                         reuse=reuse)
 
   ## Part 3. Analyze trajectories
-  trj_res <- analyze_trajectories(dir=dir, output=output_prefix, fpsfv=syncing$fpsfv, interaction=interaction)
+  trj_res <- analyze_trajectories(dir=dir,
+                                  output=output_prefix,
+                                  fpsfv=syncing$fpsfv,
+                                  interaction=interaction)
 
   ## Part 4. Detect stimulus
   message("Detecting stimulus")
@@ -116,16 +131,30 @@ FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stim
   fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 8. Position calibration
-  fvref <- dipr::readFMF(fly_view_fmf, frames=fly_flash$fvflashes[1])[,,1]/255
-  center <- align_cameras(flref=flref, fvref=fvref, output=output_prefix, center=c(0, 0), zoom=0.95, autopos=F)
+  fvref <- dipr::readFMF(filepath=fly_view_fmf,
+                         frames=fly_flash$fvflashes[1])[,,1]/255
+  center <- align_cameras(flref=flref,
+                          fvref=fvref,
+                          output=output_prefix,
+                          center=c(0, 0),
+                          zoom=0.95,
+                          autopos=F)
 
   ## Part 9. Image registration
-  registered_images <- register_images(fvimgl=fvimgl, flimgrt=flimgrt, fvimgbwbrfh=fvimgbwbrfh,
-                                       angles=trj_res$angles, zoom=zoom, center=center,
-                                       output=output_prefix, reuse=reuse)
+  registered_images <- register_images(fvimgl=fvimgl,
+                                       flimgrt=flimgrt,
+                                       fvimgbwbrfh=fvimgbwbrfh,
+                                       angles=trj_res$angles,
+                                       zoom=zoom,
+                                       center=center,
+                                       output=output_prefix,
+                                       reuse=reuse)
 
   ## Part 10. Look for good frames based on size, position, motion, and focus
-  goodfr <- find_goodframes(window_mask=fvimgbwbrfh, fvimgl=fvimgl, output=output_prefix, reuse=reuse)
+  goodfr <- find_goodframes(window_mask=fvimgbwbrfh,
+                            fvimgl=fvimgl,
+                            output=output_prefix,
+                            reuse=reuse)
 
   ## Part 11. Calculate fluorescence intensity in the brain window
   message("Measuring fluorescence intensity...")
