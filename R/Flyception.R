@@ -1,19 +1,28 @@
 #' FlyceptionR main script
 #'
-#' @param obj A target image of Image object or an array.
-#' @param ref A reference image of Image object or an array.
+#' @param dir path to the directory that contains the data
+#' @param prefix prefix used for output files
+#' @param autopos logical. Perform camera alignment using FNCC?
+#' @param interaction logical. Perform interaction detection? Requires two flies.
+#' @param reuse logical. Reuse .RDS files?
+#' @param fmf2tif logical. Convert fly-view and arena-view fmf files into tif format?
+#' @param zoom numeric. Zoom factor between fly-view and fluo-view cameras.
+#' @param FOI a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
+#' @param binning integer. Binning of the fluo-view camera.
+#' @param fluo_flash_thresh numeric. A threshold for detecting flashes in a fluo-view video.
+#' @param fv_flash_thresh integer. A threshold for detecting flashes in a fly-view video.
+#' @param av_flash_thresh integer. A threshold for detecting flashes in a arena-view video.
+#' @param dist_thresh numeric. A distance threshold for detecting fly-fly interactions.
+#' @param rotate_camera integer. Angle of the fluo-view camera.
 #' @export
 #' @examples
 #' FlyceptionR()
 #'
 
-FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stimulus=100, stimlen=200,
-                       stimplotlen=800, reuse=T, fmf2tif=T, fpsfl=100, zoom=0.85, FOI=F, binning=1){
-
-  # Note that some environment dependent variables need to be correctly set
-  # flimgrt: camera orientation
-  # flydist: distance threashold for interaction
-  # flflash_thresh: flash level might be different from setup to setup
+FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
+                        fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=0.01,
+                        fv_flash_thresh=135, av_flash_thresh=100, dist_thresh=4,
+                        rotate_camera=-90){
 
   # TO DO
   # Output: frid, frida, registered images, good frames
@@ -32,14 +41,6 @@ FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stim
   fluo_view_tif <- paste0(dir, list.files(dir, pattern="ome\\.tif$"))
   fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
   arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
-
-  # Set thresholds
-  fluo_flash_thresh <- 0.01
-  fv_flash_thresh <- 135
-  av_flash_thresh <- 100
-  dist_thresh <- 4
-  zoom <- 1
-  rotate_camera <- -90
 
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
@@ -181,8 +182,12 @@ FlyceptionR <- function(dir, prefix, autopos=T, video_out=F, interaction=T, stim
 
   ## Part 13. Create delta F over F0 pseudocolor representation
   message("Calculating dF/F0 images...")
-  dF_F0_image(registered_images$flimgreg, registered_images$fvimgbwbrfhregimg, registered_images$regimgi,
-              colmax=100, cmin=30, cmax=200, goodfr=goodfr$goodfr, output=output_prefix)
+  dF_F0_image(flregimg=registered_images$flimgreg,
+              fvimgbwbrfhregimg=registered_images$fvimgbwbrfhregimg,
+              regimgi=registered_images$regimgi,
+              colmax=100, cmin=30, cmax=200,
+              goodfr=goodfr$goodfr,
+              output=output_prefix)
 
   ## Part 14. ROI measurement
   # Creat ROI mask

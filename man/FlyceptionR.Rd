@@ -4,14 +4,39 @@
 \alias{FlyceptionR}
 \title{FlyceptionR main script}
 \usage{
-FlyceptionR(dir, prefix, autopos = T, video_out = F, interaction = T,
-  stimulus = 100, stimlen = 200, stimplotlen = 800, reuse = T,
-  fmf2tif = T, fpsfl = 100, zoom = 0.85, FOI = F, binning = 1)
+FlyceptionR(dir, prefix, autopos = T, interaction = T, reuse = T,
+  fmf2tif = T, zoom = 0.85, FOI = F, binning = 1,
+  fluo_flash_thresh = 0.01, fv_flash_thresh = 135, av_flash_thresh = 100,
+  dist_thresh = 4, rotate_camera = -90)
 }
 \arguments{
-\item{obj}{A target image of Image object or an array.}
+\item{dir}{path to the directory that contains the data}
 
-\item{ref}{A reference image of Image object or an array.}
+\item{prefix}{prefix used for output files}
+
+\item{autopos}{logical. Perform camera alignment using FNCC?}
+
+\item{interaction}{logical. Perform interaction detection? Requires two flies.}
+
+\item{reuse}{logical. Reuse .RDS files?}
+
+\item{fmf2tif}{logical. Convert fly-view and arena-view fmf files into tif format?}
+
+\item{zoom}{numeric. Zoom factor between fly-view and fluo-view cameras.}
+
+\item{FOI}{a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
+
+\item{binning}{integer. Binning of the fluo-view camera.}
+
+\item{fluo_flash_thresh}{numeric. A threshold for detecting flashes in a fluo-view video.}
+
+\item{fv_flash_thresh}{integer. A threshold for detecting flashes in a fly-view video.}
+
+\item{av_flash_thresh}{integer. A threshold for detecting flashes in a arena-view video.}
+
+\item{dist_thresh}{numeric. A distance threshold for detecting fly-fly interactions.}
+
+\item{rotate_camera}{integer. Angle of the fluo-view camera.}
 }
 \description{
 FlyceptionR main script
