@@ -30,7 +30,7 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
     flrefpadmv <- EBImage::translate(flrefpad, center)
     EBImage::display(flrefpadmv)
     EBImage::display(EBImage::normalize(fvrefrs + flrefpadmv))
-    EBImage::writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
+    EBImage::writeImage(EBImage::normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
 
   } else {
     # Automated position calibration using template matching
@@ -63,7 +63,7 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
     }
 
     flrefpadmv <- EBImage::translate(flrefpad, center)
-    EBImage::writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
+    EBImage::writeImage(EBImage::normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
 
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))

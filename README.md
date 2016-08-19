@@ -13,6 +13,7 @@ The following commands will automatically install packages necessary for running
 install.packages("devtools")
 library(devtools)
 devtools::install_github("tkatsuki/FlyceptionR")
+library(FlyceptionR)
 ```
 
 ## Usage example
@@ -24,15 +25,15 @@ devtools::install_github("tkatsuki/FlyceptionR")
 dir <- "/example/data/"  # Don't forget to add the flash at the end
 prefix <- "data_1"       # Will be used as a filename prefix
 autopos <- T             # True if you want an automatic camera alignment 
-interaction <- T         # True if you want to analyze fly-fly interaction
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 0.85
-FOI <- F
+FOI <- F                 # A vector specifying a sta and end frame. False if you want to analyze all frames.
 binning <- 1
 fluo_flash_thresh <- 0.01
 fv_flash_thresh <- 135
 av_flash_thresh <- 100
+interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4
 rotate_camera <- -90
 ```
@@ -76,7 +77,7 @@ arena_flash <- detect_flash(input=arena_view_fmf,
 ```
 
 ### Part 2. Synchronize frames and generate frame IDs
-Required step.
+Required step. Identifies which frame of fly-view and arena-view videos correspond to the fluo-view frames.
 
 ```
 syncing <- sync_frames(dir=dir,

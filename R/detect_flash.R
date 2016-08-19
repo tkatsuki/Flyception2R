@@ -63,7 +63,7 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     fvflashes <- which(fvimgsubint > flash_thresh)
     fvimgflash <- min(fvflashes)
     if(fvimgflash==Inf) stop("Flash was not detected in fly-view.")
-    message(sprintf("Flash was detected in fly-view frames: %s", paste(fvimgflash, collapse=" ")))
+    message(sprintf("Flash was detected in fly-view frames: %s", paste(fvflashes, collapse=" ")))
     return(list("fvflashes"=fvflashes, "nframesfv"=nframesfv))
   }
 
@@ -88,7 +88,7 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     avflashes <- which(avimgsubint > flash_thresh)
     avimgflash <- min(avflashes)
     if(avimgflash==Inf) stop("Flash was not detected in arena-view.")
-    message(sprintf("Flash was detected in arena-view frames: %s", paste(avimgflash, collapse=" ")))
+    message(sprintf("Flash was detected in arena-view frames: %s", paste(avflashes, collapse=" ")))
     return(list("avflashes"=avflashes, "nframesav"=nframesav))
   }
 }
