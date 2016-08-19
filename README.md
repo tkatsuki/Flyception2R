@@ -8,9 +8,9 @@ Mac: Xcode
 
 ## Installation
 
-'''
+```
 library(devtools)
 devtools::install_github("tkatsuki/FlyceptionR")
-'''
+```
 
 ## Usage
