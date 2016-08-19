@@ -17,7 +17,9 @@ devtools::install_github("tkatsuki/FlyceptionR")
 
 ## Usage example
 
-### Set variables
+### Part 0. Initialization
+
+#### Set variables
 ```
 dir <- "/example/data/"  # Don't forget to add the flash at the end
 prefix <- "data_1"       # Will be used as a filename prefix
@@ -35,8 +37,7 @@ dist_thresh <- 4
 rotate_camera <- -90
 ```
 
-### Part 0. Initialization
-1. Start logging
+#### Start logging
 ```
 rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
 message(dir)
