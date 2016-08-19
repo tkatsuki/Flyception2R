@@ -42,7 +42,8 @@ rotate_camera <- -90
 rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
 message(dir)
 ```
-2. Prepare filenames
+
+#### Prepare filenames
 ```
 output_prefix <- paste0(dir, prefix)
 fluo_view_tif <- paste0(dir, list.files(dir, pattern="ome\\.tif$"))
@@ -50,33 +51,38 @@ fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
 arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 ```
 
-  ## Part 1. Detect flash
-  message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif,
-                             type="fluo",
-                             output=output_prefix,
-                             flash_thresh=fluo_flash_thresh,
-                             reuse=reuse)
-  message("Detecting flash in fly-view")
-  fly_flash <- detect_flash(input=fly_view_fmf,
-                            type="fly",
-                            output=output_prefix,
-                            flash_thresh=fv_flash_thresh,
-                            reuse=reuse)
-  message("Detecting flash in arena-view")
-  arena_flash <- detect_flash(input=arena_view_fmf,
-                              type="arena",
-                              output=output_prefix,
-                              flash_thresh=av_flash_thresh,
-                              reuse=reuse)
+### Part 1. Detect flash
 
-  ## Part 2. Syncing frames and generate frame IDs
-  syncing <- sync_frames(dir=dir,
-                         fluo_flash=fluo_flash,
-                         fly_flash=fly_flash,
-                         arena_flash=arena_flash,
-                         output=output_prefix,
-                         reuse=reuse)
+```
+message("Detecting flash in fluo-view")
+fluo_flash <- detect_flash(input=fluo_view_tif,
+                           type="fluo",
+                           output=output_prefix,
+                           flash_thresh=fluo_flash_thresh,
+                           reuse=reuse)
+message("Detecting flash in fly-view")
+fly_flash <- detect_flash(input=fly_view_fmf,
+                          type="fly",
+                          output=output_prefix,
+                          flash_thresh=fv_flash_thresh,
+                          reuse=reuse)
+message("Detecting flash in arena-view")
+arena_flash <- detect_flash(input=arena_view_fmf,
+                            type="arena",
+                            output=output_prefix,
+                            flash_thresh=av_flash_thresh,
+                            reuse=reuse)
+```
+
+### Part 2. Synchronize frames and generate frame IDs
+```
+syncing <- sync_frames(dir=dir,
+                       fluo_flash=fluo_flash,
+                       fly_flash=fly_flash,
+                       arena_flash=arena_flash,
+                       output=output_prefix,
+                       reuse=reuse)
+```
 
   ## Part 3. Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
