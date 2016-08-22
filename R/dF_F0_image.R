@@ -20,12 +20,12 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
   if(colmax==F){
     colmax <- median(apply(dFF0maskedpos, 3, max))
   }
-  dFF0maskedpos <- EBImage::medianFilter(dFF0maskedpos/colmax, 3) # medianFilter cuts > 1
+  dFF0maskedpos <- medianFilter(dFF0maskedpos/colmax, 3) # medianFilter cuts > 1
   dFF0fin <- array(0, dim=c(dim(fvimgbwbrfhregimg)[c(1,2)], 3, dim(fvimgbwbrfhregimg)[3]))
   for(cfr in 1:dim(dFF0maskedpos)[3]){
     dFF0fin[,,,cfr] <- dipr::pseudoColor(dFF0maskedpos[,,cfr], cmin, cmax)
   }
-  dFF0fin <- EBImage::Image(dFF0fin, colormode="Color")
+  dFF0fin <- Image(dFF0fin, colormode="Color")
   message(sprintf("Pseudocolor range is %d to %d", cmin, cmax))
 
   # Use both window size and focus for filtering
@@ -38,10 +38,10 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
   dFF0regimg[,,2,] <- 255-regimgi
   dFF0regimg[,,3,] <- 255-regimgi
   dFF0finmaskfly <- dFF0fin*dFF0finmask+dFF0regimg/255
-  EBImage::writeImage(dFF0finmaskfly, bits.per.sample = 8,
+  writeImage(dFF0finmaskfly, bits.per.sample = 8,
              file=paste0(output, "_dFF0finmaskfly.tif"))
   if(goodfr!=F){
-    EBImage::writeImage(dFF0finmaskfly[,,,goodfr], bits.per.sample = 8,
+    writeImage(dFF0finmaskfly[,,,goodfr], bits.per.sample = 8,
                         file=paste0(output, "_dFF0finmaskfly_goodfr_.tif"))
   }
 }

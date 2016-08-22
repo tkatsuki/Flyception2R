@@ -11,9 +11,9 @@
 align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=T){
   # Manual position calibration with fly contour during flash
   if(autopos==F){
-    EBImage::display(flref)
-    EBImage::display(fvref)
-    fvrefrs <- EBImage::resize(fvref, dim(fvref)[1]*zoom)
+    display(flref)
+    display(fvref)
+    fvrefrs <- resize(fvref, dim(fvref)[1]*zoom)
     flrefpad <- fvrefrs*0
     if(dim(fvrefrs)[1] > dim(flref)[1]){
       print(1)
@@ -27,17 +27,17 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
                         round((dim(flref)[2]-dim(fvrefrs)[2])/2):
                           (round((dim(flref)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
     }
-    flrefpadmv <- EBImage::translate(flrefpad, center)
-    EBImage::display(flrefpadmv)
-    EBImage::display(EBImage::normalize(fvrefrs + flrefpadmv))
-    EBImage::writeImage(EBImage::normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
+    flrefpadmv <- translate(flrefpad, center)
+    display(flrefpadmv)
+    display(normalize(fvrefrs + flrefpadmv))
+    writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
 
   } else {
     # Automated position calibration using template matching
     message("Automatically aligning two cameras...")
-    EBImage::writeImage(flref, file=paste0(output, "_flref.png"))
-    EBImage::writeImage(fvref, file=paste0(output, "_fvref.png"))
-    fvrefrs <- EBImage::resize(fvref, dim(fvref)[1]*zoom)
+    writeImage(flref, file=paste0(output, "_flref.png"))
+    writeImage(fvref, file=paste0(output, "_fvref.png"))
+    fvrefrs <- resize(fvref, dim(fvref)[1]*zoom)
     if(dim(fvrefrs)[1] > dim(flref)[1]){
       fncc <- dipr::FNCC(fvrefrs, flref)
       maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
@@ -62,8 +62,8 @@ align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=
                           (round((dim(flref)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
     }
 
-    flrefpadmv <- EBImage::translate(flrefpad, center)
-    EBImage::writeImage(EBImage::normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
+    flrefpadmv <- translate(flrefpad, center)
+    writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
 
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))

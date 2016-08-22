@@ -17,27 +17,27 @@ register_images <- function(fvimgl, flimgrt, fvimgbwbrfh, angles, output, zoom, 
     regresi <- readRDS(paste0(output, "_regresi.RDS"))
   }else{
     # Prepare fvimg for registration
-    fvimgli <- EBImage::resize(255 - fvimgl, dim(fvimgl)[1]*zoom)
-    centermask <- EBImage::drawCircle(matrix(0,dim(fvimgli)[1],dim(fvimgli)[2]), dim(fvimgli)[1]/2,
+    fvimgli <- resize(255 - fvimgl, dim(fvimgl)[1]*zoom)
+    centermask <- drawCircle(matrix(0,dim(fvimgli)[1],dim(fvimgli)[2]), dim(fvimgli)[1]/2,
                                       dim(fvimgli)[2]/2, dim(fvimgli)[1]/2-1, col=1, fill=1)
     # Create first image, which will be the target in registration
-    fvimgrt1sti <- EBImage::rotate(fvimgli[,,1], angles[frid[1]]*180/pi, output.dim=dim(fvimgli)[1:2])
+    fvimgrt1sti <- rotate(fvimgli[,,1], angles[frid[1]]*180/pi, output.dim=dim(fvimgli)[1:2])
     # Build affine matrix for rotation
     aff <- list()
     for(a in 1:dim(fvimgli)[3]){
-      aff[[a]] <- RNiftyReg::buildAffine(angles=c(0,0, -angles[frid[a]]), source=fvimgli[,,1], anchor="center")
+      aff[[a]] <- buildAffine(angles=c(0,0, -angles[frid[a]]), source=fvimgli[,,1], anchor="center")
     }
     # Run image registration using the initial angle
     regresi <- list()
     for(rg in 1:dim(fvimgli)[3]){
-      regresi[[rg]] <- RNiftyReg::niftyreg(fvimgli[,,rg], fvimgrt1sti,
+      regresi[[rg]] <- niftyreg(fvimgli[,,rg], fvimgrt1sti,
                                 init=aff[[rg]], scope="rigid", symmetric=F)
     }
     regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(fvimgli))
     regimgi[which(is.na(regimgi)==T)] <- 0
     saveRDS(regimgi, paste0(output, "_regimgi.RDS"))
     saveRDS(regresi, paste0(output, "_regresi.RDS"))
-    EBImage::writeImage((255-regimgi)/255, file=paste0(output, "_regimgi.tif"))
+    writeImage((255-regimgi)/255, file=paste0(output, "_regimgi.tif"))
     rm(fvimgli)
   }
 
@@ -64,13 +64,13 @@ register_images <- function(fvimgl, flimgrt, fvimgbwbrfh, angles, output, zoom, 
                           round((dim(flimgrt)[2]-dim(regimgi)[2])/2):
                             (round((dim(flimgrt)[2]-dim(regimgi)[2])/2)+dim(regimgi)[2]-1),]
     }
-    flimgpadmv <- EBImage::translate(flimgpad, center)
+    flimgpadmv <- translate(flimgpad, center)
     flimgrgres <- list()
     for(app in 1:dim(fvimgl)[3]){
-      flimgrgres[[app]] <- RNiftyReg::applyTransform(RNiftyReg::forward(regresi[[app]]), flimgpadmv[,,app])
+      flimgrgres[[app]] <- applyTransform(forward(regresi[[app]]), flimgpadmv[,,app])
     }
     flimgreg <- array(unlist(flimgrgres), dim=dim(flimgpadmv))
-    EBImage::writeImage(flimgreg, file=paste0(output, "_flimgreg.tif"))
+    writeImage(flimgreg, file=paste0(output, "_flimgreg.tif"))
     rm(flimgrgres)
     rm(flimgpad)
     rm(flimgpadmv)
@@ -84,15 +84,15 @@ register_images <- function(fvimgl, flimgrt, fvimgbwbrfh, angles, output, zoom, 
     fvimgbwbrfhregimg <- readRDS(paste0(output, "_fvimgbwbrfhregimg.RDS"))
   }else{
 
-    fvimgbwbrfhrs <- EBImage::resize(fvimgbwbrfh, dim(fvimgl)[1]*zoom)
+    fvimgbwbrfhrs <- resize(fvimgbwbrfh, dim(fvimgl)[1]*zoom)
     rm(fvimgbwbrfh)
     fvimgbwbrfhreg <- list()
     for(app in 1:dim(fvimgl)[3]){
-      fvimgbwbrfhreg[[app]] <- RNiftyReg::applyTransform(RNiftyReg::forward(regresi[[app]]), fvimgbwbrfhrs[,,app])
+      fvimgbwbrfhreg[[app]] <- applyTransform(forward(regresi[[app]]), fvimgbwbrfhrs[,,app])
     }
     fvimgbwbrfhregimg <- array(unlist(fvimgbwbrfhreg), dim=dim(fvimgbwbrfhrs))
     fvimgbwbrfhregimg <- fvimgbwbrfhregimg >= 0.5
-    EBImage::writeImage((255-regimgi)/255*(1-fvimgbwbrfhregimg) + EBImage::normalize(flimgreg),
+    writeImage((255-regimgi)/255*(1-fvimgbwbrfhregimg) + normalize(flimgreg),
                         file=paste0(output, "_fvfvwindflregimg.tif"))
     rm(fvimgbwbrfhrs)
     rm(fvimgbwbrfhreg)

@@ -15,9 +15,9 @@ measureROI <- function(img, mask, output){
   deltaROIF <- meanint - ROIF0
   ROIdFF0 <- deltaROIF/ROIF0 * 100
   dat <- data.frame(x=1:dim(img)[3], y=ROIdFF0)
-  p <- ggplot2::ggplot(data=dat, ggplot2::aes(x=x, y=y)) +
-    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
-    ggplot2::ylim(-5, 10)
-  ggplot2::ggsave(filename = paste0(output, "_dFF0int_ROI.pdf"), width = 8, height = 8)
+  p <- ggplot(data=dat, aes(x=x, y=y)) +
+    geom_smooth(method="loess", span = 0.4, level=0.95) +
+    ylim(-5, 10)
+  ggsave(filename = paste0(output, "_dFF0int_ROI.pdf"), width = 8, height = 8)
   return(ROIdFF0)
 }
