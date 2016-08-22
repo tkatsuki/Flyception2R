@@ -7,12 +7,13 @@ Maintainer: Takeo Katsuki <takeo.katsuki@gmail.com>
 Description: FlyceptionR provides functions useful for analyzing data collected
     with Flyception.
 Depends:
-    R (>= 3.3.1)
+    R (>= 3.3.1),
+    EBImage,
+    ggplot2,
+    RNiftyReg,
 Imports:
     zoo,
-    RNiftyReg,
     plotrix,
-    ggplot2,
     plyr,
     reshape2,
     devtools,
