@@ -238,7 +238,7 @@ ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, hei
 
 ```
 message("Calculating dF/F0 images...")
-dF_F0_image(flregimg=registered_images$flimgreg,
+dF_F0_image(flimgreg=registered_images$flimgreg,
             fvimgbwbrfhregimg=registered_images$fvimgbwbrfhregimg,
             regimgi=registered_images$regimgi,
             colmax=100, cmin=30, cmax=200,
@@ -249,7 +249,7 @@ dF_F0_image(flregimg=registered_images$flimgreg,
 ### Part 14. ROI measurement
 
 ```
-# Creat ROI mask
+# Create ROI mask
 # Rectangle ROI example
 ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
 ROI_mask[120:(120+10-1),120:(120+10-1)] <- 1

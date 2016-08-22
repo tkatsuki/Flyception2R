@@ -22,7 +22,7 @@
 FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
                         fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=0.01,
                         fv_flash_thresh=135, av_flash_thresh=100, dist_thresh=4,
-                        rotate_camera=-90){
+                        rotate_camera=-180){
 
   # TO DO
   # Output: frid, frida, registered images, good frames
@@ -182,7 +182,7 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
 
   ## Part 13. Create delta F over F0 pseudocolor representation
   message("Calculating dF/F0 images...")
-  dF_F0_image(flregimg=registered_images$flimgreg,
+  dF_F0_image(flimgreg=registered_images$flimgreg,
               fvimgbwbrfhregimg=registered_images$fvimgbwbrfhregimg,
               regimgi=registered_images$regimgi,
               colmax=100, cmin=30, cmax=200,
@@ -190,7 +190,7 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
               output=output_prefix)
 
   ## Part 14. ROI measurement
-  # Creat ROI mask
+  # Create ROI mask
   # Rectangle ROI example
   ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
   ROI_mask[120:(120+10-1),120:(120+10-1)] <- 1

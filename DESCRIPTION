@@ -15,9 +15,11 @@ Imports:
     ggplot2,
     plyr,
     reshape2,
-    devtools
-Remotes: tkatsuki/dipr,
-    mjkallen/rlogging
+    devtools,
+    dipr,
+    rlogging,
+Remotes: github::tkatsuki/dipr,
+    github::mjkallen/rlogging
 biocViews: EBImage
 License: BSD 3
 Encoding: UTF-8
