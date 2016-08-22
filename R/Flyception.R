@@ -200,7 +200,8 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
 
   ROI_dFF0 <- measureROI(img=registered_images$flimgreg,
                          mask=ROI_mask,
-                         output=output_prefix)
+                         output=output_prefix,
+                         goodfr=goodfr$goodfr)
 
   ## Part 15. Create trajectory of the flies
   message("Creating trajectory of the flies...")
