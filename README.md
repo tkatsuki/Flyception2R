@@ -133,8 +133,8 @@ Required step.
 
 ```
 message(sprintf("Reading %s", fluo_view_tif))
-flimg <- EBImage::readImage(fluo_view_tif)
-flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
+flimg <- readImage(fluo_view_tif)
+flref <- normalize(rotate(flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
 
 # Analyze only part of the movie?
 if(FOI!=F && length(FOI)==2){
@@ -152,12 +152,12 @@ if(dim(flimg)[1] > 130){
   flimg <- flimg[round((dim(flimg)[1] - 128)/2):(round((dim(flimg)[1]/2+128/2))-1),
                  round((dim(flimg)[2] - 128)/2):(round((dim(flimg)[2]/2+128/2))-1),]
 }
-flimgrt <- EBImage::rotate(EBImage::flip(flimg), rotate_camera)
+flimgrt <- rotate(flip(flimg), rotate_camera)
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 # Load arena-view camera images
 avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
-EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
+writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
 rm(avimgl)
 ```
 
@@ -227,11 +227,11 @@ F0int <- mean(intensity[1:5])
 deltaFint <- intensity - F0int
 dFF0int <- deltaFint/F0int * 100
 dat <- data.frame(x=(1:length(dFF0int)), y=dFF0int, d=trj_res$flydist[frida])
-p <- ggplot2::ggplot(data=dat, ggplot2::aes(x=x, y=y)) +
-  ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
-  ggplot2::ylim(-5, 10) +
-  ggplot2::geom_line(data=dat, ggplot2::aes(x=x, y=d))
-ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
+p <- ggplot(data=dat, aes(x=x, y=y)) +
+  geom_smooth(method="loess", span = 0.4, level=0.95) +
+  ylim(-5, 10) +
+  geom_line(data=dat, aes(x=x, y=d))
+ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
 ```
 
 ### Part 13. Create delta F over F0 pseudocolor representation
@@ -255,7 +255,7 @@ ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
 ROI_mask[120:(120+10-1),120:(120+10-1)] <- 1
 # Circular ROI example
 # ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
-# EBImage::drawCircle(img=ROI_mask, x=120, y=120, radius=5, col=1, fill=T)
+# drawCircle(img=ROI_mask, x=120, y=120, radius=5, col=1, fill=T)
 
 ROI_dFF0 <- measureROI(img=registered_images$flimgreg,
                        mask=ROI_mask,
