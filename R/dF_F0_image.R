@@ -28,7 +28,6 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
   dFF0fin <- Image(dFF0fin, colormode="Color")
   message(sprintf("Pseudocolor range is %d to %d", cmin, cmax))
 
-  # Use both window size and focus for filtering
   dFF0finmask <- dFF0fin
   dFF0finmask[,,1,] <- fvimgbwbrfhregimg
   dFF0finmask[,,2,] <- fvimgbwbrfhregimg
@@ -40,8 +39,20 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
   dFF0finmaskfly <- dFF0fin*dFF0finmask+dFF0regimg/255
   writeImage(dFF0finmaskfly, bits.per.sample = 8,
              file=paste0(output, "_dFF0finmaskfly.tif"))
+  writeImage(Fmean, bits.per.sample = 8,
+             file=paste0(output, "_Fmean.tif"))
+  writeImage(F0, bits.per.sample = 8,
+             file=paste0(output, "_F0.tif"))
+  writeImage(dFF0maskedpos, bits.per.sample = 8,
+             file=paste0(output, "_dF_F0_median_masked.tif"))
   if(goodfr!=F){
     writeImage(dFF0finmaskfly[,,,goodfr], bits.per.sample = 8,
                         file=paste0(output, "_dFF0finmaskfly_goodfr_.tif"))
+    writeImage(Fmean[,,,goodfr], bits.per.sample = 8,
+               file=paste0(output, "_Fmean_goodfr_.tif"))
+    writeImage(F0[,,,goodfr], bits.per.sample = 8,
+               file=paste0(output, "_F0_goodfr_.tif"))
+    writeImage(dFF0maskedpos[,,,goodfr], bits.per.sample = 8,
+               file=paste0(output, "_dF_F0_median_masked_goodfr_.tif"))
   }
 }

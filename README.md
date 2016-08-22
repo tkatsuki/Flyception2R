@@ -1,5 +1,5 @@
 # FlyceptionR
-R scripts and utilities for Flyception data analysis
+R scripts and utilities for analyzing Flyception data
 
 ## Requirement
 Windows: R and Rtools
@@ -22,20 +22,20 @@ library(FlyceptionR)
 
 #### Set variables
 ```
-dir <- "/example/data/"  # Don't forget to add the flash at the end
-prefix <- "data_1"       # Will be used as a filename prefix
-autopos <- T             # True if you want an automatic camera alignment 
-reuse <- F               # True if you want to reuse intermediate RDS files
-fmf2tif <- T             # True if you want to convert fmf 
-zoom <- 0.85
-FOI <- F                 # A vector specifying a sta and end frame. False if you want to analyze all frames.
-binning <- 1
-fluo_flash_thresh <- 0.01
-fv_flash_thresh <- 135
-av_flash_thresh <- 100
-interaction <- T         # True if you want to analyze fly-fly interaction
-dist_thresh <- 4
-rotate_camera <- -90
+dir <- "/example/data/"   # Don't forget the slash at the end
+prefix <- "data_1"        # Will be used as a filename prefix
+autopos <- T              # True if you want to align cameras automatically 
+reuse <- F                # True if you want to reuse intermediate RDS files
+fmf2tif <- T              # True if you want to convert fmf 
+zoom <- 1.13              # Zoom ratio: fluo-view/fly-view
+FOI <- F                  # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+binning <- 1              # Binning of the fluo-view camera
+fluo_flash_thresh <- 0.01 # Threshold for detecting flash in fluo-view
+fv_flash_thresh <- 135    # Threshold for detecting flash in fly-view
+av_flash_thresh <- 100    # Threshold for detecting flash in arena-view
+interaction <- T          # True if you want to analyze fly-fly interaction
+dist_thresh <- 4          # Threshold for detecting fly-fly interaction based on distance
+rotate_camera <- -180     # Rotation angle needed to align fluo-view and fly-view
 ```
 
 #### Start logging
@@ -87,6 +87,7 @@ syncing <- sync_frames(dir=dir,
                        output=output_prefix,
                        reuse=reuse)
 ```
+
 ### Part 3. Analyze trajectories
 Required step.
 
@@ -183,7 +184,11 @@ center <- align_cameras(flref=flref,
 ```
 
 ### Part 9. Image registration
-Required step.
+Required step. This generates the following 3 files, and also returns the corresponding objects.
+
+* regimgi.tif: registered fly-view image
+* flimgreg.tif: registered fluo-view image
+* fvfvwindflregimg.tif: registered window image
 
 ```  
 registered_images <- register_images(fvimgl=fvimgl,
@@ -234,7 +239,8 @@ p <- ggplot(data=dat, aes(x=x, y=y)) +
 ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
 ```
 
-### Part 13. Create delta F over F0 pseudocolor representation
+### Part 13. Create delta F over F0 pseudocolor images
+This step produces the following 4 output files: F0, Fmean, dF over F0 grayscale image, dF over F0 pseudocolor image
 
 ```
 message("Calculating dF/F0 images...")
