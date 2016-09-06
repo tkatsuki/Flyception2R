@@ -22,20 +22,20 @@ library(FlyceptionR)
 
 #### Set variables
 ```
-dir <- "/example/data/"   # Don't forget the slash at the end
-prefix <- "data_1"        # Will be used as a filename prefix
-autopos <- T              # True if you want to align cameras automatically 
-reuse <- F                # True if you want to reuse intermediate RDS files
-fmf2tif <- T              # True if you want to convert fmf 
-zoom <- 1.13              # Zoom ratio: fluo-view/fly-view
-FOI <- F                  # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
-binning <- 1              # Binning of the fluo-view camera
-fluo_flash_thresh <- 0.01 # Threshold for detecting flash in fluo-view
-fv_flash_thresh <- 135    # Threshold for detecting flash in fly-view
-av_flash_thresh <- 100    # Threshold for detecting flash in arena-view
-interaction <- T          # True if you want to analyze fly-fly interaction
-dist_thresh <- 4          # Threshold for detecting fly-fly interaction based on distance
-rotate_camera <- -180     # Rotation angle needed to align fluo-view and fly-view
+dir <- "/example/data/"  # Don't forget the slash at the end
+prefix <- "data_1"       # Will be used as a filename prefix
+autopos <- T             # True if you want to align cameras automatically 
+reuse <- F               # True if you want to reuse intermediate RDS files
+fmf2tif <- T             # True if you want to convert fmf 
+zoom <- 1.13             # Zoom ratio: fluo-view/fly-view
+FOI <- F                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+binning <- 1             # Binning of the fluo-view camera
+fluo_flash_thresh <- 100 # Threshold for detecting flash in fluo-view
+fv_flash_thresh <- 135   # Threshold for detecting flash in fly-view
+av_flash_thresh <- 50    # Threshold for detecting flash in arena-view
+interaction <- T         # True if you want to analyze fly-fly interaction
+dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
+rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 ```
 
 #### Start logging
@@ -134,12 +134,10 @@ Required step.
 
 ```
 message(sprintf("Reading %s", fluo_view_tif))
-flimg <- readImage(fluo_view_tif)
-flref <- normalize(rotate(flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
 
 # Analyze only part of the movie?
 if(FOI!=F && length(FOI)==2){
-  flimg <- flimg[,,FOI[1]:FOI[2]]
+  flimg <- dipr::readTIFF2(fluo_view_tif, start=FOI[1], end=FOI[2])
   message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
   frid <- syncing$frid[FOI[1]:FOI[2]]
   frida <- syncing$frida[FOI[1]:FOI[2]]
@@ -174,6 +172,8 @@ fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 Required step.
 
 ```
+flref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
+flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flref), rotate_camera))
 fvref <- dipr::readFMF(filepath=fly_view_fmf,
                        frames=fly_flash$fvflashes[1])[,,1]/255
 center <- align_cameras(flref=flref,

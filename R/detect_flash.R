@@ -23,9 +23,8 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     png(file=paste0(output, "_flflash.png"), width=400, height=400)
     plot(flimgint)
     dev.off()
-    nframesfl <- dim(flimg)[3]
+    nframesfl <- readTIFF2(input, getFrames=T)
     message(paste0("Number of frames in fluo-view: ", nframesfl))
-    rm(flimg)
     }
 
     flflashes <- which(flimgint > flash_thresh)

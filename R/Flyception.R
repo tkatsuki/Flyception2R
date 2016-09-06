@@ -26,10 +26,8 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
 
   # TO DO
   # Output: frid, frida, registered images, good frames
-  # Memory usage
   # Create frame
   # Parallelism
-  # FOI for readTiff
 
   ## Part 0. Initialization
   # Start logging
@@ -130,8 +128,8 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
   fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 8. Position calibration
-  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(dipr::readTIFF2(
-    fluo_view_tif, frames=fluo_flash$flflashes[1])), rotate_camera))
+  flref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
+  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flref), rotate_camera))
   fvref <- dipr::readFMF(filepath=fly_view_fmf,
                          frames=fly_flash$fvflashes[1])[,,1]/255
   center <- align_cameras(flref=flref,
