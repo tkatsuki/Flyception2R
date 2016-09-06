@@ -30,7 +30,7 @@ fmf2tif <- T             # True if you want to convert fmf
 zoom <- 1.13             # Zoom ratio: fluo-view/fly-view
 FOI <- F                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 binning <- 1             # Binning of the fluo-view camera
-fluo_flash_thresh <- 100 # Threshold for detecting flash in fluo-view
+fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
 fv_flash_thresh <- 135   # Threshold for detecting flash in fly-view
 av_flash_thresh <- 50    # Threshold for detecting flash in arena-view
 interaction <- T         # True if you want to analyze fly-fly interaction

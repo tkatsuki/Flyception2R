@@ -68,9 +68,13 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     fvflashesfrid <- frid[fluo_flash$flflashes]
     message(sprintf("Hypothetical flash for fly-view: %s", paste(fvflashesfrid, collapse=" ")))
     message(sprintf("Actual flash for fly-view: %s", paste(fly_flash$fvflashes, collapse=" ")))
-    message(paste0("Did hypothetical flash frames match actual flash frames in fly-view?", all.equal(fvflashesfrid, fly_flash$fvflashes)))
+    if(all.equal(fvflashesfrid, fly_flash$fvflashes)==T){
+      message(paste0("Hypothetical flashes match actual flashes in fly-view."))
+    }else{
+      message(paste0("Hypothetical flashes didn't match actual flashes in fly-view. Syncing failed?"))
+    }
     if(length(fluo_flash$flflashes)!=length(fly_flash$fvflashes)) {
-      warning("Number of flash detected did not match between fly-view and fluo-view.")
+      warning("Number of flash in fly-view and fluo-view didn't match.")
     }
     frid <- frid[which(frid<=fly_flash$nframesfv)]
     if(length(frid) < fluo_flash$nframesfl){
@@ -94,9 +98,13 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     avflashesfridav <- frida[fluo_flash$flflashes]
     message(sprintf("Hypothetical flash for arena-view: %s", paste(avflashesfridav, collapse=" ")))
     message(sprintf("Actual flash for arena-view: %s", paste(arena_flash$avflashes, collapse=" ")))
-    message(paste0("Did hypothetical flash frames match actual flash frames in arena-view?", all.equal(avflashesfridav, arena_flash$avflashes)))
+    if(all.equal(avflashesfridav, arena_flash$avflashes)==T){
+      message(paste0("Hypothetical flashes match actual flashes in arena-view."))
+    }else{
+      message(paste0("Hypothetical flashes didn't match actual flashes in arena-view. Syncing failed?"))
+    }
     if(length(fluo_flash$flflashes)!=length(arena_flash$avflashes)) {
-      message("Number of flash detected did not match between arena-view and fluo-fiew.")
+      message("Number of flash in arena-view and fluo-fiew did not match.")
     }
     frida <- frida[which(frida<=arena_flash$nframesav)]
     if(length(frida) < fluo_flash$nframesfl){
