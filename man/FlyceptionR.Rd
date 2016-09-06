@@ -6,8 +6,8 @@
 \usage{
 FlyceptionR(dir, prefix, autopos = T, interaction = T, reuse = T,
   fmf2tif = T, zoom = 0.85, FOI = F, binning = 1,
-  fluo_flash_thresh = 0.01, fv_flash_thresh = 135, av_flash_thresh = 100,
-  dist_thresh = 4, rotate_camera = -90)
+  fluo_flash_thresh = 10000, fv_flash_thresh = 135, av_flash_thresh = 100,
+  dist_thresh = 4, rotate_camera = -180)
 }
 \arguments{
 \item{dir}{path to the directory that contains the data}
