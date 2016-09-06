@@ -19,9 +19,7 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     } else{
     message(sprintf("Reading %s", input))
     message(sprintf("Flash thresh is %f", flash_thresh))
-    flimg <- readImage(input)
-    # Detect flash in fluo-view
-    flimgint <- colMeans(flimg, dim=2)
+    flimgint <- readTIFF2(input, intensity=T)
     png(file=paste0(output, "_flflash.png"), width=400, height=400)
     plot(flimgint)
     dev.off()
