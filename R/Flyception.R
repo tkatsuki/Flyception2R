@@ -20,7 +20,7 @@
 #'
 
 FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
-                        fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=0.01,
+                        fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=10000,
                         fv_flash_thresh=135, av_flash_thresh=100, dist_thresh=4,
                         rotate_camera=-180){
 
@@ -101,12 +101,10 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
 
   ## Part 6. Load images
   message(sprintf("Reading %s", fluo_view_tif))
-  flimg <- EBImage::readImage(fluo_view_tif)
-  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flimg[,,fluo_flash$flflashes[1]]), rotate_camera))
 
   # Analyze only part of the movie?
   if(FOI!=F && length(FOI)==2){
-    flimg <- flimg[,,FOI[1]:FOI[2]]
+    flimg <- dipr::readTIFF2(fluo_view_tif, start=FOI[1], end=FOI[2])
     message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
     frid <- syncing$frid[FOI[1]:FOI[2]]
     frida <- syncing$frida[FOI[1]:FOI[2]]
@@ -132,6 +130,8 @@ FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
   fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
 
   ## Part 8. Position calibration
+  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(dipr::readTIFF2(
+    fluo_view_tif, frames=fluo_flash$flflashes[1])), rotate_camera))
   fvref <- dipr::readFMF(filepath=fly_view_fmf,
                          frames=fly_flash$fvflashes[1])[,,1]/255
   center <- align_cameras(flref=flref,
