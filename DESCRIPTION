@@ -11,13 +11,13 @@ Depends:
     EBImage,
     ggplot2,
     RNiftyReg,
+    dipr
 Imports:
     zoo,
     plotrix,
     plyr,
     reshape2,
     devtools,
-    dipr,
     rlogging,
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
