@@ -7,7 +7,7 @@
 #' dF_F0_image()
 #'
 
-dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cmax, goodfr=F, output){
+dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cmax, goodfr=NULL, output){
   Fmean <- dipr::rollmeanimg(flimgreg, 5)
   F0 <- rowMeans(flimgreg[,,1:5], dims=2)
   deltaF <- dipr::ssweep(Fmean, F0, op="-")
@@ -45,13 +45,11 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
              file=paste0(output, "_F0.tif"))
   writeImage(dFF0maskedpos, bits.per.sample = 8,
              file=paste0(output, "_dF_F0_median_masked.tif"))
-  if(goodfr!=F){
+  if(length(goodfr)>0){
     writeImage(dFF0finmaskfly[,,,goodfr], bits.per.sample = 8,
                         file=paste0(output, "_dFF0finmaskfly_goodfr_.tif"))
     writeImage(Fmean[,,goodfr], bits.per.sample = 8,
                file=paste0(output, "_Fmean_goodfr_.tif"))
-    writeImage(F0[,,goodfr], bits.per.sample = 8,
-               file=paste0(output, "_F0_goodfr_.tif"))
     writeImage(dFF0maskedpos[,,goodfr], bits.per.sample = 8,
                file=paste0(output, "_dF_F0_median_masked_goodfr_.tif"))
   }
