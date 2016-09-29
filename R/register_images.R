@@ -26,7 +26,7 @@ register_images <- function(fvimgl, flimgrt, fvimgbwbrfh, angles, output, zoom, 
     if(cores!=1){
       library(doParallel)
       registerDoParallel(cores=cores)
-      message(print0(getDoParWorkers(), " cores are used..."))
+      message(paste0("Using ", getDoParWorkers(), " cores..."))
     }
     # Build affine matrix for rotation
     aff <- list()
