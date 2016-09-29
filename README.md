@@ -198,6 +198,8 @@ registered_images <- register_images(fvimgl=fvimgl,
                                      zoom=zoom,
                                      center=center,
                                      output=output_prefix,
+                                     cores=1,
+                                     saveRDS=F,
                                      reuse=reuse)
 ```
 
