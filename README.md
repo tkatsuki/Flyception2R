@@ -184,7 +184,7 @@ center <- align_cameras(flref=flref,
 ```
 
 ### Part 9. Image registration
-Required step. This generates the following 3 files, and also returns the corresponding objects.
+Required step. This generates the following 3 files, and also returns the corresponding objects. One can take advantage of parallel processing by specifying the number of cores to be used.
 
 * regimgi.tif: registered fly-view image
 * flimgreg.tif: registered fluo-view image
