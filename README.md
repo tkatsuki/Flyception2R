@@ -250,7 +250,7 @@ dF_F0_image(flimgreg=registered_images$flimgreg,
             fvimgbwbrfhregimg=registered_images$fvimgbwbrfhregimg,
             regimgi=registered_images$regimgi,
             colmax=100, cmin=30, cmax=200,
-            goodfr=goodfr$goodfr,
+            goodfr=which(goodfr$goodfr==T),
             output=output_prefix)
 ```
 
