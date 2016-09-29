@@ -19,7 +19,7 @@ Imports:
     reshape2,
     devtools,
     rlogging,
-    doParallels
+    doParallel
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
 biocViews: EBImage
