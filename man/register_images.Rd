@@ -5,7 +5,7 @@
 \title{Perform image registration for fly-view, window, and fluo-view}
 \usage{
 register_images(fvimgl, flimgrt, fvimgbwbrfh, angles, output, zoom, center,
-  reuse = F)
+  cores = 1, saveRDS = F, reuse = F)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}

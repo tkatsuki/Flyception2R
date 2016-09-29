@@ -5,7 +5,7 @@
 \title{Create delta F over F pseudocolor representation}
 \usage{
 dF_F0_image(flimgreg, fvimgbwbrfhregimg, regimgi, colmax = F, cmin, cmax,
-  goodfr = F, output)
+  goodfr = NULL, output)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}
