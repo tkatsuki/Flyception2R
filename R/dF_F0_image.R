@@ -45,7 +45,7 @@ dF_F0_image <- function(flimgreg, fvimgbwbrfhregimg, regimgi, colmax=F, cmin, cm
              file=paste0(output, "_F0.tif"))
   writeImage(dFF0maskedpos, bits.per.sample = 8,
              file=paste0(output, "_dF_F0_median_masked.tif"))
-  if(length(goodfr)>0){
+  if(length(goodfr)>1){
     writeImage(dFF0finmaskfly[,,,goodfr], bits.per.sample = 8,
                         file=paste0(output, "_dFF0finmaskfly_goodfr_.tif"))
     writeImage(Fmean[,,goodfr], bits.per.sample = 8,
