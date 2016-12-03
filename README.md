@@ -12,6 +12,8 @@ The following commands will automatically install packages necessary for running
 ```
 install.packages("devtools")
 library(devtools)
+source("https://bioconductor.org/biocLite.R")
+biocLite("BiocInstaller")
 devtools::install_github("tkatsuki/FlyceptionR")
 library(FlyceptionR)
 ```

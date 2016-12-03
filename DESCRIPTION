@@ -22,7 +22,9 @@ Imports:
     doParallel
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
-biocViews: EBImage
+biocViews:
+    EBImage,
+    BiocGenerics
 License: BSD 3
 Encoding: UTF-8
 LazyData: TRUE
