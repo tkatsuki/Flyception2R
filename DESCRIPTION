@@ -19,7 +19,8 @@ Imports:
     reshape2,
     devtools,
     rlogging,
-    doParallel
+    doParallel,
+    BiocGenerics
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
 biocViews:
