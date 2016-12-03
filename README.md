@@ -10,10 +10,10 @@ Mac: R and Xcode
 The following commands will automatically install packages necessary for running FlyceptionR.
 
 ```
-install.packages("devtools")
-library(devtools)
+install.packages(c("devtools", "ggplot2", "RNiftyReg"))
 source("https://bioconductor.org/biocLite.R")
-biocLite("BiocInstaller")
+biocLite(c("BiocInstaller", "EBImage""))
+library(devtools)
 devtools::install_github("tkatsuki/FlyceptionR")
 library(FlyceptionR)
 ```

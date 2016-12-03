@@ -20,19 +20,8 @@ Imports:
     devtools,
     rlogging,
     doParallel,
-    BiocGenerics,
-    abind,
-    tiff,
-    jpeg,
-    png,
-    locfit,
-    fftwtools,
-    gtable
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
-biocViews:
-    EBImage,
-    BiocGenerics
 License: BSD 3
 Encoding: UTF-8
 LazyData: TRUE
