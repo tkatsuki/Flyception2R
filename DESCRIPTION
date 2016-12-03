@@ -20,7 +20,13 @@ Imports:
     devtools,
     rlogging,
     doParallel,
-    BiocGenerics
+    BiocGenerics,
+    abind,
+    tiff,
+    jpeg,
+    png,
+    locfit,
+    fftwtools
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
 biocViews:
