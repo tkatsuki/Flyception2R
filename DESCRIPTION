@@ -26,7 +26,8 @@ Imports:
     jpeg,
     png,
     locfit,
-    fftwtools
+    fftwtools,
+    gtable
 Remotes: github::tkatsuki/dipr,
     github::mjkallen/rlogging
 biocViews:
