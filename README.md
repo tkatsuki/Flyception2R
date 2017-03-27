@@ -6,6 +6,8 @@ Windows: R and Rtools
 
 Mac: R and Xcode
 
+ImageJ https://imagej.nih.gov/ij/
+
 ## Installation
 The following commands will automatically install packages necessary for running FlyceptionR.
 
@@ -14,8 +16,8 @@ install.packages(c("devtools", "ggplot2", "RNiftyReg"))
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("BiocInstaller", "EBImage""))
 library(devtools)
-devtools::install_github("tkatsuki/FlyceptionR")
-library(FlyceptionR)
+devtools::install_github("tkatsuki/Flyception2R")
+library(Flyception2R)
 ```
 
 ## Usage example
