@@ -19,4 +19,3 @@ Detect flash
 detect_flash()
 
 }
-

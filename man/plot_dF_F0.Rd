@@ -18,4 +18,3 @@ Plot delta F over F
 plot_dF_F0()
 
 }
-

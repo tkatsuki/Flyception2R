@@ -18,4 +18,3 @@ Detect fly-fly interactions
 detect_interaction()
 
 }
-

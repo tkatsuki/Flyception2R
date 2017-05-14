@@ -18,4 +18,3 @@ Analyze trajectory of flies
 analyze_trajectories()
 
 }
-

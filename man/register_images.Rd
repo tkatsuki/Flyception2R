@@ -19,4 +19,3 @@ Perform image registration for fly-view, window, and fluo-view
 register_images()
 
 }
-

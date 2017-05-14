@@ -19,4 +19,3 @@ Calculate window size, position, motion, and blurriness
 find_goodframes()
 
 }
-

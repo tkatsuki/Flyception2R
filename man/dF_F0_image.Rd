@@ -19,4 +19,3 @@ Create delta F over F pseudocolor representation
 dF_F0_image()
 
 }
-

@@ -1,4 +1,4 @@
-#' FlyceptionR main script
+#' Flyception2R main script
 #'
 #' @param dir path to the directory that contains the data
 #' @param prefix prefix used for output files
@@ -16,10 +16,10 @@
 #' @param rotate_camera integer. Angle of the fluo-view camera.
 #' @export
 #' @examples
-#' FlyceptionR()
+#' Flyception2R()
 #'
 
-FlyceptionR <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
+Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
                         fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=10000,
                         fv_flash_thresh=135, av_flash_thresh=100, dist_thresh=4,
                         rotate_camera=-180){

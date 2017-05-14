@@ -17,4 +17,3 @@ Synchronize camera frames
 \examples{
 sync_frames()
 }
-

@@ -17,4 +17,3 @@ Perform image processing to segment the imaging window
 \examples{
 detect_window()
 }
-

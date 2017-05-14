@@ -18,4 +18,3 @@ Create delta F over F plot for ROI
 measureROI()
 
 }
-
