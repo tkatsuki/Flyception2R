@@ -46,7 +46,7 @@ imageJ_crop_append <- function(dir, ch=1, roi=c(383, 0, 256, 256)){
     strs[st] <- paste0('image',st,'=',fluo_view_cropped_files[cropped_file_order[st]])
   }
   write(paste('run("Concatenate...", "  title=[Concatenated Stacks]', paste(strs, collapse=" "), '");\n'), file=paste0(dir,"macro.txt"), append=T)
-  write(paste0('saveAs("tiff", "', tools::file_path_sans_ext(fluo_view_cropped_files[length(fluo_view_cropped_files)]), '.concat.tif");\n run("Quit");\n'), file=paste0(dir,"macro.txt"), append=T)
+  write(paste0('saveAs("tiff", "', tools::file_path_sans_ext(fluo_view_cropped_files_full[length(fluo_view_cropped_files_full)]), '.concat.tif");\n run("Quit");\n'), file=paste0(dir,"macro.txt"), append=T)
   
   # Execute the macro
   
