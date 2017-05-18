@@ -34,15 +34,20 @@ Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
   rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
   message(dir)
 
+  # Crop and concatenate fluo_view images
+  imageJ_crop_append(dir, ch=1, roi=c(383, 0, 256, 256))
+  imageJ_crop_append(dir, ch=2, roi=c(1407, 0, 256, 256))
+  
   # Prepare filenames
   output_prefix <- paste0(dir, prefix)
-  fluo_view_tif <- paste0(dir, list.files(dir, pattern="ome\\.tif$"))
+  fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+  fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
   fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
   arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif,
+  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                              type="fluo",
                              output=output_prefix,
                              flash_thresh=fluo_flash_thresh,
