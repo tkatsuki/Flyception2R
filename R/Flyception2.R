@@ -47,7 +47,7 @@ Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
 
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
+  fluo_flash <- detect_flash(input=fluo_view_tif_ch2,
                              type="fluo",
                              output=output_prefix,
                              flash_thresh=fluo_flash_thresh,
