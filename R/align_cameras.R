@@ -8,70 +8,74 @@
 #' align_cameras()
 #'
 
-align_cameras <- function(flref, fvref, output, center=c(0, 0), zoom=1, autopos=T){
+align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, autopos=T){
+  # template image must always be smaller than source image
   # Manual position calibration with fly contour during flash
   if(autopos==F){
-    display(flref)
-    display(fvref)
-    fvrefrs <- EBImage::resize(fvref, dim(fvref)[1]*zoom)
+    display(source)
+    display(template)
+    fvrefrs <- EBImage::resize(template, dim(template)[1]*zoom)
     flrefpad <- fvrefrs*0
-    if(dim(fvrefrs)[1] > dim(flref)[1]){
-      print(1)
-      flrefpad[round((dim(fvrefrs)[1]-dim(flref)[1])/2):
-                 (round((dim(fvrefrs)[1]-dim(flref)[1])/2)+dim(flref)[1]-1),
-               round((dim(fvrefrs)[2]-dim(flref)[2])/2):
-                 (round((dim(fvrefrs)[2]-dim(flref)[2])/2)+dim(flref)[2]-1)] <- flref
+    if(dim(fvrefrs)[1] > dim(source)[1]){
+      flrefpad[round((dim(fvrefrs)[1]-dim(source)[1])/2):
+                 (round((dim(fvrefrs)[1]-dim(source)[1])/2)+dim(source)[1]-1),
+               round((dim(fvrefrs)[2]-dim(source)[2])/2):
+                 (round((dim(fvrefrs)[2]-dim(source)[2])/2)+dim(source)[2]-1)] <- source
     } else{
-      flrefpad <- flref[round((dim(flref)[1]-dim(fvrefrs)[1])/2):
-                          (round((dim(flref)[1]-dim(fvrefrs)[1])/2)+dim(fvrefrs)[1]-1),
-                        round((dim(flref)[2]-dim(fvrefrs)[2])/2):
-                          (round((dim(flref)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
+      flrefpad <- source[round((dim(source)[1]-dim(fvrefrs)[1])/2):
+                           (round((dim(source)[1]-dim(fvrefrs)[1])/2)+dim(fvrefrs)[1]-1),
+                         round((dim(source)[2]-dim(fvrefrs)[2])/2):
+                           (round((dim(source)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
     }
     flrefpadmv <- EBImage::translate(flrefpad, center)
     display(flrefpadmv)
     display(normalize(fvrefrs + flrefpadmv))
     writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
-
+    
   } else {
     # Automated position calibration using template matching
     message("Automatically aligning two cameras...")
-    writeImage(flref, file=paste0(output, "_flref.png"))
-    writeImage(fvref, file=paste0(output, "_fvref.png"))
-    fvrefrs <- EBImage::resize(fvref, dim(fvref)[1]*zoom)
-    if(dim(fvrefrs)[1] > dim(flref)[1]){
-      fncc <- dipr::FNCC(fvrefrs, flref)
+    display(source)
+    display(template)
+    writeImage(source, file=paste0(output, "_source.png"))
+    writeImage(template, file=paste0(output, "_template.png"))
+    source_rs <- EBImage::resize(source, dim(source)[1]*zoom)
+    
+    if(dim(source_rs)[1] > dim(template)[1] && dim(source_rs)[2] > dim(template)[2]){
+      fncc <- dipr::FNCC(source_rs, template)
       maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
-      centerx <- (maxpeak[1] + round(nrow(flref)/2)) - round(dim(fvrefrs)[1]/2)
-      centery <- (maxpeak[2] + round(ncol(flref)/2)) - round(dim(fvrefrs)[2]/2)
+      centerx <- (maxpeak[1] + round(nrow(template)/2)) - round(dim(source_rs)[1]/2)
+      centery <- (maxpeak[2] + round(ncol(template)/2)) - round(dim(source_rs)[2]/2)
       center <- c(centerx, centery)
-      flrefpad <- fvrefrs*0
-      flrefpad[round((dim(fvrefrs)[1]-dim(flref)[1])/2):
-                 (round((dim(fvrefrs)[1]-dim(flref)[1])/2)+dim(flref)[1]-1),
-               round((dim(fvrefrs)[2]-dim(flref)[2])/2):
-                 (round((dim(fvrefrs)[2]-dim(flref)[2])/2)+dim(flref)[2]-1)] <- flref
-    }else if (dim(fvrefrs)[1] < dim(flref)[1]){
-      fncc <- dipr::FNCC(flref, fvrefrs)
-      maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
-      centerx <- (maxpeak[1] + round(nrow(flref)/2)) - round(dim(fvrefrs)[1]/2)
-      centery <- (maxpeak[2] + round(ncol(flref)/2)) - round(dim(fvrefrs)[2]/2)
-      center <- c(centerx, centery)
-      flrefpad <- fvrefrs*0
-      flrefpad <- flref[round((dim(flref)[1]-dim(fvrefrs)[1])/2):
-                          (round((dim(flref)[1]-dim(fvrefrs)[1])/2)+dim(fvrefrs)[1]-1),
-                        round((dim(flref)[2]-dim(fvrefrs)[2])/2):
-                          (round((dim(flref)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
+      template_pad <- source_rs*0
+      template_pad[(round((dim(source_rs)[1]-dim(template)[1])/2) + 1):
+                     (round((dim(source_rs)[1]-dim(template)[1])/2)+dim(template)[1]),
+                   (round((dim(source_rs)[2]-dim(template)[2])/2) + 1):
+                     (round((dim(source_rs)[2]-dim(template)[2])/2)+dim(template)[2])] <- template
+    }else if (dim(source_rs)[1] < dim(template)[1]){
+      stop(paste("Use smaller template"))
     } else{
-      fncc <- dipr::FNCC(flref, fvrefrs)
+      # Template needs to be smaller than the reference therefore crop one of the images
+      x1 <- round(nrow(template)/2)-round(nrow(template)/4)
+      x2 <- round(nrow(template)/2)+round(nrow(template)/4)
+      y1 <- round(ncol(template)/2)-round(ncol(template)/4)
+      y2 <- round(ncol(template)/2)+round(ncol(template)/4)
+      templatecrop <- template[x1:x2, y1:y2]
+      fncc <- dipr::FNCC(source_rs, templatecrop)
       maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
-      centerx <- (maxpeak[1] + round(nrow(flref)/2)) - round(dim(fvrefrs)[1]/2)
-      centery <- (maxpeak[2] + round(ncol(flref)/2)) - round(dim(fvrefrs)[2]/2)
+      centerx <- (maxpeak[1] + round(nrow(templatecrop)/2)) - round(dim(source_rs)[1]/2)
+      centery <- (maxpeak[2] + round(ncol(templatecrop)/2)) - round(dim(source_rs)[2]/2)
       center <- c(centerx, centery)
-      flrefpad <- flref
+      template_pad <- source_rs*0
+      template_pad[round((dim(source_rs)[1]-dim(templatecrop)[1])/2):
+                 (round((dim(source_rs)[1]-dim(templatecrop)[1])/2)+dim(templatecrop)[1]-1),
+               round((dim(source_rs)[2]-dim(templatecrop)[2])/2):
+                 (round((dim(source_rs)[2]-dim(templatecrop)[2])/2)+dim(templatecrop)[2]-1)] <- templatecrop
     }
-
-    flrefpadmv <- EBImage::translate(flrefpad, center)
-    writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
-
+    
+    template_mv <- EBImage::translate(template_pad, center)
+    writeImage(normalize(source_rs + template_mv), file=paste0(output, "_aligned.png"))
+   
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))
   return(center)
