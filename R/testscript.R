@@ -5,7 +5,8 @@ library(devtools)
 devtools::install_github("tkatsuki/Flyception2R")
 library(Flyception2R)
 
-dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
+#dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
+dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4"  # Don't forget the slash at the end
 prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy"       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
@@ -71,9 +72,6 @@ center <- align_cameras(source=fl2refcrop,
 
 imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
 
-# Channel detection
-
-
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,
                        fluo_flash=fluo_flash,
@@ -136,20 +134,6 @@ if(flimg1int[1] < mean(flimg1int)){
   red <- flimg2[,,seq(2, dim(flimg2)[3], 2)]
 }
 
-# Calculate dF/F
-
-
-# Crop fluo-view movie for speed
-if(dim(flimg1)[1] > 130){
-  flimg1 <- flimg1[round((dim(flimg1)[1] - 128)/2):(round((dim(flimg1)[1]/2+128/2))-1),
-                 round((dim(flimg1)[2] - 128)/2):(round((dim(flimg1)[2]/2+128/2))-1),]
-  flimg2 <- flimg2[round((dim(flimg2)[1] - 128)/2):(round((dim(flimg2)[1]/2+128/2))-1),
-                   round((dim(flimg2)[2] - 128)/2):(round((dim(flimg2)[2]/2+128/2))-1),]
-  
-}
-flimg1rt <- EBImage::rotate(EBImage::flip(flimg1), rotate_camera)
-flimg2rt <- EBImage::rotate(EBImage::flip(flimg2), rotate_camera)
-
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 
@@ -158,22 +142,95 @@ avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
 EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
 rm(avimgl)
 
-## Part 7. Detect window on the head
-fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
+# Calculate head angles
+img <- readImage(paste0(dir, "/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy_fvmgl_fr_1-5.tif"))
+img <- gblur(img, 2)
+imgbw <- thresh(img, w=20, h=20, offset=0.1)
+display(imgbw)
+imgbwlb <- bwlabel(imgbw)
 
-## Part 8. Position calibration
-fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
-fl1ref <- EBImage::normalize(fl1ref)
-fl2ref <- dipr::readTIFF2(fluo_view_tif_ch2, frames=fluo_flash$flflashes[1])
-fl2ref <- EBImage::normalize(fl2ref)
+ang <- c()
 
+for (i in 1:dim(img)[3]){
+  
+  m <- computeFeatures.moment(imgbwlb[,,i])
+  distmat <- dist(m[1:3,1:2])
+  maxpair <- which(distmat == max(distmat))
+  
+  if(maxpair == 1){ # pair 1-2
+    angle <- atan((m[2,2] - m[1,2])/(m[2,1] - m[1,1]))
+    if (angle < 0){
+      dleft <- (m[1,1] - 1 - m[1,1])*(m[2,2] - m[1,2]) - (m[1,2] - m[1,2])*(m[2,1] - m[1,1])
+      d <- (m[3,1] - m[1,1])*(m[2,2] - m[1,2]) - (m[3,2] - m[1,2])*(m[2,1] - m[1,1])
+      if (dleft * d > 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+    if (angle > 0){
+      dleft <- (m[1,1] - 1 - m[1,1])*(m[2,2] - m[1,2]) - (m[1,2] - m[1,2])*(m[2,1] - m[1,1])
+      d <- (m[3,1] - m[1,1])*(m[2,2] - m[1,2]) - (m[3,2] - m[1,2])*(m[2,1] - m[1,1])
+      if (dleft * d < 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+  }
+  
+  if(maxpair == 2){ # pair 1-3
+    angle <- atan((m[3,2] - m[1,2])/(m[3,1] - m[1,1]))
+    if (angle < 0){
+      dleft <- (m[1,1] - 1 - m[1,1])*(m[3,2] - m[1,2]) - (m[1,2] - m[1,2])*(m[3,1] - m[1,1])
+      d <- (m[2,1] - m[1,1])*(m[3,2] - m[1,2]) - (m[2,2] - m[1,2])*(m[3,1] - m[1,1])
+      if (dleft * d > 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+    if (angle > 0){
+      dleft <- (m[1,1] - 1 - m[1,1])*(m[3,2] - m[1,2]) - (m[1,2] - m[1,2])*(m[3,1] - m[1,1])
+      d <- (m[2,1] - m[1,1])*(m[3,2] - m[1,2]) - (m[2,2] - m[1,2])*(m[3,1] - m[1,1])
+      if (dleft * d < 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+  }
+  
+  if(maxpair == 3){ # pair 2-3
+    angle <- atan((m[2,2] - m[3,2])/(m[2,1] - m[3,1]))
+    if (angle < 0){
+      dleft <- (m[3,1] - 1 - m[3,1])*(m[2,2] - m[3,2]) - (m[3,2] - m[3,2])*(m[2,1] - m[3,1])
+      d <- (m[1,1] - m[3,1])*(m[2,2] - m[3,2]) - (m[1,2] - m[3,2])*(m[2,1] - m[3,1])
+      if (dleft * d > 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+    if (angle > 0){
+      dleft <- (m[3,1] - 1 - m[3,1])*(m[2,2] - m[3,2]) - (m[3,2] - m[3,2])*(m[2,1] - m[3,1])
+      d <- (m[1,1] - m[3,1])*(m[2,2] - m[3,2]) - (m[1,2] - m[3,2])*(m[2,1] - m[3,1])
+      if (dleft * d < 0){ # Triangle facing left
+        angle <- angle + pi
+      }
+    }
+  }
+  ang[i] <- angle
+}
 
-center <- align_cameras(flref=fl1ref,
-                        fvref=fl2ref,
-                        output=output_prefix,
-                        center=c(0, 0),
-                        zoom=1,
-                        autopos=T)
+# Build affine matrix for rotation
+aff <- list()
+for(a in 1:dim(img)[3]){
+  aff[[a]] <- buildAffine(angles=c(0,0, ang[a]), source=img[,,1], anchor="center")
+}
+
+initimg <- rotate(img[,,1], ang[1], anchor = c("center"))
+
+# Run image registration using the initial angles
+regresi <- list()
+if(cores==1){
+  for(rg in 1:dim(img)[3]){
+    regresi[[rg]] <- niftyreg(img[,,rg], as.Image(initimg),
+                              init=aff[[rg]], scope="rigid", symmetric=F)
+  }
+}else{
+  regresi <- foreach(rg = 1:dim(fvimgli)[3]) %dopar% niftyreg(fvimgli[,,rg], fvimgrt1sti, init=aff[[rg]], scope="rigid", symmetric=F, internal=FALSE)
+}
 
 ## Part 9. Image registration
 regresi <- list()
@@ -186,7 +243,7 @@ test <- niftyreg(fvimgl, fvimgl[,,1],
          scope="rigid", symmetric=F, sequentialInit=T)
 
 regimgi <- test
-regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(red))
+regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(img))
 regimgi[which(is.na(regimgi)==T)] <- 0
 display(normalize(regimgi))
 
