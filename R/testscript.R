@@ -219,7 +219,33 @@ for(a in 1:dim(img)[3]){
   aff[[a]] <- buildAffine(angles=c(0,0, ang[a]), source=img[,,1], anchor="center")
 }
 
-initimg <- rotate(img[,,1], ang[1], anchor = c("center"))
+
+# Test calculated angles
+rot <- img
+for (r in 1:dim(img)[3]){
+  rot[,,r] <- as.Image(rotate(img[,,r], ang[r], anchor = c("center")))
+  }
+
+centermask <- drawCircle(matrix(0,dim(img)[1],dim(img)[2]), dim(img)[1]/2,
+                         dim(img)[2]/2, dim(img)[1]/2-1, col=1, fill=1)
+
+rotc <- ssweep(rot, centermask, "*")
+display(rotc)
+
+regresi <- list()
+if(cores==1){
+  for(rg in 1:dim(rotc)[3]){
+    regresi[[rg]] <- niftyreg(rotc[,,rg], rotc[,,1],
+                              init=aff[[rg]], scope="rigid", symmetric=F)
+  }
+}else{
+  regresi <- foreach(rg = 1:dim(fvimgli)[3]) %dopar% niftyreg(fvimgli[,,rg], fvimgrt1sti, init=aff[[rg]], scope="rigid", symmetric=F, internal=FALSE)
+}
+
+regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(img))
+regimgi[which(is.na(regimgi)==T)] <- 0
+display(normalize(regimgi))
+
 
 # Run image registration using the initial angles
 regresi <- list()
