@@ -8,6 +8,8 @@ Mac: R and Xcode
 
 ImageJ https://imagej.nih.gov/ij/
 
+Set ImageJ (and Fiji if present) to save Tiff in Intel byte order from Edit -> Options -> Input/Output... 
+
 ## Installation
 The following commands will automatically install packages necessary for running FlyceptionR.
 

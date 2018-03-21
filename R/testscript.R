@@ -2,11 +2,11 @@ install.packages(c("devtools", "ggplot2", "RNiftyReg"))
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("BiocInstaller", "EBImage"))
 library(devtools)
-devtools::install_github("tkatsuki/Flyception2R")
-library(Flyception2R)
+devtools::install_github("tkatsuki/FlyceptionR")
+library(FlyceptionR)
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4"  # Don't forget the slash at the end
+dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
 prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy"       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
@@ -144,6 +144,8 @@ rm(avimgl)
 
 # Calculate head angles
 img <- readImage(paste0(dir, "/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy_fvmgl_fr_1-5.tif"))
+
+
 img <- gblur(img, 2)
 imgbw <- thresh(img, w=20, h=20, offset=0.1)
 display(imgbw)
