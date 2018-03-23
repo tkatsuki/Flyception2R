@@ -29,7 +29,6 @@ message(dir)
 output_prefix <- paste0(dir, prefix)
 fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
 fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
-fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
 arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
@@ -71,6 +70,7 @@ center <- align_cameras(source=fl2refcrop,
                         autopos=T)
 
 imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,
@@ -115,6 +115,8 @@ message(sprintf("Reading %s", fluo_view_tif_ch1))
 if(FOI!=F && length(FOI)==2){
   flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
   flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
+  flimg1 <- flip(flimg1) # flip images to match fly-view
+  flimg2 <- flip(flimg2) # flip images to match fly-view
   message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
   frid <- syncing$frid[FOI[1]:FOI[2]]
   frida <- syncing$frida[FOI[1]:FOI[2]]
@@ -143,19 +145,16 @@ EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1]
 rm(avimgl)
 
 # Calculate head angles
-img <- readImage(paste0(dir, "/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy_fvmgl_fr_1-5.tif"))
-
-
-img <- gblur(img, 2)
-imgbw <- thresh(img, w=20, h=20, offset=0.1)
-display(imgbw)
-imgbwlb <- bwlabel(imgbw)
+fvimglbl <- gblur(fvimgl/255, 2)
+fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.1)
+display(fvimglbw)
+fvimglbwseg <- bwlabel(fvimglbw)
 
 ang <- c()
 
-for (i in 1:dim(img)[3]){
-  
-  m <- computeFeatures.moment(imgbwlb[,,i])
+#for (i in 1:dim(fvimglbwseg)[3]){
+for (i in 1:100){
+  m <- computeFeatures.moment(fvimglbwseg[,,i])
   distmat <- dist(m[1:3,1:2])
   maxpair <- which(distmat == max(distmat))
   
@@ -217,44 +216,44 @@ for (i in 1:dim(img)[3]){
 
 # Build affine matrix for rotation
 aff <- list()
-for(a in 1:dim(img)[3]){
-  aff[[a]] <- buildAffine(angles=c(0,0, ang[a]), source=img[,,1], anchor="center")
+#for(a in 1:dim(img)[3]){
+for(a in 1:100){
+    aff[[a]] <- buildAffine(angles=c(0,0, ang[a]), source=fvimgl[,,1], anchor="center")
 }
 
-
-# Test calculated angles
-rot <- img
-for (r in 1:dim(img)[3]){
-  rot[,,r] <- as.Image(rotate(img[,,r], ang[r], anchor = c("center")))
+# Apply rotation compensation
+rot <- fvimgl
+#for (r in 1:dim(img)[3]){
+  for (r in 1:100){
+  rot[,,r] <- as.Image(rotate(fvimgl[,,r], ang[r], anchor = c("center")))
   }
 
-centermask <- drawCircle(matrix(0,dim(img)[1],dim(img)[2]), dim(img)[1]/2,
-                         dim(img)[2]/2, dim(img)[1]/2-1, col=1, fill=1)
+# Template matching
+centers <- array(0, dim=c(100,2))
 
-rotc <- ssweep(rot, centermask, "*")
-display(rotc)
-
-regresi <- list()
-if(cores==1){
-  for(rg in 1:dim(rotc)[3]){
-    regresi[[rg]] <- niftyreg(rotc[,,rg], rotc[,,1],
-                              init=aff[[rg]], scope="rigid", symmetric=F)
-  }
-}else{
-  regresi <- foreach(rg = 1:dim(fvimgli)[3]) %dopar% niftyreg(fvimgli[,,rg], fvimgrt1sti, init=aff[[rg]], scope="rigid", symmetric=F, internal=FALSE)
+for (c in 1:100){
+  centers[c,] <- align_cameras(source=rot[,,c],
+                           template=rot[,,1],
+                           output=output_prefix,
+                           center=c(0, 0),
+                           zoom=1,
+                           autopos=T)
 }
 
-regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(img))
-regimgi[which(is.na(regimgi)==T)] <- 0
-display(normalize(regimgi))
+# Apply translation compensation
+rottrans <- fvimgl
+for (tr in 1:100){
+  rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
+}
 
+EBImage::writeImage(rot/255, file=paste0(dir, prefix, "_rot.tif"))
 
 # Run image registration using the initial angles
 regresi <- list()
 if(cores==1){
   for(rg in 1:dim(img)[3]){
-    regresi[[rg]] <- niftyreg(img[,,rg], as.Image(initimg),
-                              init=aff[[rg]], scope="rigid", symmetric=F)
+    regresi[[rg]] <- niftyreg(rotc[,,rg], rotc[,,1],
+                              scope="rigid", symmetric=F)
   }
 }else{
   regresi <- foreach(rg = 1:dim(fvimgli)[3]) %dopar% niftyreg(fvimgli[,,rg], fvimgrt1sti, init=aff[[rg]], scope="rigid", symmetric=F, internal=FALSE)
@@ -267,11 +266,11 @@ for(rg in 1:dim(fvimgl)[3]){
                             scope="rigid", symmetric=F)
 }
 
-test <- niftyreg(fvimgl, fvimgl[,,1],
+test <- niftyreg(rot, rot[,,1],
          scope="rigid", symmetric=F, sequentialInit=T)
 
 regimgi <- test
-regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(img))
+regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(red))
 regimgi[which(is.na(regimgi)==T)] <- 0
 display(normalize(regimgi))
 

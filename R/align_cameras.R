@@ -12,8 +12,6 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
   # template image must always be smaller than source image
   # Manual position calibration with fly contour during flash
   if(autopos==F){
-    display(source)
-    display(template)
     fvrefrs <- EBImage::resize(template, dim(template)[1]*zoom)
     flrefpad <- fvrefrs*0
     if(dim(fvrefrs)[1] > dim(source)[1]){
@@ -28,15 +26,13 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
                            (round((dim(source)[2]-dim(fvrefrs)[2])/2)+dim(fvrefrs)[2]-1)]
     }
     flrefpadmv <- EBImage::translate(flrefpad, center)
-    display(flrefpadmv)
+    display(normalize(flrefpadmv))
     display(normalize(fvrefrs + flrefpadmv))
     writeImage(normalize(fvrefrs + flrefpadmv), file=paste0(output, "_aligned.png"))
     
   } else {
     # Automated position calibration using template matching
     message("Automatically aligning two cameras...")
-    display(source)
-    display(template)
     writeImage(source, file=paste0(output, "_source.png"))
     writeImage(template, file=paste0(output, "_template.png"))
     source_rs <- EBImage::resize(source, dim(source)[1]*zoom)
@@ -68,14 +64,13 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
       center <- c(centerx, centery)
       template_pad <- source_rs*0
       template_pad[round((dim(source_rs)[1]-dim(templatecrop)[1])/2):
-                 (round((dim(source_rs)[1]-dim(templatecrop)[1])/2)+dim(templatecrop)[1]-1),
-               round((dim(source_rs)[2]-dim(templatecrop)[2])/2):
-                 (round((dim(source_rs)[2]-dim(templatecrop)[2])/2)+dim(templatecrop)[2]-1)] <- templatecrop
+                     (round((dim(source_rs)[1]-dim(templatecrop)[1])/2)+dim(templatecrop)[1]-1),
+                   round((dim(source_rs)[2]-dim(templatecrop)[2])/2):
+                     (round((dim(source_rs)[2]-dim(templatecrop)[2])/2)+dim(templatecrop)[2]-1)] <- templatecrop
     }
     
     template_mv <- EBImage::translate(template_pad, center)
     writeImage(normalize(source_rs + template_mv), file=paste0(output, "_aligned.png"))
-   
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))
   return(center)
