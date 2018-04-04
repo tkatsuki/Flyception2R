@@ -11,7 +11,7 @@ prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy"       # Will be used as a filenam
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
-zoom <- 1             # Zoom ratio: fluo-view/fly-view
+zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
 FOI <- c(1000, 1200)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
@@ -72,6 +72,18 @@ center <- align_cameras(source=fl2refcrop,
 imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
 fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
+
+# Load fly-view camera images
+fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
+
+# Align fly-view and fluo-view
+center2 <- align_cameras(source=fvref,
+                        template=flip(fl1ref),
+                        output=output_prefix,
+                        center=c(0, 0),
+                        zoom=1.085,
+                        autopos=T)
+
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,
                        fluo_flash=fluo_flash,
@@ -129,15 +141,22 @@ if(FOI!=F && length(FOI)==2){
 # Green or red channel?
 flimg1int <- colMeans(flimg1, dim=2)
 if(flimg1int[1] < mean(flimg1int)){
-  green <- flimg1[,,seq(2, dim(flimg1)[3], 2)]
-  red <- flimg2[,,seq(1, dim(flimg2)[3], 2)]
+  greenfr <- seq(2, dim(flimg1)[3], 2)
+  redfr <- seq(1, dim(flimg2)[3], 2)
 } else {
-  green <- flimg1[,,seq(1, dim(flimg1)[3], 2)]
-  red <- flimg2[,,seq(2, dim(flimg2)[3], 2)]
+  greenfr <- seq(1, dim(flimg1)[3], 2)
+  redfr <- seq(2, dim(flimg2)[3], 2)
 }
+
+green <- flimg1[,,greenfr]
+red <- flimg2[,,redfr]
+
 
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
+
+# Apply resize and translation to align with fluo-view
+fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), center2)
 
 # Load arena-view camera images
 avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -147,6 +166,9 @@ rm(avimgl)
 # Calculate head angles
 fvimglbl <- gblur(fvimgl/255, 2)
 fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.1)
+centermask <- drawCircle(matrix(0,dim(fvimglbl)[1],dim(fvimglbl)[2]), dim(fvimglbl)[1]/2,
+                         dim(fvimglbl)[2]/2, dim(fvimglbl)[1]*2/5, col=1, fill=1)
+fvimglbw <- ssweep(fvimglbw, centermask, op="*")
 display(fvimglbw)
 fvimglbwseg <- bwlabel(fvimglbw)
 
@@ -246,42 +268,19 @@ for (tr in 1:100){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
 
-EBImage::writeImage(rot/255, file=paste0(dir, prefix, "_rot.tif"))
+EBImage::writeImage(rottrans[,,1:100]/255, file=paste0(dir, prefix, "_rottrans.tif"))
 
-# Run image registration using the initial angles
-regresi <- list()
-if(cores==1){
-  for(rg in 1:dim(img)[3]){
-    regresi[[rg]] <- niftyreg(rotc[,,rg], rotc[,,1],
-                              scope="rigid", symmetric=F)
-  }
-}else{
-  regresi <- foreach(rg = 1:dim(fvimgli)[3]) %dopar% niftyreg(fvimgli[,,rg], fvimgrt1sti, init=aff[[rg]], scope="rigid", symmetric=F, internal=FALSE)
+## Apply transformation functions to fluo-view images
+redrot <- red
+#for (r in 1:dim(img)[3]){
+for (rr in 1:50){
+  redrot[,,rr] <- as.Image(RNiftyReg::rotate(red[,,rr], ang[redfr[rr]], anchor = c("center")))
 }
 
-## Part 9. Image registration
-regresi <- list()
-for(rg in 1:dim(fvimgl)[3]){
-  regresi[[rg]] <- niftyreg(img[,,rg], img[,,1],
-                            scope="rigid", symmetric=F)
+redrottrans <- red
+for (trr in 1:50){
+  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[redfr[trr],])
 }
-
-test <- niftyreg(rot, rot[,,1],
-         scope="rigid", symmetric=F, sequentialInit=T)
-
-regimgi <- test
-regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(red))
-regimgi[which(is.na(regimgi)==T)] <- 0
-display(normalize(regimgi))
-
-registered_images <- register_images(fvimgl=fvimgl,
-                                     flimgrt=flimgrt,
-                                     fvimgbwbrfh=fvimgbwbrfh,
-                                     angles=trj_res$angles,
-                                     zoom=zoom,
-                                     center=center,
-                                     output=output_prefix,
-                                     reuse=reuse)
 
 ## Part 10. Look for good frames based on size, position, motion, and focus
 goodfr <- find_goodframes(window_mask=fvimgbwbrfh,
