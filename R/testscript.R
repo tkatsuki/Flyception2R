@@ -12,7 +12,7 @@ autopos <- T             # True if you want to align cameras automatically
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(1000, 1200)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(1400, 1800)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -150,13 +150,16 @@ if(flimg1int[1] < mean(flimg1int)){
 
 green <- flimg1[,,greenfr]
 red <- flimg2[,,redfr]
+EBImage::writeImage(green/1000, file=paste0(dir, prefix, "green.tif"))
+EBImage::writeImage(red/1000, file=paste0(dir, prefix, "red.tif"))
 
 
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 
 # Apply resize and translation to align with fluo-view
-fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), center2)
+#fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear", output.dim=dim(red)[1:2]), (-center2 - 10))
+fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
 
 # Load arena-view camera images
 avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -175,7 +178,7 @@ fvimglbwseg <- bwlabel(fvimglbw)
 ang <- c()
 
 #for (i in 1:dim(fvimglbwseg)[3]){
-for (i in 1:100){
+for (i in 1:220){
   m <- computeFeatures.moment(fvimglbwseg[,,i])
   distmat <- dist(m[1:3,1:2])
   maxpair <- which(distmat == max(distmat))
@@ -236,24 +239,17 @@ for (i in 1:100){
   ang[i] <- angle
 }
 
-# Build affine matrix for rotation
-aff <- list()
-#for(a in 1:dim(img)[3]){
-for(a in 1:100){
-    aff[[a]] <- buildAffine(angles=c(0,0, ang[a]), source=fvimgl[,,1], anchor="center")
-}
-
 # Apply rotation compensation
 rot <- fvimgl
 #for (r in 1:dim(img)[3]){
-  for (r in 1:100){
-  rot[,,r] <- as.Image(rotate(fvimgl[,,r], ang[r], anchor = c("center")))
+  for (r in 1:220){
+  rot[,,r] <- as.Image(RNiftyReg::rotate(fvimgl[,,r], ang[r], anchor = c("center")))
   }
 
 # Template matching
-centers <- array(0, dim=c(100,2))
+centers <- array(0, dim=c(220,2))
 
-for (c in 1:100){
+for (c in 1:220){
   centers[c,] <- align_cameras(source=rot[,,c],
                            template=rot[,,1],
                            output=output_prefix,
@@ -264,23 +260,43 @@ for (c in 1:100){
 
 # Apply translation compensation
 rottrans <- fvimgl
-for (tr in 1:100){
+for (tr in 1:220){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
 
-EBImage::writeImage(rottrans[,,1:100]/255, file=paste0(dir, prefix, "_rottrans.tif"))
+EBImage::writeImage(rottrans[,,1:220]/255, file=paste0(dir, prefix, "_rottrans.tif"))
+display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
 redrot <- red
 #for (r in 1:dim(img)[3]){
-for (rr in 1:50){
-  redrot[,,rr] <- as.Image(RNiftyReg::rotate(red[,,rr], ang[redfr[rr]], anchor = c("center")))
+for (rr in 2:110){
+  redrot[,,rr] <- as.Image(RNiftyReg::rotate(red[,,rr], ang[redfr[rr-1]], anchor = c("center")))
+}
+greenrot <- green
+#for (r in 1:dim(img)[3]){
+for (rg in 2:110){
+  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(green[,,rg], ang[greenfr[rg-1]], anchor = c("center")))
 }
 
+display(normalize(redrot))
+display(normalize(greenrot))
+
 redrottrans <- red
-for (trr in 1:50){
-  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[redfr[trr],])
+for (trr in 2:110){
+  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[redfr[trr-1],])
 }
+greenrottrans <- green
+for (trg in 2:110){
+  greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centers[greenfr[trg-1],])
+}
+
+display(normalize(redrottrans))
+display(normalize(greenrottrans))
+EBImage::writeImage(normalize(redrottrans[,,2:100]), file=paste0(dir, prefix, "_redrottrans.tif"))
+EBImage::writeImage(normalize(greenrottrans[,,2:100]), file=paste0(dir, prefix, "_greenrottrans.tif"))
+
+
 
 ## Part 10. Look for good frames based on size, position, motion, and focus
 goodfr <- find_goodframes(window_mask=fvimgbwbrfh,
