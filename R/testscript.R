@@ -251,24 +251,12 @@ for (i in 1:dim(fvimglbwseg)[3]){
 
 }
 
-# Apply rotation compensation
-rot <- fvimgl
-for (r in 1:dim(fvimgl)[3]){
-#  for (r in 1:220){
-  rot[,,r] <- as.Image(RNiftyReg::rotate(fvimgl[,,r], ang[r], anchor = c("center")))
-  }
-
-# Template matching
-centers <- array(0, dim=c(dim(fvimgl)[3],2))
-
-for (c in 1:dim(fvimgl)[3]){
-  centers[c,] <- align_cameras(source=rot[,,c],
-                           template=rot[,,1],
-                           output=output_prefix,
-                           center=c(0, 0),
-                           zoom=1,
-                           autopos=T)
-}
+angdiff <- c(0, diff(ang))
+angsum <- zoo::rollsumr(angdiff, 20)
+ang_thresh <- 0.02
+goodangfr <- which(angsum < ang_thresh & angsum > -ang_thresh)
+fvimglfr20 <- seq(1, dim(fvimgl)[3], by=19)
+goodangfr20 <- which(fvimglfr20 %in% goodangfr)
 
 
 objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
@@ -276,15 +264,31 @@ motion <- c(0, sqrt(diff(centroid[,1])^2 + diff(centroid[,2])^2))
 motionsum <- zoo::rollsumr(motion, 20)
 motion_thresh <- 20
 goodmotionfr <- which(motionsum < motion_thresh)
-fvimglfr20 <- seq(1, dim(fvimgl)[3], by=19)
 goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
-message(sprintf("The following frames have too large motion: %s", paste((1:length(motion))[-goodmotionfr], collapse=" ")))
 
-matplot(centers, type="l")
+goodfr20 <-  Reduce(intersect, list(goodmotionfr20, goodangfr20))
 
+# Apply rotation compensation
+rot <- fvimgl[,,fvimglfr20]
+for (r in 1:dim(rot)[3]){
+  #  for (r in 1:220){
+  rot[,,r] <- as.Image(RNiftyReg::rotate(fvimgl[,,fvimglfr20[r]], ang[fvimglfr20[r]], anchor = c("center")))
+}
+
+# Template matching
+centers <- array(0, dim=c(dim(rot)[3],2))
+
+for (c in 1:dim(rot)[3]){
+  centers[c,] <- align_cameras(source=rot[,,c],
+                               template=rot[,,1],
+                               output=output_prefix,
+                               center=c(0, 0),
+                               zoom=1,
+                               autopos=T)
+}
 # Apply translation compensation
-rottrans <- fvimgl
-for (tr in 1:dim(fvimgl)[3]){
+rottrans <- fvimgl[,,fvimglfr20]
+for (tr in 1:dim(rottrans)[3]){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
 
@@ -293,14 +297,14 @@ display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
 redrot <- flimg2
-for (rr in 1:dim(fvimgl)[3]){
+for (rr in 1:dim(redrot)[3]){
   #for (rr in 2:110){
-  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,rr], ang[rr], anchor = c("center")))
+  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,rr], ang[fvimglfr20[rr]], anchor = c("center")))
 }
 greenrot <- flimg1
-for (rg in 1:dim(fvimgl)[3]){
+for (rg in 1:dim(greenrot)[3]){
   #for (rg in 2:110){
-  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,rg], ang[rg], anchor = c("center")))
+  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,rg], ang[fvimglfr20[rg]], anchor = c("center")))
 }
 # 
 # redrot <- red
@@ -317,8 +321,8 @@ for (rg in 1:dim(fvimgl)[3]){
 display(normalize(redrot))
 display(normalize(greenrot))
 
-centerr <- array(0, dim=c(dim(fvimgl)[3],2))
-for (cr in 1:dim(fvimgl)[3]){
+centerr <- array(0, dim=c(dim(redrot)[3],2))
+for (cr in 1:dim(redrot)[3]){
   centerr[cr,] <- align_cameras(source=redrot[,,cr],
                                 template=redrot[,,1],
                                 output=output_prefix,
@@ -328,10 +332,10 @@ for (cr in 1:dim(fvimgl)[3]){
 }
 
 redrottrans <- flimg2
-for (trr in 1:dim(fvimgl)[3]){
-  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[trr,])
+for (trr in 1:dim(redrottrans)[3]){
+  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centerr[trr,])
 }
-display(normalize(redrottrans))
+display(normalize(redrottrans[,,goodmotionfr20]))
 
 greenrottrans <- flimg1
 for (trg in 1:dim(fvimgl)[3]){
