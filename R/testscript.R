@@ -167,9 +167,9 @@ fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filte
 fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
 
 # Load arena-view camera images
-avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
-EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
-rm(avimgl)
+#avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
+#EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
+#rm(avimgl)
 
 # Calculate head angles
 fvimglbl <- gblur(fvimgl/255, 2)
@@ -255,7 +255,7 @@ angdiff <- c(0, diff(ang))
 angsum <- zoo::rollsumr(angdiff, 20)
 ang_thresh <- 0.02
 goodangfr <- which(angsum < ang_thresh & angsum > -ang_thresh)
-fvimglfr20 <- seq(1, dim(fvimgl)[3], by=19)
+fvimglfr20 <- seq(1, dim(fvimgl)[3], by=20)
 goodangfr20 <- which(fvimglfr20 %in% goodangfr)
 
 
@@ -267,6 +267,7 @@ goodmotionfr <- which(motionsum < motion_thresh)
 goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
 
 goodfr20 <-  Reduce(intersect, list(goodmotionfr20, goodangfr20))
+
 
 # Apply rotation compensation
 rot <- fvimgl[,,fvimglfr20]
@@ -335,12 +336,61 @@ redrottrans <- flimg2
 for (trr in 1:dim(redrottrans)[3]){
   redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centerr[trr,])
 }
-display(normalize(redrottrans[,,goodmotionfr20]))
+display(normalize(redrottrans[,,goodfr20]))
 
 greenrottrans <- flimg1
-for (trg in 1:dim(fvimgl)[3]){
-  greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centers[trg,])
+for (trg in 1:dim(greenrottrans)[3]){
+  greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centerr[trg,])
 }
+
+# Segment neurons
+redwindow <- redrottrans[(dim(redrottrans)[1]/2-35):(dim(redrottrans)[1]/2+35),
+                         (dim(redrottrans)[2]/2-20):(dim(redrottrans)[2]/2+15),]
+greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2-35):(dim(greenrottrans)[1]/2+35),
+                         (dim(greenrottrans)[2]/2-20):(dim(greenrottrans)[2]/2+15),]
+
+display(normalize(redwindow[,,goodfr20]))
+redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
+greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
+display(normalize(redwindowmed[,,goodfr20]))
+redwindowmedth <- thresh(redwindowmed, w=10, h=10, offset=0.0003)
+display(redwindowmedth)
+
+redmasked <- redwindowmed*redwindowmedth
+greenmasked <- greenwindowmed*redwindowmedth
+greenperred <- greenmasked/redmasked
+greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
+plot(greenperredave[goodfr20])
+greenperred[which(is.na(greenperred)==T)] <- 0
+grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
+for(cfr in 1:dim(greenperred)[3]){
+  grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], 160, 250)
+}
+grratiocolor <- Image(grratiocolor, colormode="Color")
+display(grratiocolor[,,,goodfr20])
+
+rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
+rottransmask[(dim(rottrans)[1]/2-35):(dim(rottrans)[1]/2+35),
+              (dim(rottrans)[2]/2-20):(dim(rottrans)[2]/2+15),] <- redwindowmedth
+
+rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
+rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
+rottranscolor[,,2,] <- rottrans/255*(1-rottransmask)
+rottranscolor[,,3,] <- rottrans/255*(1-rottransmask)
+
+grratiocolorl <- rottranscolor*0
+grratiocolorl[(dim(grratiocolorl)[1]/2-35):(dim(grratiocolorl)[1]/2+35),
+                      (dim(grratiocolorl)[2]/2-20):(dim(grratiocolorl)[2]/2+15),,] <- grratiocolor
+flyviewcolor <- rottranscolor + grratiocolorl
+flyviewcolor <- Image(flyviewcolor, colormode="Color")
+display(flyviewcolor[,,,goodfr20])
+
+greencolor <- array(0, dim=c(dim(greenrottrans)[c(1,2)], 3, dim(greenrottrans)[3]))
+greencolor[,,1:3,] <- greenrottrans
+greencolor[(dim(greencolor)[1]/2-35):(dim(greencolor)[1]/2+35),
+              (dim(greencolor)[2]/2-20):(dim(greencolor)[2]/2+15),,] <- grratiocolor
+
+rottrans
 
 frgcombined <- array(dim=c(dim(fvimgl)[1]*3, dim(fvimgl)[2], dim(fvimgl)[3]))
 frgcombined[1:240,1:240,1:dim(fvimgl)[3]] <- rottrans
@@ -353,20 +403,6 @@ display(normalize(greenrottrans))
 EBImage::writeImage(redrottrans/2^16, file=paste0(dir, prefix, "_redrottrans.tif"))
 EBImage::writeImage(greenrottrans/2^16, file=paste0(dir, prefix, "_greenrottrans.tif"))
 EBImage::writeImage(frgcombined/2^16, file=paste0(dir, prefix, "_frgcombined.tif"))
-
-
-centermask <- drawCircle(matrix(0,dim(ratioimg)[1],dim(ratioimg)[2]), dim(ratioimg)[1]/2,
-                         dim(ratioimg)[2]/2, dim(ratioimg)[1]*2/5, col=1, fill=1)
-redregres <- list()
-for(redrg in 1:dim(ratioimg)[3]){
-  redregres[[redrg]] <- niftyreg(ratioimg[,,redrg], ratioimg[,,1],
-                                 scope="rigid", symmetric=F)
-}
-
-redregimg <- array(sapply(redregres, function(x) x$image), dim=dim(ratioimg))
-redregimg[which(is.na(redregimg)==T)] <- 0
-display(normalize(redregimg))
-writeImage((255-regimgi)/255, file=paste0(output, "_regimgi.tif"))
 
 
 ## Part 10. Look for good frames based on size, position, motion, and focus
