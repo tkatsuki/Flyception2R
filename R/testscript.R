@@ -265,14 +265,12 @@ motionsum <- zoo::rollsumr(motion, 20)
 motion_thresh <- 20
 goodmotionfr <- which(motionsum < motion_thresh)
 goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
-
 goodfr20 <-  Reduce(intersect, list(goodmotionfr20, goodangfr20))
 
 
 # Apply rotation compensation
 rot <- fvimgl[,,fvimglfr20]
 for (r in 1:dim(rot)[3]){
-  #  for (r in 1:220){
   rot[,,r] <- as.Image(RNiftyReg::rotate(fvimgl[,,fvimglfr20[r]], ang[fvimglfr20[r]], anchor = c("center")))
 }
 
@@ -299,25 +297,12 @@ display(normalize(rottrans))
 ## Apply transformation functions to fluo-view images
 redrot <- flimg2
 for (rr in 1:dim(redrot)[3]){
-  #for (rr in 2:110){
   redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,rr], ang[fvimglfr20[rr]], anchor = c("center")))
 }
 greenrot <- flimg1
 for (rg in 1:dim(greenrot)[3]){
-  #for (rg in 2:110){
   greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,rg], ang[fvimglfr20[rg]], anchor = c("center")))
 }
-# 
-# redrot <- red
-# for (rr in 2:dim(fvimgl)[3]){
-# #for (rr in 2:110){
-#   redrot[,,rr] <- as.Image(RNiftyReg::rotate(red[,,rr], ang[redfr[rr-1]], anchor = c("center")))
-# }
-# greenrot <- green
-# for (rg in 2:dim(fvimgl)[3]){
-# #for (rg in 2:110){
-#   greenrot[,,rg] <- as.Image(RNiftyReg::rotate(green[,,rg], ang[greenfr[rg-1]], anchor = c("center")))
-# }
 
 display(normalize(redrot))
 display(normalize(greenrot))
@@ -356,6 +341,7 @@ display(normalize(redwindowmed[,,goodfr20]))
 redwindowmedth <- thresh(redwindowmed, w=10, h=10, offset=0.0003)
 display(redwindowmedth)
 
+# F_ratio image
 redmasked <- redwindowmed*redwindowmedth
 greenmasked <- greenwindowmed*redwindowmedth
 greenperred <- greenmasked/redmasked
@@ -369,6 +355,7 @@ for(cfr in 1:dim(greenperred)[3]){
 grratiocolor <- Image(grratiocolor, colormode="Color")
 display(grratiocolor[,,,goodfr20])
 
+# Overlay fly_view and F_ratio image
 rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
 rottransmask[(dim(rottrans)[1]/2-35):(dim(rottrans)[1]/2+35),
               (dim(rottrans)[2]/2-20):(dim(rottrans)[2]/2+15),] <- redwindowmedth
@@ -385,24 +372,35 @@ flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
 display(flyviewcolor[,,,goodfr20])
 
-greencolor <- array(0, dim=c(dim(greenrottrans)[c(1,2)], 3, dim(greenrottrans)[3]))
-greencolor[,,1:3,] <- greenrottrans
-greencolor[(dim(greencolor)[1]/2-35):(dim(greencolor)[1]/2+35),
-              (dim(greencolor)[2]/2-20):(dim(greencolor)[2]/2+15),,] <- grratiocolor
+# overlay green channel and F_ratio color image
+greenrottranscol <- array(0, dim=c(dim(greenrottrans)[c(1,2)], 3, dim(greenrottrans)[3]))
+greenrottranscol[,,1,] <- greenrottrans/2^16*(1-rottransmask)
+greenrottranscol[,,2,] <- greenrottrans/2^16*(1-rottransmask)
+greenrottranscol[,,3,] <- greenrottrans/2^16*(1-rottransmask)
+greenrottranscol <- normalize(greenrottranscol, separate=F)
+greencolor <- greenrottranscol + grratiocolorl
+greencolor <- Image(greencolor, colormode="Color")
+display(greencolor[,,,goodfr20])
+EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
 
-rottrans
+# Create side-by-side view of fly_view and fluo_view images
+frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
+frgcombined[1:240,1:240,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+frgcombined[1:240,1:240,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+frgcombined[1:240,1:240,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+frgcombined[241:480,1:240,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
+frgcombined[241:480,1:240,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
+frgcombined[241:480,1:240,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
+frgcombined[481:720,1:240,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
+frgcombined[481:720,1:240,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
+frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
+frgcombined[721:960,1:240,,1:dim(greenrottrans)[3]] <- greencolor
+frgcombined <-  Image(frgcombined, colormode="Color")
 
-frgcombined <- array(dim=c(dim(fvimgl)[1]*3, dim(fvimgl)[2], dim(fvimgl)[3]))
-frgcombined[1:240,1:240,1:dim(fvimgl)[3]] <- rottrans
-frgcombined[241:480,1:240,1:dim(fvimgl)[3]] <- greenrottrans
-frgcombined[481:720,1:240,1:dim(fvimgl)[3]] <- redrottrans
-display(normalize(frgcombined))
-  
-display(normalize(redrottrans))
-display(normalize(greenrottrans))
+display(frgcombined[,,,goodfr20])
 EBImage::writeImage(redrottrans/2^16, file=paste0(dir, prefix, "_redrottrans.tif"))
 EBImage::writeImage(greenrottrans/2^16, file=paste0(dir, prefix, "_greenrottrans.tif"))
-EBImage::writeImage(frgcombined/2^16, file=paste0(dir, prefix, "_frgcombined.tif"))
+EBImage::writeImage(frgcombined[,,,goodfr20], file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
 
 
 ## Part 10. Look for good frames based on size, position, motion, and focus
