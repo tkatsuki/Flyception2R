@@ -364,10 +364,10 @@ redwindow <- redrottrans[(dim(redrottrans)[1]/2-35):(dim(redrottrans)[1]/2+35),
 greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2-35):(dim(greenrottrans)[1]/2+35),
                          (dim(greenrottrans)[2]/2-20):(dim(greenrottrans)[2]/2+15),]
 
-display(normalize(redwindow[,,goodfr20]))
+display(normalize(redwindow))
 redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
 greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
-display(normalize(redwindowmed[,,goodfr20]))
+display(normalize(redwindowmed))
 redwindowmedth <- thresh(redwindowmed, w=10, h=10, offset=0.0003)
 display(redwindowmedth)
 
@@ -376,14 +376,14 @@ redmasked <- redwindowmed*redwindowmedth
 greenmasked <- greenwindowmed*redwindowmedth
 greenperred <- greenmasked/redmasked
 greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
-plot(greenperredave[goodfr20])
+plot(greenperredave)
 greenperred[which(is.na(greenperred)==T)] <- 0
 grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
 for(cfr in 1:dim(greenperred)[3]){
   grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], 160, 250)
 }
 grratiocolor <- Image(grratiocolor, colormode="Color")
-display(grratiocolor[,,,goodfr20])
+display(grratiocolor)
 
 # Overlay fly_view and F_ratio image
 rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
@@ -400,7 +400,7 @@ grratiocolorl[(dim(grratiocolorl)[1]/2-35):(dim(grratiocolorl)[1]/2+35),
                       (dim(grratiocolorl)[2]/2-20):(dim(grratiocolorl)[2]/2+15),,] <- grratiocolor
 flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
-display(flyviewcolor[,,,goodfr20])
+display(flyviewcolor)
 
 # overlay green channel and F_ratio color image
 greenrottranscol <- array(0, dim=c(dim(greenrottrans)[c(1,2)], 3, dim(greenrottrans)[3]))
@@ -410,7 +410,7 @@ greenrottranscol[,,3,] <- greenrottrans/2^16*(1-rottransmask)
 greenrottranscol <- normalize(greenrottranscol, separate=F)
 greencolor <- greenrottranscol + grratiocolorl
 greencolor <- Image(greencolor, colormode="Color")
-display(greencolor[,,,goodfr20])
+display(greencolor)
 
 # Create side-by-side view of fly_view and fluo_view images
 frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
@@ -426,7 +426,7 @@ frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans,
 frgcombined[721:960,1:240,,1:dim(greenrottrans)[3]] <- greencolor
 frgcombined <-  Image(frgcombined, colormode="Color")
 
-display(frgcombined[,,,goodfr20])
+display(frgcombined)
 EBImage::writeImage(redrottrans/2^16, file=paste0(dir, prefix, "_redrottrans.tif"))
 EBImage::writeImage(greenrottrans/2^16, file=paste0(dir, prefix, "_greenrottrans.tif"))
-EBImage::writeImage(frgcombined[,,,goodfr20], file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
+EBImage::writeImage(frgcombined, file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
