@@ -14,7 +14,7 @@ autopos <- T             # True if you want to align cameras automatically
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(250, 350)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(200, 300)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -140,21 +140,21 @@ if(FOI!=F && length(FOI)==2){
   frida <- syncing$frida
 }
 
-# Green or red channel?
-flimg1int <- colMeans(flimg1, dim=2)
-if(flimg1int[1] < mean(flimg1int)){
-  greenfr <- seq(2, dim(flimg1)[3], 2)
-  redfr <- seq(1, dim(flimg2)[3], 2)
-} else {
-  greenfr <- seq(1, dim(flimg1)[3], 2)
-  redfr <- seq(2, dim(flimg2)[3], 2)
-}
-
-green <- flimg1[,,greenfr]
-red <- flimg2[,,redfr]
-
-EBImage::writeImage(green/1000, file=paste0(dir, prefix, "green.tif"))
-EBImage::writeImage(red/1000, file=paste0(dir, prefix, "red.tif"))
+# # Green or red channel?
+# flimg1int <- colMeans(flimg1, dim=2)
+# if(flimg1int[1] < mean(flimg1int)){
+#   greenfr <- seq(2, dim(flimg1)[3], 2)
+#   redfr <- seq(1, dim(flimg2)[3], 2)
+# } else {
+#   greenfr <- seq(1, dim(flimg1)[3], 2)
+#   redfr <- seq(2, dim(flimg2)[3], 2)
+# }
+# 
+# green <- flimg1[,,greenfr]
+# red <- flimg2[,,redfr]
+# 
+# EBImage::writeImage(green/1000, file=paste0(dir, prefix, "green.tif"))
+# EBImage::writeImage(red/1000, file=paste0(dir, prefix, "red.tif"))
 
 
 # Load fly-view camera images
@@ -177,15 +177,21 @@ fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.1)
 centermask <- drawCircle(matrix(0,dim(fvimglbl)[1],dim(fvimglbl)[2]), dim(fvimglbl)[1]/2,
                          dim(fvimglbl)[2]/2, dim(fvimglbl)[1]*2/5, col=1, fill=1)
 fvimglbw <- ssweep(fvimglbw, centermask, op="*")
-#display(fvimglbw)
 fvimglbwseg <- bwlabel(fvimglbw)
+
+ftrs <- list()
+for (i in 1:dim(fvimglbwseg)[3]){
+  ftrs[[i]] <- computeFeatures.moment(fvimglbwseg[,,i])
+}
 
 ang <- c()
 centroid <- array(0, dim=c(dim(fvimgl)[3],2))
+markernum <- c()
+for (im in 1:dim(fvimglbwseg)[3]){
+  m <- ftrs[[im]]
+  markernum[im] <- nrow(m)
   
-for (i in 1:dim(fvimglbwseg)[3]){
-  m <- computeFeatures.moment(fvimglbwseg[,,i])
-  if(nrow(m)==3){
+  if(markernum[im]==3){
     distmat <- dist(m[1:3,1:2])
     maxpair <- which(distmat == max(distmat))
     centroid[i,] <- colMeans(m[,1:2])
@@ -243,12 +249,13 @@ for (i in 1:dim(fvimglbwseg)[3]){
         }
       }
     }
-    ang[i] <- angle 
+    ang[im] <- angle 
   }
-  # if(){
-  #   
-  # }
-
+  
+  if(markernum[im]!=3){
+  centroid[im,] <- centroid[im-1,]
+  ang[im] <- ang[im-1]
+  }
 }
 
 angdiff <- c(0, diff(ang))
@@ -257,6 +264,8 @@ ang_thresh <- 0.02
 goodangfr <- which(angsum < ang_thresh & angsum > -ang_thresh)
 fvimglfr20 <- seq(1, dim(fvimgl)[3], by=20)
 goodangfr20 <- which(fvimglfr20 %in% goodangfr)
+goodmarkerfr <- which(markernum == 3) 
+goodmarkerfr20 <- which(fvimglfr20 %in% goodmarkerfr)
 
 
 objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
@@ -265,13 +274,21 @@ motionsum <- zoo::rollsumr(motion, 20)
 motion_thresh <- 20
 goodmotionfr <- which(motionsum < motion_thresh)
 goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
-goodfr20 <-  Reduce(intersect, list(goodmotionfr20, goodangfr20))
+
+LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
+flimg2log <- EBImage::filter2(flimg2, LoGkern)
+centermask <- EBImage::drawCircle(flimg2[,,1]*0, dim(flimg2)[1]/2, dim(flimg2)[2]/2, 100, col=1, fill=T)
+flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
+quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
+goodfocusfr <- which(quantcnt > 1100)
+goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20, goodfocusfr))
 
 
 # Apply rotation compensation
-rot <- fvimgl[,,fvimglfr20]
+rot <- fvimgl[,,fvimglfr20[goodfr20]]
 for (r in 1:dim(rot)[3]){
-  rot[,,r] <- as.Image(RNiftyReg::rotate(fvimgl[,,fvimglfr20[r]], ang[fvimglfr20[r]], anchor = c("center")))
+  rot[,,r] <- RNiftyReg::rotate(fvimgl[,,fvimglfr20[goodfr20[r]]], ang[fvimglfr20[goodfr20[r]]], anchor = c("center"))
+
 }
 
 # Template matching
@@ -286,7 +303,7 @@ for (c in 1:dim(rot)[3]){
                                autopos=T)
 }
 # Apply translation compensation
-rottrans <- fvimgl[,,fvimglfr20]
+rottrans <- fvimgl[,,fvimglfr20[goodfr20]]
 for (tr in 1:dim(rottrans)[3]){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
@@ -295,17 +312,30 @@ EBImage::writeImage(rottrans/255, file=paste0(dir, prefix, "_rottrans.tif"))
 display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
-redrot <- flimg2
+redrot <- flimg2[,,goodfr20]
 for (rr in 1:dim(redrot)[3]){
-  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,rr], ang[fvimglfr20[rr]], anchor = c("center")))
+  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr20[rr]], ang[fvimglfr20[goodfr20[rr]]], anchor = c("center")))
 }
-greenrot <- flimg1
+greenrot <- flimg1[,,goodfr20]
 for (rg in 1:dim(greenrot)[3]){
-  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,rg], ang[fvimglfr20[rg]], anchor = c("center")))
+  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr20[rg]], ang[fvimglfr20[goodfr20[rg]]], anchor = c("center")))
 }
 
 display(normalize(redrot))
 display(normalize(greenrot))
+
+# Run image registration using the initial angles
+# centermask <- drawCircle(matrix(0,dim(redrot)[1],dim(redrot)[2]), dim(redrot)[1]/2,
+#                          dim(redrot)[2]/2, dim(redrot)[1]/5*2, col=1, fill=1)
+# regresi <- list()
+# for(rg in 1:dim(redrot)[3]){
+#     regresi[[rg]] <- niftyreg(redrot[,,rg], redrot[,,1], scope="rigid", targetMask = centermask, symmetric=F)
+# }
+# 
+# regimgi <- array(sapply(regresi, function(x) x$image), dim=dim(redrot))
+# regimgi[which(is.na(regimgi)==T)] <- 0
+# display(normalize(regimgi))
+
 
 centerr <- array(0, dim=c(dim(redrot)[3],2))
 for (cr in 1:dim(redrot)[3]){
@@ -317,13 +347,13 @@ for (cr in 1:dim(redrot)[3]){
                                 autopos=T)
 }
 
-redrottrans <- flimg2
+redrottrans <- redrot
 for (trr in 1:dim(redrottrans)[3]){
   redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centerr[trr,])
 }
-display(normalize(redrottrans[,,goodfr20]))
+display(normalize(redrottrans))
 
-greenrottrans <- flimg1
+greenrottrans <- greenrot
 for (trg in 1:dim(greenrottrans)[3]){
   greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centerr[trg,])
 }
@@ -381,7 +411,6 @@ greenrottranscol <- normalize(greenrottranscol, separate=F)
 greencolor <- greenrottranscol + grratiocolorl
 greencolor <- Image(greencolor, colormode="Color")
 display(greencolor[,,,goodfr20])
-EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
 
 # Create side-by-side view of fly_view and fluo_view images
 frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
@@ -401,10 +430,3 @@ display(frgcombined[,,,goodfr20])
 EBImage::writeImage(redrottrans/2^16, file=paste0(dir, prefix, "_redrottrans.tif"))
 EBImage::writeImage(greenrottrans/2^16, file=paste0(dir, prefix, "_greenrottrans.tif"))
 EBImage::writeImage(frgcombined[,,,goodfr20], file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
-
-
-## Part 10. Look for good frames based on size, position, motion, and focus
-goodfr <- find_goodframes(window_mask=fvimgbwbrfh,
-                          fvimgl=fvimgl,
-                          output=output_prefix,
-                          reuse=reuse)
