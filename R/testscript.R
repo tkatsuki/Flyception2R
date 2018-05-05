@@ -1,8 +1,8 @@
-install.packages(c("devtools", "ggplot2", "RNiftyReg"))
-source("https://bioconductor.org/biocLite.R")
-biocLite(c("BiocInstaller", "EBImage"))
-library(devtools)
-devtools::install_github("tkatsuki/FlyceptionR")
+#install.packages(c("devtools", "ggplot2", "RNiftyReg"))
+#source("https://bioconductor.org/biocLite.R")
+#biocLite(c("BiocInstaller", "EBImage"))
+#library(devtools)
+#devtools::install_github("tkatsuki/FlyceptionR")
 library(FlyceptionR)
 library(zoo)
 
@@ -14,7 +14,7 @@ autopos <- T             # True if you want to align cameras automatically
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(200, 300)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(100, 200)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -35,7 +35,7 @@ arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
 
 ## First crop the fluo-view image with one ROI and find the flash frame
-imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+#imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
 fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
 
 message("Detecting flash in fluo-view")
@@ -71,7 +71,7 @@ center <- align_cameras(source=fl2refcrop,
                         zoom=1,
                         autopos=T)
 
-imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+#imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
 fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
 
