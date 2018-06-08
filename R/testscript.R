@@ -8,13 +8,14 @@ library(zoo)
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
+#dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
+dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy"       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(100, 200)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(2467, 2567)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -282,6 +283,7 @@ flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
 quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
 goodfocusfr <- which(quantcnt > 1100)
 goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20, goodfocusfr))
+goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20))
 
 
 # Apply rotation compensation
