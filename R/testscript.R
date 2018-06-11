@@ -9,13 +9,14 @@ library(zoo)
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
-prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy"       # Will be used as a filename prefix
+#dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
+dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
+prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_5"       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(2467, 2567)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(2438, 2793)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -67,7 +68,7 @@ fl2refcrop <- fl2ref[1025:2048,1:256] # Split the original image into two halves
 
 center <- align_cameras(source=fl2refcrop,
                         template=fl1ref,
-                        output=output_prefix,
+                        output=paste0(output_prefix, "_fl2fl1"),
                         center=c(0, 0),
                         zoom=1,
                         autopos=T)
@@ -80,9 +81,9 @@ fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.con
 fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
 
 # Align fly-view and fluo-view
-center2 <- align_cameras(source=fvref,
+center2 <- align_cameras(source=fvref/255,
                         template=flip(fl1ref),
-                        output=output_prefix,
+                        output=paste0(output_prefix, "_fvfl1"),
                         center=c(0, 0),
                         zoom=1.085,
                         autopos=T)
@@ -166,6 +167,7 @@ fvimgl <- dipr::readFMF(fly_view_fmf, frames=seq(frid[1], frid[length(frid)], by
 #fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear", output.dim=dim(red)[1:2]), (-center2 - 10))
 fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), c(0, -4))
 fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
+#EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_fvimgl.tif"))
 
 # Load arena-view camera images
 #avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -175,8 +177,9 @@ fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
 # Calculate head angles
 fvimglbl <- gblur(fvimgl/255, 2)
 fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.1)
-centermask <- drawCircle(matrix(0,dim(fvimglbl)[1],dim(fvimglbl)[2]), dim(fvimglbl)[1]/2,
-                         dim(fvimglbl)[2]/2, dim(fvimglbl)[1]*2/5, col=1, fill=1)
+rm(fvimglbl)
+centermask <- drawCircle(matrix(0,dim(fvimglbw)[1],dim(fvimglbw)[2]), dim(fvimglbw)[1]/2,
+                         dim(fvimglbw)[2]/2, dim(fvimglbw)[1]*2/5, col=1, fill=1)
 fvimglbw <- ssweep(fvimglbw, centermask, op="*")
 fvimglbwseg <- bwlabel(fvimglbw)
 
@@ -186,7 +189,7 @@ for (i in 1:dim(fvimglbwseg)[3]){
 }
 
 ang <- c()
-centroid <- array(0, dim=c(dim(fvimgl)[3],2))
+centroid <- array(0, dim=c(dim(fvimglbwseg)[3],2))
 markernum <- c()
 for (im in 1:dim(fvimglbwseg)[3]){
   m <- ftrs[[im]]
