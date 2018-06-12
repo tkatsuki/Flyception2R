@@ -5,6 +5,8 @@
 #devtools::install_github("tkatsuki/FlyceptionR")
 library(FlyceptionR)
 library(zoo)
+source("~/Flyception2R/R/align_cameras.R")
+source("~/Flyception2R/R/imageJ_crop_append.R")
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
@@ -82,11 +84,11 @@ fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
 
 # Align fly-view and fluo-view
 center2 <- align_cameras(source=fvref/255,
-                        template=flip(fl1ref),
-                        output=paste0(output_prefix, "_fvfl1"),
-                        center=c(0, 0),
-                        zoom=1.085,
-                        autopos=T)
+                         template=flip(fl1ref),
+                         output=paste0(output_prefix, "_fvfl1"),
+                         center=c(0, 0),
+                         zoom=1.085,
+                         autopos=T)
 
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,
@@ -161,7 +163,7 @@ if(FOI!=F && length(FOI)==2){
 
 # Load fly-view camera images
 #fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
-fvimgl <- dipr::readFMF(fly_view_fmf, frames=seq(frid[1], frid[length(frid)], by=1))
+fvimgl <- dipr::readFMF(fly_view_fmf, frames=seq(frid[1], frid[length(frid)]+20, by=1))
 
 # Apply resize and translation to align with fluo-view
 #fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear", output.dim=dim(red)[1:2]), (-center2 - 10))
@@ -176,7 +178,7 @@ fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
 
 # Calculate head angles
 fvimglbl <- gblur(fvimgl/255, 2)
-fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.1)
+fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.2)
 rm(fvimglbl)
 centermask <- drawCircle(matrix(0,dim(fvimglbw)[1],dim(fvimglbw)[2]), dim(fvimglbw)[1]/2,
                          dim(fvimglbw)[2]/2, dim(fvimglbw)[1]*2/5, col=1, fill=1)
@@ -198,8 +200,8 @@ for (im in 1:dim(fvimglbwseg)[3]){
   if(markernum[im]==3){
     distmat <- dist(m[1:3,1:2])
     maxpair <- which(distmat == max(distmat))
-    centroid[i,] <- colMeans(m[,1:2])
-      
+    centroid[im,] <- colMeans(m[,1:2])
+    
     if(maxpair == 1){ # pair 1-2
       angle <- atan((m[2,2] - m[1,2])/(m[2,1] - m[1,1]))
       if (angle < 0){
@@ -257,8 +259,9 @@ for (im in 1:dim(fvimglbwseg)[3]){
   }
   
   if(markernum[im]!=3){
-  centroid[im,] <- centroid[im-1,]
-  ang[im] <- ang[im-1]
+    print(paste0("Less or more than 3 beads detected in the ", im, "th frame."))
+    centroid[im,] <- centroid[im-1,]
+    ang[im] <- ang[im-1]
   }
 }
 
@@ -271,11 +274,10 @@ goodangfr20 <- which(fvimglfr20 %in% goodangfr)
 goodmarkerfr <- which(markernum == 3) 
 goodmarkerfr20 <- which(fvimglfr20 %in% goodmarkerfr)
 
-
 objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
 motion <- c(0, sqrt(diff(centroid[,1])^2 + diff(centroid[,2])^2))
 motionsum <- zoo::rollsumr(motion, 20)
-motion_thresh <- 20
+motion_thresh <- 10
 goodmotionfr <- which(motionsum < motion_thresh)
 goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
 
@@ -293,7 +295,7 @@ goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20)
 rot <- fvimgl[,,fvimglfr20[goodfr20]]
 for (r in 1:dim(rot)[3]){
   rot[,,r] <- RNiftyReg::rotate(fvimgl[,,fvimglfr20[goodfr20[r]]], ang[fvimglfr20[goodfr20[r]]], anchor = c("center"))
-
+  
 }
 
 # Template matching
@@ -354,20 +356,20 @@ for (cr in 1:dim(redrot)[3]){
 
 redrottrans <- redrot
 for (trr in 1:dim(redrottrans)[3]){
-  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centerr[trr,])
+  redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[trr,])
 }
 display(normalize(redrottrans))
 
 greenrottrans <- greenrot
 for (trg in 1:dim(greenrottrans)[3]){
-  greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centerr[trg,])
+  greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centers[trg,])
 }
 
 # Segment neurons
 redwindow <- redrottrans[(dim(redrottrans)[1]/2-35):(dim(redrottrans)[1]/2+35),
                          (dim(redrottrans)[2]/2-20):(dim(redrottrans)[2]/2+15),]
 greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2-35):(dim(greenrottrans)[1]/2+35),
-                         (dim(greenrottrans)[2]/2-20):(dim(greenrottrans)[2]/2+15),]
+                             (dim(greenrottrans)[2]/2-20):(dim(greenrottrans)[2]/2+15),]
 
 display(normalize(redwindow))
 redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
@@ -393,7 +395,7 @@ display(grratiocolor)
 # Overlay fly_view and F_ratio image
 rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
 rottransmask[(dim(rottrans)[1]/2-35):(dim(rottrans)[1]/2+35),
-              (dim(rottrans)[2]/2-20):(dim(rottrans)[2]/2+15),] <- redwindowmedth
+             (dim(rottrans)[2]/2-20):(dim(rottrans)[2]/2+15),] <- redwindowmedth
 
 rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
 rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
@@ -402,7 +404,7 @@ rottranscolor[,,3,] <- rottrans/255*(1-rottransmask)
 
 grratiocolorl <- rottranscolor*0
 grratiocolorl[(dim(grratiocolorl)[1]/2-35):(dim(grratiocolorl)[1]/2+35),
-                      (dim(grratiocolorl)[2]/2-20):(dim(grratiocolorl)[2]/2+15),,] <- grratiocolor
+              (dim(grratiocolorl)[2]/2-20):(dim(grratiocolorl)[2]/2+15),,] <- grratiocolor
 flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
 display(flyviewcolor)
