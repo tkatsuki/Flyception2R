@@ -25,15 +25,22 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   elapsedtimefl <- as.numeric(substr(elapsedtimefl, 1, nchar(elapsedtimefl)-1))
   fpsfl <- round(length(elapsedtimefl)/tail(elapsedtimefl, n=1)*1000)
   message(paste("fluo-view fps:", fpsfl))
-  elapsedtime <- elapsedtimefl - elapsedtimefl[fluo_flash$fvflashes[1]]
-
+  elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]]
+  elapsedtimediff <- diff(elapsedtimefl)
+  plot(1:length(elapsedtimediff), elapsedtimediff)
+  timestampfl <- metadata[grep("TimeStampMsec", metadata)+2]
+  timestampfl <- as.numeric(substr(timestampfl, 1, nchar(timestampfl)))
+  timestampfl <- timestampfl - timestampfl[fluo_flash$flflashes[1]]
+  timestampfldiff <- diff(timestampfl)
+  plot(1:length(timestampfldiff), timestampfldiff)
+  
   # Elapsed time (in ms) of each frame from the fly view camera
   timestampusec <- as.numeric(log[grep("TimeStamp", log)+1])
   elapsedtimefv <- (timestampusec - timestampusec[1])/1000
-  elapsedtimefvflash <- elapsedtimefv - elapsedtimefv[fly_flash$fvflashes[1]]
+  elapsedtimefv <- elapsedtimefv - elapsedtimefv[fly_flash$fvflashes[1]]
   fpsfv <- round(length(elapsedtimefv)/((tail(elapsedtimefv, n=1) - elapsedtimefv[1])/1000))
   message(paste("fly-view fps:", fpsfv))
-  framediff <- diff(elapsedtimefvflash)
+  framediff <- diff(elapsedtimefv)
 
   # Elapsed time (in ms) of each frame from the arenaview camera
   avtimestampcyclesec <- avlog[grep("TimeStamp", avlog)+1]
@@ -64,6 +71,12 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     # Hypothetical trigger
     frid <- seq(fly_flash$fvflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio,
                 fly_flash$fvflashes[1]+frameratio*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio)
+    
+    # Find matching and nearest frames to the hypothetical trigger
+    frid2 <- match(timestampfl, elapsedtimefv)
+    frid2[which(is.na(frid2))] <- sapply(timestampfl[which(is.na(frid2))], function(x) which.min(abs(elapsedtimefv-x)))
+    frid <- frid2
+    
     # Check if two flashes match
     fvflashesfrid <- frid[fluo_flash$flflashes]
     message(sprintf("Hypothetical flash for fly-view: %s", paste(fvflashesfrid, collapse=" ")))

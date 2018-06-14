@@ -7,6 +7,7 @@ library(FlyceptionR)
 library(zoo)
 source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
+source("~/Flyception2R/R/sync_frames.R")
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
@@ -97,6 +98,17 @@ syncing <- sync_frames(dir=dir,
                        arena_flash=arena_flash,
                        output=output_prefix,
                        reuse=reuse)
+flimgtest <- dipr::readTIFF2(fluo_view_tif_ch2, start=1, end=1)
+fvimgltest <- dipr::readFMF(fly_view_fmf, frames=syncing$frid[1])
+
+display(fvimgltest/255)
+display(normalize(flimgtest)*5)
+
+flimgtest2 <- EBImage::flip(dipr::readTIFF2(fluo_view_tif_ch2, start=517, end=527))
+fvimgltest2 <- dipr::readFMF(fly_view_fmf, frames=syncing$frid[517:527])
+
+display(fvimgltest2/255)
+display(normalize(flimgtest2)*5)
 
 ## Part 3. Analyze trajectories
 trj_res <- analyze_trajectories(dir=dir,
