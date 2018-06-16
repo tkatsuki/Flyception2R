@@ -27,12 +27,16 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   message(paste("fluo-view fps:", fpsfl))
   elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]]
   elapsedtimediff <- diff(elapsedtimefl)
+  png(file=paste0(output, "_elapsedtimefldiff.png"), width=400, height=400)
   plot(1:length(elapsedtimediff), elapsedtimediff)
+  dev.off()
   timestampfl <- metadata[grep("TimeStampMsec", metadata)+2]
   timestampfl <- as.numeric(substr(timestampfl, 1, nchar(timestampfl)))
   timestampfl <- timestampfl - timestampfl[fluo_flash$flflashes[1]]
   timestampfldiff <- diff(timestampfl)
-  plot(1:length(timestampfldiff), timestampfldiff)
+  png(file=paste0(output, "_timestampfldiff.png"), width=400, height=400)
+  plot(timestampfldiff)
+  dev.off()
   
   # Elapsed time (in ms) of each frame from the fly view camera
   timestampusec <- as.numeric(log[grep("TimeStamp", log)+1])
@@ -69,13 +73,12 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     frameratio <- round(fpsfv/fpsfl)
     message(paste0("fv/fl frame ratio: ", frameratio))
     # Hypothetical trigger
-    frid <- seq(fly_flash$fvflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio,
-                fly_flash$fvflashes[1]+frameratio*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio)
-    
+    # frid <- seq(fly_flash$fvflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio,
+    #             fly_flash$fvflashes[1]+frameratio*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio)
+    # 
     # Find matching and nearest frames to the hypothetical trigger
-    frid2 <- match(timestampfl, elapsedtimefv)
-    frid2[which(is.na(frid2))] <- sapply(timestampfl[which(is.na(frid2))], function(x) which.min(abs(elapsedtimefv-x)))
-    frid <- frid2
+    frid <- match(timestampfl, elapsedtimefv)
+    frid[which(is.na(frid))] <- sapply(timestampfl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
     
     # Check if two flashes match
     fvflashesfrid <- frid[fluo_flash$flflashes]

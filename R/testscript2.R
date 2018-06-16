@@ -281,24 +281,14 @@ for (im in 1:dim(fvimglbwseg)[3]){
 }
 
 angdiff <- c(0, diff(ang))
-# angsum <- zoo::rollsumr(angdiff, 20)
 ang_thresh <- 0.02
-# goodangfr <- which(angsum < ang_thresh & angsum > -ang_thresh)
 goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
-#fvimglfr20 <- seq(1, dim(fvimgl)[3], by=20)
-#goodangfr20 <- which(fvimglfr20 %in% goodangfr)
 goodmarkerfr <- which(markernum == 3) 
-#goodmarkerfr20 <- which(fvimglfr20 %in% goodmarkerfr)
 
 objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
 motion <- c(0, sqrt(diff(centroid[,1])^2 + diff(centroid[,2])^2))
-#motionsum <- zoo::rollsumr(motion, 20)
-#motion_thresh <- 10
 motion_thresh <- 2
-#goodmotionfr <- which(motionsum < motion_thresh)
 goodmotionfr <- which(motion < motion_thresh)
-
-#goodmotionfr20 <- which(fvimglfr20 %in% goodmotionfr)
 
 LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
 flimg2log <- EBImage::filter2(flimg2, LoGkern)
@@ -306,15 +296,12 @@ centermask <- EBImage::drawCircle(flimg2[,,1]*0, dim(flimg2)[1]/2, dim(flimg2)[2
 flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
 quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
 goodfocusfr <- which(quantcnt > 1100)
-#goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20, goodfocusfr))
-#goodfr20 <-  Reduce(intersect, list(goodmarkerfr20, goodmotionfr20, goodangfr20))
 goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
-goodfr20 <- goodfr
 
 # Apply rotation compensation
-rot <- fvimgl[,,fvimglfr20[goodfr20]]
+rot <- fvimgl[,,goodfr]
 for (r in 1:dim(rot)[3]){
-  rot[,,r] <- RNiftyReg::rotate(fvimgl[,,fvimglfr20[goodfr20[r]]], ang[fvimglfr20[goodfr20[r]]], anchor = c("center"))
+  rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
 }
 
 # Template matching
@@ -329,7 +316,7 @@ for (c in 1:dim(rot)[3]){
                                autopos=T)
 }
 # Apply translation compensation
-rottrans <- fvimgl[,,fvimglfr20[goodfr20]]
+rottrans <- fvimgl[,,goodfr]
 for (tr in 1:dim(rottrans)[3]){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
@@ -338,13 +325,13 @@ EBImage::writeImage(rottrans/255, file=paste0(dir, prefix, "_rottrans.tif"))
 display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
-redrot <- flimg2[,,goodfr20]
+redrot <- flimg2[,,goodfr]
 for (rr in 1:dim(redrot)[3]){
-  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr20[rr]], ang[fvimglfr20[goodfr20[rr]]], anchor = c("center")))
+  redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr[rr]], ang[goodfr[rr]], anchor = c("center")))
 }
-greenrot <- flimg1[,,goodfr20]
+greenrot <- flimg1[,,goodfr]
 for (rg in 1:dim(greenrot)[3]){
-  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr20[rg]], ang[fvimglfr20[goodfr20[rg]]], anchor = c("center")))
+  greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr[rg]], ang[goodfr[rg]], anchor = c("center")))
 }
 
 display(normalize(redrot))
@@ -447,8 +434,7 @@ intensity <- zoo::rollmean(greenperredave, 3, align="left")
 F0int <- intensity[1]
 deltaFint <- intensity - F0int
 dFF0int <- deltaFint/F0int * 100
-#dat <- data.frame(x=(1:goodfr20[length(goodfr20)]), y=dFF0int, d=flydist[Fintfr])
-dat <- data.frame(x=goodfr20[1:(length(goodfr20)-2)], y=dFF0int)
+dat <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
 
 p <- ggplot(data=dat, aes(x=x, y=y)) +
   geom_smooth(method="loess", span = 0.4, level=0.95) +
