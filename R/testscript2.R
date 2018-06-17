@@ -20,7 +20,7 @@ autopos <- T             # True if you want to align cameras automatically
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(2438, 2793)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(2438, 3000)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -178,13 +178,12 @@ if(FOI!=F && length(FOI)==2){
 
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
-#fvimgl <- dipr::readFMF(fly_view_fmf, frames=seq(frid[1], frid[length(frid)]+20, by=1))
 
 # Apply resize and translation to align with fluo-view
 #fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear", output.dim=dim(red)[1:2]), (-center2 - 10))
 fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), c(0, -4))
 fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
-#EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_fvimgl.tif"))
+EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_fvimgl.tif"))
 
 # Load arena-view camera images
 #avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -362,7 +361,7 @@ display(normalize(redwindow))
 redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
 greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
 display(normalize(redwindowmed))
-redwindowmedth <- thresh(redwindowmed, w=10, h=10, offset=0.0003)
+redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
 display(redwindowmedth)
 
 # F_ratio image
@@ -399,13 +398,14 @@ grratiocolorl[(dim(grratiocolorl)[1]/2 + window_offset[1] - window_size[1]/2):
 flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
 display(flyviewcolor)
+EBImage::writeImage(flyviewcolor, file=paste0(dir, prefix, "_flyviewcolor.tif"))
 
 # overlay red channel and F_ratio color image
 redrottranscol <- array(0, dim=c(dim(redrottrans)[c(1,2)], 3, dim(redrottrans)[3]))
-redrottranscol[,,1,] <- redrottrans/2^16*(1-rottransmask)
-redrottranscol[,,2,] <- redrottrans/2^16*(1-rottransmask)
-redrottranscol[,,3,] <- redrottrans/2^16*(1-rottransmask)
-redrottranscol <- normalize(redrottranscol, separate=F)
+redrottranscol[,,1,] <- redrottrans*(1-rottransmask)
+redrottranscol[,,2,] <- redrottrans*(1-rottransmask)
+redrottranscol[,,3,] <- redrottrans*(1-rottransmask)
+redrottranscol <- normalize(redrottranscol, separate=F, inputRange=c(180, 400))
 redcolor <- redrottranscol + grratiocolorl
 redcolor <- Image(redcolor, colormode="Color")
 display(redcolor)
@@ -415,18 +415,18 @@ frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans
 frgcombined[1:240,1:240,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
 frgcombined[1:240,1:240,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
 frgcombined[1:240,1:240,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-frgcombined[241:480,1:240,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
-frgcombined[241:480,1:240,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
-frgcombined[241:480,1:240,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F)
-frgcombined[481:720,1:240,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
-frgcombined[481:720,1:240,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
-frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F)
+frgcombined[241:480,1:240,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+frgcombined[241:480,1:240,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+frgcombined[241:480,1:240,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+frgcombined[481:720,1:240,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+frgcombined[481:720,1:240,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
 frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
 frgcombined <-  Image(frgcombined, colormode="Color")
 
 display(frgcombined)
-EBImage::writeImage(redrottrans/2^16, file=paste0(dir, prefix, "_redrottrans.tif"))
-EBImage::writeImage(greenrottrans/2^16, file=paste0(dir, prefix, "_greenrottrans.tif"))
+EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(dir, prefix, "_redrottrans.tif"))
+EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(dir, prefix, "_greenrottrans.tif"))
 EBImage::writeImage(frgcombined, file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
 
 # Calculate dF/F
