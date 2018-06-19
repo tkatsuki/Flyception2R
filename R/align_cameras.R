@@ -70,7 +70,8 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
     }
     
     template_mv <- EBImage::translate(template_pad, center)
-    writeImage(normalize(source_rs) + normalize(template_mv), file=paste0(output, "_aligned.png"))
+    EBImage::writeImage(normalize(source_rs), file=paste0(output, "_source_aligned.png"))
+    EBImage::writeImage(normalize(template_mv), file=paste0(output, "_template_aligned.png"))
   }
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))
   return(center)

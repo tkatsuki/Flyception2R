@@ -10,17 +10,20 @@ source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
 
+#To do
+# plot intensity
+
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
-#dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
-dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-prefix <- "P1-Gal4_UAS-GCaMP6s_tdTomato_5"       # Will be used as a filename prefix
+dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
+#dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
+prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7", "/", paste0(FOI, collapse="_"))       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <- c(2438, 3000)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <- c(3352, 3500)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -30,22 +33,24 @@ interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
-window_offset <- c(6, -2)     # Offset of the window from the center of the image 
+window_offset <- c(8, 7)     # Offset of the window from the center of the image 
 
 
 rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
 message(dir)
 
 output_prefix <- paste0(dir, prefix)
+dir.create()
 fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
 fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
 arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
 
 ## First crop the fluo-view image with one ROI and find the flash frame
-#imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
 fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
-
+flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
+  
 message("Detecting flash in fluo-view")
 fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                            type="fluo",
@@ -79,7 +84,7 @@ center <- align_cameras(source=fl2refcrop,
                         zoom=1,
                         autopos=T)
 
-#imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
 fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
 
@@ -101,17 +106,6 @@ syncing <- sync_frames(dir=dir,
                        arena_flash=arena_flash,
                        output=output_prefix,
                        reuse=reuse)
-flimgtest <- dipr::readTIFF2(fluo_view_tif_ch2, start=1, end=1)
-fvimgltest <- dipr::readFMF(fly_view_fmf, frames=syncing$frid[1])
-
-display(fvimgltest/255)
-display(normalize(flimgtest)*5)
-
-flimgtest2 <- EBImage::flip(dipr::readTIFF2(fluo_view_tif_ch2, start=517, end=527))
-fvimgltest2 <- dipr::readFMF(fly_view_fmf, frames=syncing$frid[517:527])
-
-display(fvimgltest2/255)
-display(normalize(flimgtest2)*5)
 
 ## Part 3. Analyze trajectories
 trj_res <- analyze_trajectories(dir=dir,
@@ -119,19 +113,6 @@ trj_res <- analyze_trajectories(dir=dir,
                                 fpsfv=syncing$fpsfv,
                                 interaction=interaction)
 
-# message("Detecting stimulus")
-# fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
-# stimulus <- which(fvtrj[,10]==1)
-# if(length(stimulus)==0){
-#   fridstim <- NA
-#   message(paste0("No stimulus was detected."))
-# } else {
-#   stimfr <- sapply(stimulus, function(x) which.min(abs(syncing$frid-x)))
-#   message(paste0("Stimuli were given at the following frames:"))
-#   message(stimfr)
-#   dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
-#   write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
-# }
 
 ## Part 5. Detect interaction
 if(interaction==T){
@@ -157,6 +138,7 @@ if(FOI!=F && length(FOI)==2){
   message("All frames will be analyzed.")
   frid <- syncing$frid
   frida <- syncing$frida
+  FOI <- c(1, flnframe)
 }
 
 # # Green or red channel?
@@ -180,10 +162,9 @@ if(FOI!=F && length(FOI)==2){
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 
 # Apply resize and translation to align with fluo-view
-#fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear", output.dim=dim(red)[1:2]), (-center2 - 10))
-fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), c(0, -4))
+fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
 fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
-EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_fvimgl.tif"))
+EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_fvimgl.tif"))
 
 # Load arena-view camera images
 #avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -294,7 +275,7 @@ flimg2log <- EBImage::filter2(flimg2, LoGkern)
 centermask <- EBImage::drawCircle(flimg2[,,1]*0, dim(flimg2)[1]/2, dim(flimg2)[2]/2, 100, col=1, fill=T)
 flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
 quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
-goodfocusfr <- which(quantcnt > 1100)
+goodfocusfr <- which(quantcnt > 1000)
 goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
 
 # Apply rotation compensation
@@ -319,8 +300,7 @@ rottrans <- fvimgl[,,goodfr]
 for (tr in 1:dim(rottrans)[3]){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
-
-EBImage::writeImage(rottrans/255, file=paste0(dir, prefix, "_rottrans.tif"))
+EBImage::writeImage(rottrans/255, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_rottrans.tif"))
 display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
@@ -333,14 +313,10 @@ for (rg in 1:dim(greenrot)[3]){
   greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr[rg]], ang[goodfr[rg]], anchor = c("center")))
 }
 
-display(normalize(redrot))
-display(normalize(greenrot))
-
 redrottrans <- redrot
 for (trr in 1:dim(redrottrans)[3]){
   redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[trr,])
 }
-display(normalize(redrottrans))
 
 greenrottrans <- greenrot
 for (trg in 1:dim(greenrottrans)[3]){
@@ -398,7 +374,7 @@ grratiocolorl[(dim(grratiocolorl)[1]/2 + window_offset[1] - window_size[1]/2):
 flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
 display(flyviewcolor)
-EBImage::writeImage(flyviewcolor, file=paste0(dir, prefix, "_flyviewcolor.tif"))
+EBImage::writeImage(flyviewcolor, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_flyviewcolor.tif"))
 
 # overlay red channel and F_ratio color image
 redrottranscol <- array(0, dim=c(dim(redrottrans)[c(1,2)], 3, dim(redrottrans)[3]))
@@ -425,19 +401,22 @@ frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
 frgcombined <-  Image(frgcombined, colormode="Color")
 
 display(frgcombined)
-EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(dir, prefix, "_redrottrans.tif"))
-EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(dir, prefix, "_greenrottrans.tif"))
-EBImage::writeImage(frgcombined, file=paste0(dir, prefix, "_frgcombined_goodfr20_normalized.tif"))
+EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_redrottrans.tif"))
+EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_greenrottrans.tif"))
+EBImage::writeImage(frgcombined, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_frgcombined_goodfr20_normalized.tif"))
 
 # Calculate dF/F
 intensity <- zoo::rollmean(greenperredave, 3, align="left")
 F0int <- intensity[1]
 deltaFint <- intensity - F0int
 dFF0int <- deltaFint/F0int * 100
-dat <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
+datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
+plot(datint)  
+datdFF0 <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
+plot(datdFF0)
 
 p <- ggplot(data=dat, aes(x=x, y=y)) +
   geom_smooth(method="loess", span = 0.4, level=0.95) +
   ylim(-5, 10) +
   geom_line(data=dat, aes(x=x, y=d))
-ggsave(filename = paste0(dir, prefix, "_dFF0int_", fintfr, ".pdf"), width = 8, height = 8)
+ggsave(filename = paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_dFF0int.pdf"), width = 8, height = 8)
