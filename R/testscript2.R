@@ -18,7 +18,7 @@ source("~/Flyception2R/R/sync_frames.R")
 #dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
 dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 #dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7", "/", paste0(FOI, collapse="_"))       # Will be used as a filename prefix
+prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
@@ -34,13 +34,15 @@ dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on 
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
 window_offset <- c(8, 7)     # Offset of the window from the center of the image 
+outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
+dir.create(outdir)
 
 rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
-message(dir)
+message(outdir)
 
-output_prefix <- paste0(dir, prefix)
-dir.create()
+output_prefix <- paste0(outdir, prefix)
+
 fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
 fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
 arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
