@@ -6,6 +6,7 @@
 library(FlyceptionR)
 library(zoo)
 library(magick)
+library(loggit)
 source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
@@ -38,8 +39,8 @@ outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
 
-rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
-message(outdir)
+loggit::setLogFile(paste0(output_prefix, "_log.json"))
+loggit::message(outdir)
 
 output_prefix <- paste0(outdir, prefix)
 
