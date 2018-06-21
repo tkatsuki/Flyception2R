@@ -166,7 +166,7 @@ fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 # Apply resize and translation to align with fluo-view
 fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
 fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
-EBImage::writeImage(fvimgl/255, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_fvimgl.tif"))
+EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
 
 # Load arena-view camera images
 #avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
@@ -302,7 +302,7 @@ rottrans <- fvimgl[,,goodfr]
 for (tr in 1:dim(rottrans)[3]){
   rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
 }
-EBImage::writeImage(rottrans/255, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_rottrans.tif"))
+EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
 display(normalize(rottrans))
 
 ## Apply transformation functions to fluo-view images
@@ -376,7 +376,7 @@ grratiocolorl[(dim(grratiocolorl)[1]/2 + window_offset[1] - window_size[1]/2):
 flyviewcolor <- rottranscolor + grratiocolorl
 flyviewcolor <- Image(flyviewcolor, colormode="Color")
 display(flyviewcolor)
-EBImage::writeImage(flyviewcolor, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_flyviewcolor.tif"))
+EBImage::writeImage(flyviewcolor, file=paste0(output_prefix, "_flyviewcolor.tif"))
 
 # overlay red channel and F_ratio color image
 redrottranscol <- array(0, dim=c(dim(redrottrans)[c(1,2)], 3, dim(redrottrans)[3]))
@@ -403,9 +403,9 @@ frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
 frgcombined <-  Image(frgcombined, colormode="Color")
 
 display(frgcombined)
-EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_redrottrans.tif"))
-EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_greenrottrans.tif"))
-EBImage::writeImage(frgcombined, file=paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_frgcombined_goodfr20_normalized.tif"))
+EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
+EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
+EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
 
 # Calculate dF/F
 intensity <- zoo::rollmean(greenperredave, 3, align="left")
