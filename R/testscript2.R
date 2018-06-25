@@ -16,10 +16,11 @@ source("~/Flyception2R/R/sync_frames.R")
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
+#dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
-#dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_3")       # Will be used as a filename prefix
+dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
+dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
+prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_5")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
@@ -38,11 +39,10 @@ window_offset <- c(8, 4)     # Offset of the window from the center of the image
 outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
+output_prefix <- paste0(outdir, prefix)
 
 loggit::setLogFile(paste0(output_prefix, "_log.json"))
 loggit::message(outdir)
-
-output_prefix <- paste0(outdir, prefix)
 
 fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
 fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
@@ -410,16 +410,15 @@ EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr
 
 # Calculate dF/F
 intensity <- zoo::rollmean(greenperredave, 3, align="left")
+datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
+png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
+plot(datint)  
+dev.off()
+
 F0int <- intensity[1]
 deltaFint <- intensity - F0int
 dFF0int <- deltaFint/F0int * 100
-datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
-plot(datint)  
 datdFF0 <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
+png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
 plot(datdFF0)
-
-p <- ggplot(data=dat, aes(x=x, y=y)) +
-  geom_smooth(method="loess", span = 0.4, level=0.95) +
-  ylim(-5, 10) +
-  geom_line(data=dat, aes(x=x, y=d))
-ggsave(filename = paste0(dir, prefix, "_", paste0(FOI, collapse="_"), "_dFF0int.pdf"), width = 8, height = 8)
+dev.off()
