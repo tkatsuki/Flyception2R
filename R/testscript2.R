@@ -12,20 +12,19 @@ source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
 
 #To do
-# Log max F ratio
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
 dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 #dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-#dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_3")       # Will be used as a filename prefix
+dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_6/"
+prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_6")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <-  c(100, 400)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <-  c(1, 1725)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -35,7 +34,7 @@ interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
-window_offset <- c(0, 4)     # Offset of the window from the center of the image 
+window_offset <- c(0, 12)     # Offset of the window from the center of the image 
 outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
@@ -423,3 +422,4 @@ png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
 plot(datdFF0)
 dev.off()
 loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
+loggit::message(paste0("Number of good frames was ", length(goodfr)))
