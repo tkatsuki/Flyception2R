@@ -10,21 +10,24 @@ library(loggit)
 source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
+source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/align_cameras.R")
+source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/imageJ_crop_append.R")
+source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
 
 #To do
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
-#dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
+#dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
+dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 #dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_6/"
-prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_6")       # Will be used as a filename prefix
+#dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_6/"
+prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_3")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <-  c(1, 1725)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <-  c(2462, 3136)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -49,7 +52,14 @@ arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
 
 ## First crop the fluo-view image with one ROI and find the flash frame
-imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+
+fluo_view_tif_ch1 <- paste0(substr(fluo_view_tif, 1, nchar(fluo_view_tif)-3), "ch1.crop.concat.tif")
+
+if(file.exists(fluo_view_tif_ch1)==F){
+  imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+}
+
+
 fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
 flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
   
