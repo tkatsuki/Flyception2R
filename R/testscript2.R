@@ -39,7 +39,7 @@ interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
-window_offset <- c(-4, 4)     # Offset of the window from the center of the image. Positive x moves right
+window_offset <- c(-8, 0)     # Offset of the window from the center of the image. Positive x moves right
 outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
@@ -433,5 +433,9 @@ datdFF0 <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
 png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
 plot(datdFF0)
 dev.off()
+
+loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
+loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
+loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
 loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
 loggit::message(paste0("Number of good frames was ", length(goodfr)))
