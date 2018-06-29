@@ -110,7 +110,8 @@ center2 <- align_cameras(source=fvref/255,
                          output=paste0(output_prefix, "_fvfl1"),
                          center=c(0, 0),
                          zoom=1.085,
-                         autopos=T)
+                         autopos=T,
+                         ROI=c(1,1,50,50))
 
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,

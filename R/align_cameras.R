@@ -8,7 +8,7 @@
 #' align_cameras()
 #'
 
-align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, autopos=T){
+align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, autopos=T, ROI=F){
   # template image must always be smaller than source image
   # Manual position calibration with fly contour during flash
   if(autopos==F){
@@ -39,6 +39,10 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
     
     if(dim(source_rs)[1] > dim(template)[1] && dim(source_rs)[2] > dim(template)[2]){
       fncc <- dipr::FNCC(source_rs, template)
+      if(length(ROI)!=1){
+        fncc <- fncc[ROI[1]:(ROI[1]+ROI[3]-1),
+                     ROI[2]:(ROI[2]+ROI[4]-1)]
+      }
       maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
       centerx <- (maxpeak[1] + round(nrow(template)/2)) - round(dim(source_rs)[1]/2)
       centery <- (maxpeak[2] + round(ncol(template)/2)) - round(dim(source_rs)[2]/2)
@@ -58,6 +62,10 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
       y2 <- round(ncol(template)/2)+round(ncol(template)/4)
       templatecrop <- template[x1:x2, y1:y2]
       fncc <- dipr::FNCC(source_rs, templatecrop)
+      if(length(ROI)!=1){
+        fncc <- fncc[ROI[1]:(ROI[1]+ROI[3]-1),
+                     ROI[2]:(ROI[2]+ROI[4]-1)]
+      }
       maxpeak <- which(fncc==max(fncc), arr.ind=TRUE)
       centerx <- (maxpeak[1] + round(nrow(templatecrop)/2)) - round(dim(source_rs)[1]/2)
       centery <- (maxpeak[2] + round(ncol(templatecrop)/2)) - round(dim(source_rs)[2]/2)
@@ -72,7 +80,10 @@ align_cameras <- function(source, template, output, center=c(0, 0), zoom=1, auto
     template_mv <- EBImage::translate(template_pad, center)
     EBImage::writeImage(normalize(source_rs), file=paste0(output, "_source_aligned.png"))
     EBImage::writeImage(normalize(template_mv), file=paste0(output, "_template_aligned.png"))
+    EBImage::writeImage(normalize(fncc), file=paste0(output, "_fncc.png"))
+    
   }
+  message(sprintf("FNCC max peak was: x=%d, y=%d", maxpeak[1], maxpeak[2]))
   message(sprintf("Center offset: x=%d, y=%d", center[1], center[2]))
   return(center)
 }
