@@ -20,16 +20,16 @@ source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1/"  # Don't forget the slash at the end
-dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
+#dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 #dir <- "/Users/takeokatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_5/"
-#dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_3/"
+dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_7/"
 #dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_6/"
 prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <-  c(2462, 3436)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <-  c(1941, 2106)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -39,7 +39,7 @@ interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
-window_offset <- c(8, 0)     # Offset of the window from the center of the image. Positive x moves right
+window_offset <- c(0, 0)     # Offset of the window from the center of the image. Positive x moves right
 outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
@@ -54,11 +54,10 @@ arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
 
 ## First crop the fluo-view image with one ROI and find the flash frame
 
-fluo_view_tif_ch1 <- paste0(substr(fluo_view_tif, 1, nchar(fluo_view_tif)-3), "ch1.crop.concat.tif")
-
-if(file.exists(fluo_view_tif_ch1)==F){
+if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
   imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
 }
+fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
 flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
   
 message("Detecting flash in fluo-view")
@@ -94,11 +93,11 @@ center <- align_cameras(source=fl2refcrop,
                         zoom=1,
                         autopos=T)
 
-fluo_view_tif_ch2 <- paste0(substr(fluo_view_tif, 1, nchar(fluo_view_tif)-3), "ch2.crop.concat.tif")
 
-if(file.exists(fluo_view_tif_ch2)==F){
+if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
   imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
 }
+fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
 
 # Load fly-view camera images
@@ -111,7 +110,7 @@ center2 <- align_cameras(source=fvref/255,
                          center=c(0, 0),
                          zoom=1.085,
                          autopos=T,
-                         ROI=c(1,1,50,50))
+                         ROI=F)
 
 ## Part 2. Syncing frames and generate frame IDs
 syncing <- sync_frames(dir=dir,
