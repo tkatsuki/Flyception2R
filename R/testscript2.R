@@ -154,23 +154,6 @@ if(FOI!=F && length(FOI)==2){
   FOI <- c(1, flnframe)
 }
 
-# # Green or red channel?
-# flimg1int <- colMeans(flimg1, dim=2)
-# if(flimg1int[1] < mean(flimg1int)){
-#   greenfr <- seq(2, dim(flimg1)[3], 2)
-#   redfr <- seq(1, dim(flimg2)[3], 2)
-# } else {
-#   greenfr <- seq(1, dim(flimg1)[3], 2)
-#   redfr <- seq(2, dim(flimg2)[3], 2)
-# }
-# 
-# green <- flimg1[,,greenfr]
-# red <- flimg2[,,redfr]
-# 
-# EBImage::writeImage(green/1000, file=paste0(dir, prefix, "green.tif"))
-# EBImage::writeImage(red/1000, file=paste0(dir, prefix, "red.tif"))
-
-
 # Load fly-view camera images
 fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
 
