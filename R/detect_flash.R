@@ -23,10 +23,10 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     png(file=paste0(output, "_flflash.png"), width=400, height=400)
     plot(flimgint)
     dev.off()
+    saveRDS(flimgint, file=paste0(output, "_flimgint.RDS"))
+    }
     nframesfl <- dipr::readTIFF2(input, getFrames=T)
     message(paste0("Number of frames in fluo-view: ", nframesfl))
-    }
-
     flflashes <- which(flimgint > flash_thresh)
     flimgflash <- min(flflashes)
     if(flimgflash==Inf) stop("Flash was not detected in fluo-view.")

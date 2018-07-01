@@ -10,9 +10,11 @@ library(loggit)
 source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
+source("~/Flyception2R/R/detect_flash.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/align_cameras.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/imageJ_crop_append.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
+source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/detect_flash.R")
 
 #To do
 # Should stop when the number of flash detected do not match between flou-view and fly-view
