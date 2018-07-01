@@ -14,7 +14,7 @@ dirlist <- list.dirs("/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser"
 for(dl in dirlist){
   dir <- paste0(dl, "//")
   prefix <- strsplit(dir, "/")[[1]][5]       # Will be used as a filename prefix
-  
+  reuse <- T 
   autopos <- T             # True if you want to align cameras automatically 
   zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
   ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)

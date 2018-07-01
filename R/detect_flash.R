@@ -43,7 +43,6 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
       message(sprintf("Reading %s", input))
       message(sprintf("Flash thresh is %f", flash_thresh))
       # Load only diagonal ROIs
-      nframesfv <- dipr::readFMF(input, getFrames=T)
       fvimgsub1 <- dipr::readFMF(input, crop=c(5,10,5,10))
       fvimgsub2 <- dipr::readFMF(input, crop=c(220,225,220,225))
       fvimgsubint1 <- colMeans(fvimgsub1, dim=2)
@@ -56,7 +55,8 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
       dev.off()
       saveRDS(fvimgsubint, file=paste0(output, "_fvimgsubint.RDS"))
     }
-
+    
+    nframesfv <- dipr::readFMF(input, getFrames=T)
     fvflashes <- which(fvimgsubint > flash_thresh)
     fvimgflash <- min(fvflashes)
     if(fvimgflash==Inf) stop("Flash was not detected in fly-view.")
@@ -72,7 +72,6 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
      }else{
       message(sprintf("Reading %s", input))
       message(sprintf("Flash thresh is %f", flash_thresh))
-      nframesav <- dipr::readFMF(input, getFrames=T)
       avimgsub <- dipr::readFMF(input, crop=c(5,10,5,10))
       avimgsubint <- colMeans(avimgsub, dim=2)
       rm(avimgsub)
@@ -82,6 +81,7 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
       saveRDS(avimgsubint, file=paste0(output, "_avimgsubint.RDS"))
     }
 
+    nframesav <- dipr::readFMF(input, getFrames=T)
     avflashes <- which(avimgsubint > flash_thresh)
     avimgflash <- min(avflashes)
     if(avimgflash==Inf) stop("Flash was not detected in arena-view.")
