@@ -29,7 +29,7 @@ autopos <- T             # True if you want to align cameras automatically
 reuse <- F               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
-FOI <-  c(1941, 2106)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
+FOI <-  c(4200, 4460)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
 binning <- 1             # Binning of the fluo-view camera
 fluo_flash_thresh <- 500 # Threshold for detecting flash in fluo-view
@@ -39,7 +39,7 @@ interaction <- T         # True if you want to analyze fly-fly interaction
 dist_thresh <- 4         # Threshold for detecting fly-fly interaction based on distance
 rotate_camera <- -180    # Rotation angle needed to align fluo-view and fly-view
 window_size <- c(68, 28) # Size of a rectangle window on the head for segmentation. Choose even numbers.
-window_offset <- c(0, 0)     # Offset of the window from the center of the image. Positive x moves right
+window_offset <- c(-4, 25)     # Offset of the window from the center of the image. Positive x moves right
 outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
 
 dir.create(outdir)
@@ -91,7 +91,8 @@ center <- align_cameras(source=fl2refcrop,
                         output=paste0(output_prefix, "_fl2fl1"),
                         center=c(0, 0),
                         zoom=1,
-                        autopos=T)
+                        autopos=T,
+                        ROI=c(1, 1, 450, 50))
 
 
 if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
@@ -421,3 +422,7 @@ loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_
 loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
 loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
 loggit::message(paste0("Number of good frames was ", length(goodfr)))
+
+loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
+                        FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
+
