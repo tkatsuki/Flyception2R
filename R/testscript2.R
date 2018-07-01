@@ -16,7 +16,6 @@ source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
 
 #To do
 # Should stop when the number of flash detected do not match between flou-view and fly-view
-# Write a script for cropping all data
 # Save flash data
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
@@ -28,7 +27,7 @@ dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GC
 #dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_6/"
 prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
-reuse <- F               # True if you want to reuse intermediate RDS files
+reuse <- T               # True if you want to reuse intermediate RDS files
 fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
 FOI <-  c(4200, 4460)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
@@ -63,23 +62,42 @@ fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.con
 flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
   
 message("Detecting flash in fluo-view")
-fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
-                           type="fluo",
-                           output=output_prefix,
-                           flash_thresh=fluo_flash_thresh,
-                           reuse=reuse)
-message("Detecting flash in fly-view")
-fly_flash <- detect_flash(input=fly_view_fmf,
-                          type="fly",
-                          output=output_prefix,
-                          flash_thresh=fv_flash_thresh,
-                          reuse=reuse)
-message("Detecting flash in arena-view")
-arena_flash <- detect_flash(input=arena_view_fmf,
-                            type="arena",
+
+# if(file.exists(paste0(output_prefix, "_fluo_flash.RDS"))==T &
+#    file.exists(paste0(output_prefix, "_fly_flash.RDS"))==T &
+#    file.exists(paste0(output_prefix, "_arena_flash.RDS"))==T &
+#    reuse==T){
+#   message("Loading RDS file")
+#   fluo_flash <- readRDS(paste0(output_prefix, "_fluo_flash.RDS"))
+#   fly_flash <- readRDS(paste0(output_prefix, "_fly_flash.RDS"))
+#   arena_flash <- readRDS(paste0(output_prefix, "_arena_flash.RDS"))
+#   
+# } elase {
+  
+  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
+                             type="fluo",
+                             output=output_prefix,
+                             flash_thresh=fluo_flash_thresh,
+                             reuse=reuse)
+  message("Detecting flash in fly-view")
+  fly_flash <- detect_flash(input=fly_view_fmf,
+                            type="fly",
                             output=output_prefix,
-                            flash_thresh=av_flash_thresh,
+                            flash_thresh=fv_flash_thresh,
                             reuse=reuse)
+  message("Detecting flash in arena-view")
+  arena_flash <- detect_flash(input=arena_view_fmf,
+                              type="arena",
+                              output=output_prefix,
+                              flash_thresh=av_flash_thresh,
+                              reuse=reuse)
+  # if(saveRDS==T){
+  #   saveRDS(regimgi, paste0(output, "_regimgi.RDS"))
+  #   saveRDS(regresi, paste0(output, "_regresi.RDS"))
+  # }
+
+
+
 
 ## Find the other channel in fluo-view
 fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
