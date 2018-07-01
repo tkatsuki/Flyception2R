@@ -16,6 +16,8 @@ source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
 
 #To do
 # Should stop when the number of flash detected do not match between flou-view and fly-view
+# Write a script for cropping all data
+# Save flash data
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
