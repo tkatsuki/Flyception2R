@@ -17,8 +17,6 @@ source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/detect_flash.R")
 
 #To do
-# Should stop when the number of flash detected do not match between flou-view and fly-view
-# Save flash data
 
 #dir <- "H:/P1_GCaMP6s_tdTomato_02202018/P1-Gal4_UAS-GCaMP6s_tdTomato_4Copy/"  # Don't forget the slash at the end
 #dir <- "C:/Users/tkatsuki/Desktop/P1-Gal4_UAS-GCaMP6s_tdTomato_4/"  # Don't forget the slash at the end
@@ -30,7 +28,6 @@ dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06212018_CW_Dual_Laser/P1-Gal4_UAS-GC
 prefix <- paste0("P1-Gal4_UAS-GCaMP6s_tdTomato_7")       # Will be used as a filename prefix
 autopos <- T             # True if you want to align cameras automatically 
 reuse <- T               # True if you want to reuse intermediate RDS files
-fmf2tif <- T             # True if you want to convert fmf 
 zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
 FOI <-  c(4200, 4460)                 # A vector specifying start and end frame (e.g. c(10,1000)). False if you want to analyze all frames.
 ROI <- c(391, 7, 240, 240) # Top left corner is (0, 0)
@@ -62,44 +59,29 @@ if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
 }
 fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
 flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
-  
+
 message("Detecting flash in fluo-view")
 
-# if(file.exists(paste0(output_prefix, "_fluo_flash.RDS"))==T &
-#    file.exists(paste0(output_prefix, "_fly_flash.RDS"))==T &
-#    file.exists(paste0(output_prefix, "_arena_flash.RDS"))==T &
-#    reuse==T){
-#   message("Loading RDS file")
-#   fluo_flash <- readRDS(paste0(output_prefix, "_fluo_flash.RDS"))
-#   fly_flash <- readRDS(paste0(output_prefix, "_fly_flash.RDS"))
-#   arena_flash <- readRDS(paste0(output_prefix, "_arena_flash.RDS"))
-#   
-# } elase {
-  
-  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
-                             type="fluo",
-                             output=output_prefix,
-                             flash_thresh=fluo_flash_thresh,
-                             reuse=reuse)
-  message("Detecting flash in fly-view")
-  fly_flash <- detect_flash(input=fly_view_fmf,
-                            type="fly",
+fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
+                           type="fluo",
+                           output=output_prefix,
+                           flash_thresh=fluo_flash_thresh,
+                           reuse=reuse)
+message("Detecting flash in fly-view")
+fly_flash <- detect_flash(input=fly_view_fmf,
+                          type="fly",
+                          output=output_prefix,
+                          flash_thresh=fv_flash_thresh,
+                          reuse=reuse)
+message("Detecting flash in arena-view")
+arena_flash <- detect_flash(input=arena_view_fmf,
+                            type="arena",
                             output=output_prefix,
-                            flash_thresh=fv_flash_thresh,
+                            flash_thresh=av_flash_thresh,
                             reuse=reuse)
-  message("Detecting flash in arena-view")
-  arena_flash <- detect_flash(input=arena_view_fmf,
-                              type="arena",
-                              output=output_prefix,
-                              flash_thresh=av_flash_thresh,
-                              reuse=reuse)
-  # if(saveRDS==T){
-  #   saveRDS(regimgi, paste0(output, "_regimgi.RDS"))
-  #   saveRDS(regresi, paste0(output, "_regresi.RDS"))
-  # }
+# Check the number of flashes detected and abort if they don't match
 
-
-
+if(length(fluo_flash$flflashes)!=length(fly_flash$fvflashes)) stop("Number of flashes did not match.")
 
 ## Find the other channel in fluo-view
 fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
@@ -343,16 +325,26 @@ for (trg in 1:dim(greenrottrans)[3]){
 }
 
 # Segment neurons
-redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                           (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                         (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                           (dim(redrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
-greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                             (dim(greenrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                           (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                             (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+ans <- "N"
+while(ans != "Y" && ans != "y"){
+  
+  redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
+                             (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
+                           (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
+                             (dim(redrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+  greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
+                                 (dim(greenrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
+                               (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
+                                 (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+  
+  display(normalize(redwindow))
+  ans <- readline("Is the window good (Y or N)?:")
+  if(ans != "Y" && ans != "y") {
+    window_offset[1] <- as.integer(readline("Enter new x offset:"))
+    window_offset[2] <- as.integer(readline("Enter new y offset:"))
+  }
+}
 
-display(normalize(redwindow))
 redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
 greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
 display(normalize(redwindowmed))
