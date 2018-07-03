@@ -104,6 +104,13 @@ if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
 }
 fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
 
+## Part 2. Syncing frames and generate frame IDs
+syncing <- sync_frames(dir=dir,
+                       fluo_flash=fluo_flash,
+                       fly_flash=fly_flash,
+                       arena_flash=arena_flash,
+                       output=output_prefix,
+                       reuse=reuse)
 
 # Load fly-view camera images
 fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
@@ -116,14 +123,6 @@ center2 <- align_cameras(source=fvref/255,
                          zoom=1.085,
                          autopos=T,
                          ROI=F)
-
-## Part 2. Syncing frames and generate frame IDs
-syncing <- sync_frames(dir=dir,
-                       fluo_flash=fluo_flash,
-                       fly_flash=fly_flash,
-                       arena_flash=arena_flash,
-                       output=output_prefix,
-                       reuse=reuse)
 
 ## Part 3. Analyze trajectories
 trj_res <- analyze_trajectories(dir=dir,

@@ -20,11 +20,11 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     message(sprintf("Reading %s", input))
     message(sprintf("Flash thresh is %f", flash_thresh))
     flimgint <- dipr::readTIFF2(input, intensity=T)
+    saveRDS(flimgint, file=paste0(output, "_flimgint.RDS"))
+    }
     png(file=paste0(output, "_flflash.png"), width=400, height=400)
     plot(flimgint)
     dev.off()
-    saveRDS(flimgint, file=paste0(output, "_flimgint.RDS"))
-    }
     nframesfl <- dipr::readTIFF2(input, getFrames=T)
     message(paste0("Number of frames in fluo-view: ", nframesfl))
     flflashes <- which(flimgint > flash_thresh)
