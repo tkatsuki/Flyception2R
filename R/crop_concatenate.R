@@ -5,9 +5,11 @@ library(loggit)
 source("~/Flyception2R/R/align_cameras.R")
 source("~/Flyception2R/R/imageJ_crop_append.R")
 source("~/Flyception2R/R/sync_frames.R")
+source("~/Flyception2R/R/detect_flash.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/align_cameras.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/imageJ_crop_append.R")
 source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/sync_frames.R")
+source("C:/Users/tkatsuki/Documents/GitHub/Flyception2R/R/detect_flash.R")
 
 parental_dirs <- dir("/Volumes/LaCie/", pattern = "P1_GCaMP6s_tdTomato", full.names=T)
   
@@ -17,7 +19,7 @@ for(pd in parental_dirs){
   for(dl in dirlist){
     dir <- paste0(dl, "/")
     prefix <- strsplit(dir, "/")[[1]][5]       # Will be used as a filename prefix
-    reuse <- F 
+    reuse <- T 
     autopos <- T             # True if you want to align cameras automatically 
     zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
     FOI <- c(1, 2)
