@@ -18,8 +18,8 @@ for(pd in parental_dirs){
   
   for(dl in dirlist){
     dir <- paste0(dl, "/")
-    prefix <- strsplit(dir, "/")[[1]][5]       # Will be used as a filename prefix
-    reuse <- T 
+    prefix <- strsplit(dir, "/")[[1]][6]       # Will be used as a filename prefix
+    reuse <- F 
     autopos <- T             # True if you want to align cameras automatically 
     zoom <- 1.085             # Zoom ratio: fluo-view/fly-view. Measure this using a resolution target.
     FOI <- c(1, 2)
@@ -50,19 +50,19 @@ for(pd in parental_dirs){
     message("Detecting flash in fluo-view")
     fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                                type="fluo",
-                               output=dir,
+                               output=paste0(dir, prefix),
                                flash_thresh=fluo_flash_thresh,
                                reuse=reuse)
     message("Detecting flash in fly-view")
     fly_flash <- detect_flash(input=fly_view_fmf,
                               type="fly",
-                              output=dir,
+                              output=paste0(dir, prefix),
                               flash_thresh=fv_flash_thresh,
                               reuse=reuse)
     message("Detecting flash in arena-view")
     arena_flash <- detect_flash(input=arena_view_fmf,
                                 type="arena",
-                                output=dir,
+                                output=paste0(dir, prefix),
                                 flash_thresh=av_flash_thresh,
                                 reuse=reuse)
     
