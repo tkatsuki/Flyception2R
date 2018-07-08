@@ -1,99 +1,123 @@
 #' Flyception2R main script
 #'
 #' @param dir path to the directory that contains the data
-#' @param prefix prefix used for output files
 #' @param autopos logical. Perform camera alignment using FNCC?
 #' @param interaction logical. Perform interaction detection? Requires two flies.
 #' @param reuse logical. Reuse .RDS files?
 #' @param fmf2tif logical. Convert fly-view and arena-view fmf files into tif format?
 #' @param zoom numeric. Zoom factor between fly-view and fluo-view cameras.
 #' @param FOI a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
+#' @param ROI a vector of four numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
 #' @param binning integer. Binning of the fluo-view camera.
 #' @param fluo_flash_thresh numeric. A threshold for detecting flashes in a fluo-view video.
 #' @param fv_flash_thresh integer. A threshold for detecting flashes in a fly-view video.
 #' @param av_flash_thresh integer. A threshold for detecting flashes in a arena-view video.
 #' @param dist_thresh numeric. A distance threshold for detecting fly-fly interactions.
 #' @param rotate_camera integer. Angle of the fluo-view camera.
+#' @param window_size a vector of two numbers indicating the size of a window to the brain.
+#' @param window_offset a vector of two numbers indicating the position of the window to the brain as an offset from the center of the image.
 #' @export
 #' @examples
 #' Flyception2R()
 #'
 
-Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
-                        fmf2tif=T, zoom=0.85, FOI=F, binning=1, fluo_flash_thresh=10000,
-                        fv_flash_thresh=135, av_flash_thresh=100, dist_thresh=4,
-                        rotate_camera=-180){
-
+Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
+                         fmf2tif=T, zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), 
+                         binning=1, fluo_flash_thresh=500,
+                         fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
+                         rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25)){
+  
   # TO DO
-  # Output: frid, frida, registered images, good frames
-  # Create frame
-  # Parallelism
-
+  
   ## Part 0. Initialization
   # Start logging
-  rlogging::SetLogFile(base.file=paste0(prefix, "_log.txt"), folder=dir)
-  message(dir)
-
-  # Crop and concatenate fluo_view images
-  imageJ_crop_append(dir, ch=1, roi=c(383, 0, 256, 256))
-  imageJ_crop_append(dir, ch=2, roi=c(1407, 0, 256, 256))
+  loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
-  # Prepare filenames
-  output_prefix <- paste0(dir, prefix)
-  fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
-  fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+  # Prepare filenames 
+  fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
   fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
   arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
-
+  
+  # Crop a first channel in fluo_view images using ImageJ
+  if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
+    imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+  }
+  fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+  flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
+  
   ## Part 1. Detect flash
   message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif_ch2,
+  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                              type="fluo",
-                             output=output_prefix,
+                             output=paste0(dir, prefix),
                              flash_thresh=fluo_flash_thresh,
                              reuse=reuse)
   message("Detecting flash in fly-view")
   fly_flash <- detect_flash(input=fly_view_fmf,
                             type="fly",
-                            output=output_prefix,
+                            output=paste0(dir, prefix),
                             flash_thresh=fv_flash_thresh,
                             reuse=reuse)
   message("Detecting flash in arena-view")
   arena_flash <- detect_flash(input=arena_view_fmf,
                               type="arena",
-                              output=output_prefix,
+                              output=paste0(dir, prefix),
                               flash_thresh=av_flash_thresh,
                               reuse=reuse)
-
-  ## Part 2. Syncing frames and generate frame IDs
+  
+  if(length(fluo_flash$flflashes) == length(fly_flash$flyflashes)){
+    stop("Number of flash detected differ between fluo-view and fly-view.")
+  }
+  
+  ## Find the other channel in fluo-view
+  fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
+  fl1ref <- EBImage::normalize(fl1ref)
+  fl2ref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
+  fl2ref <- EBImage::normalize(fl2ref)
+  fl2refcrop <- fl2ref[1025:2048,1:256] # Split the original image into two halves
+  
+  ## Align two channels of fluo-view
+  center <- align_cameras(source=fl2refcrop,
+                          template=fl1ref,
+                          output=paste0(paste0(dir, prefix), "_fl2fl1"),
+                          center=c(0, 0),
+                          zoom=1,
+                          autopos=T,
+                          ROI=c(1, 1, 450, 50))
+  
+  # Crop a second channel in fluo_view images using ImageJ
+  if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
+    imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+  }
+  fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+  
+  # Synchronize video frames
   syncing <- sync_frames(dir=dir,
                          fluo_flash=fluo_flash,
                          fly_flash=fly_flash,
                          arena_flash=arena_flash,
-                         output=output_prefix,
+                         output=paste0(dir, prefix),
                          reuse=reuse)
 
+  # Load fly-view flash image
+  fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
+  
+  # Align fly-view and fluo-view
+  center2 <- align_cameras(source=fvref/255,
+                           template=flip(fl1ref),
+                           output=paste0(output_prefix, "_fvfl1"),
+                           center=c(0, 0),
+                           zoom=1.085,
+                           autopos=T,
+                           ROI=F)
+  
   ## Part 3. Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
                                   output=output_prefix,
                                   fpsfv=syncing$fpsfv,
                                   interaction=interaction)
-
-  ## Part 4. Detect stimulus
-  message("Detecting stimulus")
-  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
-  stimulus <- which(fvtrj[,10]==1)
-  if(length(stimulus)==0){
-    fridstim <- NA
-    message(paste0("No stimulus was detected."))
-  } else {
-    stimfr <- sapply(stimulus, function(x) which.min(abs(syncing$frid-x)))
-    message(paste0("Stimuli were given at the following frames:"))
-    message(stimfr)
-    dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
-    write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
-  }
-
+  
+  
   ## Part 5. Detect interaction
   if(interaction==T){
     message("Detecting interaction")
@@ -101,13 +125,16 @@ Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
     closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
     write.table(closefrid, paste0(dir, prefix, "_closefrid.txt"))
   }
-
+  
   ## Part 6. Load images
-  message(sprintf("Reading %s", fluo_view_tif))
-
+  message(sprintf("Reading %s", fluo_view_tif_ch1))
+  
   # Analyze only part of the movie?
   if(FOI!=F && length(FOI)==2){
-    flimg <- dipr::readTIFF2(fluo_view_tif, start=FOI[1], end=FOI[2])
+    flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
+    flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
+    flimg1 <- flip(flimg1) # flip images to match fly-view
+    flimg2 <- flip(flimg2) # flip images to match fly-view
     message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
     frid <- syncing$frid[FOI[1]:FOI[2]]
     frida <- syncing$frida[FOI[1]:FOI[2]]
@@ -115,114 +142,175 @@ Flyception2R <- function(dir, prefix, autopos=T, interaction=T, reuse=T,
     message("All frames will be analyzed.")
     frid <- syncing$frid
     frida <- syncing$frida
+    FOI <- c(1, flnframe)
   }
-  # Crop fluo-view movie for speed
-  if(dim(flimg)[1] > 130){
-    flimg <- flimg[round((dim(flimg)[1] - 128)/2):(round((dim(flimg)[1]/2+128/2))-1),
-                   round((dim(flimg)[2] - 128)/2):(round((dim(flimg)[2]/2+128/2))-1),]
-  }
-  flimgrt <- EBImage::rotate(EBImage::flip(flimg), rotate_camera)
+  
   # Load fly-view camera images
   fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
+  
+  # Apply resize and translation to align with fluo-view
+  fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
+  fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
+  EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
+  
   # Load arena-view camera images
   avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
-  EBImage::writeImage(avimgl/255, file=paste0(dir, prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
+  EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
   rm(avimgl)
-
-  ## Part 7. Detect window on the head
-  fvimgbwbrfh <- detect_window(fvimgl=fvimgl, output=output_prefix, reuse=reuse)
-
-  ## Part 8. Position calibration
-  flref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
-  flref <- EBImage::normalize(EBImage::rotate(EBImage::flip(flref), rotate_camera))
-  fvref <- dipr::readFMF(filepath=fly_view_fmf,
-                         frames=fly_flash$fvflashes[1])[,,1]/255
-  center <- align_cameras(flref=flref,
-                          fvref=fvref,
-                          output=output_prefix,
-                          center=c(0, 0),
-                          zoom=0.95,
-                          autopos=F)
-
-  ## Part 9. Image registration
-  registered_images <- register_images(fvimgl=fvimgl,
-                                       flimgrt=flimgrt,
-                                       fvimgbwbrfh=fvimgbwbrfh,
-                                       angles=trj_res$angles,
-                                       zoom=zoom,
-                                       center=center,
-                                       output=output_prefix,
-                                       reuse=reuse)
-
-  ## Part 10. Look for good frames based on size, position, motion, and focus
-  goodfr <- find_goodframes(window_mask=fvimgbwbrfh,
-                            fvimgl=fvimgl,
-                            output=output_prefix,
-                            reuse=reuse)
-
-  ## Part 11. Calculate fluorescence intensity in the brain window
-  message("Measuring fluorescence intensity...")
-  if(file.exists(paste0(output_prefix, "_intensity_br.RDS"))==T & reuse==T){
-    message("Using RDS file")
-    intensity_br <- readRDS(paste0(output_prefix, "_intensity_br.RDS"))
-  }else{
-    intensity_br <- colSums(registered_images$fvimgbwbrfhregimg*registered_images$flimgreg, dims=2)/as.integer(goodfr$objsize)
-    saveRDS(intensity_br, paste0(dir, prefix, "_intensity_br.RDS"))
+  
+  # Detect beads
+  fvimglbl <- gblur(fvimgl/255, 2)
+  fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.2)
+  rm(fvimglbl)
+  centermask <- drawCircle(matrix(0,dim(fvimglbw)[1],dim(fvimglbw)[2]), dim(fvimglbw)[1]/2,
+                           dim(fvimglbw)[2]/2, dim(fvimglbw)[1]*2/5, col=1, fill=1)
+  fvimglbw <- ssweep(fvimglbw, centermask, op="*")
+  fvimglbwseg <- bwlabel(fvimglbw)
+  EBImage::writeImage(fvimglbwseg, file=paste0(output_prefix, "_fvimglbwseg.tif"))
+  
+  # Calculate head angle
+  ang_res <- detect_angle(fvimglbwseg)
+  ang <- ang_res[[1]]
+  markernum <- ang_res[[2]]
+  centroid <- ang_res[[3]]
+  
+  # Find good frames
+  angdiff <- c(0, diff(ang))
+  ang_thresh <- 0.02
+  goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
+  goodmarkerfr <- which(markernum == 3) 
+  
+  objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
+  motion <- c(0, sqrt(diff(centroid[,1])^2 + diff(centroid[,2])^2))
+  motion_thresh <- 2
+  goodmotionfr <- which(motion < motion_thresh)
+  
+  LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
+  flimg2log <- EBImage::filter2(flimg2, LoGkern)
+  centermask <- EBImage::drawCircle(flimg2[,,1]*0, dim(flimg2)[1]/2, dim(flimg2)[2]/2, 100, col=1, fill=T)
+  flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
+  quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
+  goodfocusfr <- which(quantcnt > 1000)
+  goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
+  
+  
+## Part 9. Image registration
+  # Apply rotation compensation
+  rot <- fvimgl[,,goodfr]
+  for (r in 1:dim(rot)[3]){
+    rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
   }
-  intensity <- zoo::na.approx(intensity_br)
-
-  ## Part 12. Plot delta F over F0
-  message("Creating dF/F0 plots")
-  F0int <- mean(intensity[1:5])
+  
+  # Template matching
+  centers <- array(0, dim=c(dim(rot)[3],2))
+  
+  for (c in 1:dim(rot)[3]){
+    centers[c,] <- align_cameras(source=rot[,,c],
+                                 template=rot[,,1],
+                                 output=output_prefix,
+                                 center=c(0, 0),
+                                 zoom=1,
+                                 autopos=T)
+  }
+  # Apply translation compensation
+  rottrans <- fvimgl[,,goodfr]
+  for (tr in 1:dim(rottrans)[3]){
+    rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
+  }
+  EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
+  display(normalize(rottrans))
+  
+  ## Apply transformation functions to fluo-view images
+  redrot <- flimg2[,,goodfr]
+  for (rr in 1:dim(redrot)[3]){
+    redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr[rr]], ang[goodfr[rr]], anchor = c("center")))
+  }
+  greenrot <- flimg1[,,goodfr]
+  for (rg in 1:dim(greenrot)[3]){
+    greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr[rg]], ang[goodfr[rg]], anchor = c("center")))
+  }
+  
+  redrottrans <- redrot
+  for (trr in 1:dim(redrottrans)[3]){
+    redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[trr,])
+  }
+  
+  greenrottrans <- greenrot
+  for (trg in 1:dim(greenrottrans)[3]){
+    greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centers[trg,])
+  }
+  
+  # Segment neurons
+  ans <- "N"
+  while(ans != "Y" && ans != "y"){
+    
+    redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
+                               (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
+                             (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
+                               (dim(redrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+    greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
+                                   (dim(greenrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
+                                 (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
+                                   (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+    
+    display(normalize(redwindow))
+    ans <- readline("Is the window good (Y or N)?:")
+    if(ans != "Y" && ans != "y") {
+      window_offset[1] <- as.integer(readline("Enter new x offset:"))
+      window_offset[2] <- as.integer(readline("Enter new y offset:"))
+    }
+  }
+  
+  redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
+  greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
+  display(normalize(redwindowmed))
+  redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
+  display(redwindowmedth)
+  
+  # Create F_ratio images  
+  F_ratio_image(redwindowmed, redwindowmedth, greenwindowmed)
+ 
+  # Calculate dF/F
+  intensity <- zoo::rollmean(greenperredave, 3, align="left")
+  datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
+  png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
+  plot(datint)  
+  dev.off()
+  
+  F0int <- intensity[1]
   deltaFint <- intensity - F0int
   dFF0int <- deltaFint/F0int * 100
-  dat <- data.frame(x=(1:length(dFF0int)), y=dFF0int, d=trj_res$flydist[frida])
-  p <- ggplot2::ggplot(data=dat, ggplot2::aes(x=x, y=y)) +
-    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
-    ggplot2::ylim(-5, 10) +
-    ggplot2::geom_line(data=dat, ggplot2::aes(x=x, y=d))
-  ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
-
-  ## Part 13. Create delta F over F0 pseudocolor representation
-  message("Calculating dF/F0 images...")
-  dF_F0_image(flimgreg=registered_images$flimgreg,
-              fvimgbwbrfhregimg=registered_images$fvimgbwbrfhregimg,
-              regimgi=registered_images$regimgi,
-              colmax=100, cmin=30, cmax=200,
-              goodfr=goodfr$goodfr,
-              output=output_prefix)
-
-  ## Part 14. ROI measurement
-  # Create ROI mask
-  # Rectangle ROI example
-  ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
-  ROI_mask[120:(120+10-1),120:(120+10-1)] <- 1
-  # Circular ROI example
-  # ROI_mask <- array(0, dim=dim(registered_images$flimgreg)[1:2])
-  # EBImage::drawCircle(img=ROI_mask, x=120, y=120, radius=5, col=1, fill=T)
-
-  ROI_dFF0 <- measureROI(img=registered_images$flimgreg,
-                         mask=ROI_mask,
-                         output=output_prefix,
-                         goodfr=goodfr$goodfr)
-
-  ## Part 15. Create trajectory of the flies
-  message("Creating trajectory of the flies...")
-  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
-  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-  plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
-       type = "l", lty = 1, col="red",
-       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-  par(new=T)
-  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+  datdFF0 <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
+  png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
+  plot(datdFF0)
   dev.off()
+  
+  loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
+  loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
+  loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
+  loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
+  loggit::message(paste0("Number of good frames was ", length(goodfr)))
+  
+  loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
+                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
 
-  ## Part 16. Convert fmf to tif format
-  if(fmf2tif==T){
-    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
-    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
-  }
+## Part 15. Create trajectory of the flies
+message("Creating trajectory of the flies...")
+pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
+plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
+     type = "l", lty = 1, col="red",
+     axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+par(new=T)
+plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+dev.off()
 
-  message("Finished processing!")
-  gc()
+## Part 16. Convert fmf to tif format
+if(fmf2tif==T){
+  dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
+  dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
+}
+
+message("Finished processing!")
+gc()
 }

@@ -72,11 +72,6 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   }else{
     frameratio <- round(fpsfv/fpsfl)
     message(paste0("fv/fl frame ratio: ", frameratio))
-    # Hypothetical trigger
-    # frid <- seq(fly_flash$fvflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio,
-    #             fly_flash$fvflashes[1]+frameratio*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio)
-    # 
-    # Find matching and nearest frames to the hypothetical trigger
     frid <- match(timestampfl, elapsedtimefv)
     frid[which(is.na(frid))] <- sapply(timestampfl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
     
@@ -110,7 +105,10 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     # Hypothetical trigger
     frida <- seq(arena_flash$avflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio2,
                  arena_flash$avflashes[1]+frameratio2*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio2)
-    # Check if two flashes match
+    frida <- match(timestampfl, elapsedtimeav)
+    frida[which(is.na(frida))] <- sapply(timestampfl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeav-x)))
+
+        # Check if two flashes match
     avflashesfridav <- frida[fluo_flash$flflashes]
     message(sprintf("Hypothetical flash for arena-view: %s", paste(avflashesfridav, collapse=" ")))
     message(sprintf("Actual flash for arena-view: %s", paste(arena_flash$avflashes, collapse=" ")))
