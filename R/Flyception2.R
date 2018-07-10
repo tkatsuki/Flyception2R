@@ -22,7 +22,7 @@
 #'
 
 Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
-                         fmf2tif=T, zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), 
+                         fmf2tif=F, zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), 
                          binning=1, fluo_flash_thresh=500,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25)){
@@ -30,7 +30,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # TO DO
   
   ## Part 0. Initialization
-  # Start logging
+  # Prepare directories and paths
+  prefix <- strsplit(dir, "/")[[1]][6]
+  outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
+  dir.create(outdir)
+  output_prefix <- paste0(outdir, prefix)
+  
+  # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
   # Prepare filenames 
@@ -98,7 +104,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          arena_flash=arena_flash,
                          output=paste0(dir, prefix),
                          reuse=reuse)
-
+  
   # Load fly-view flash image
   fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
   
@@ -123,7 +129,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     message("Detecting interaction")
     closefr <- which(trj_res$flydist < dist_thresh)
     closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
-    write.table(closefrid, paste0(dir, prefix, "_closefrid.txt"))
+    write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
   }
   
   ## Part 6. Load images
@@ -155,7 +161,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Load arena-view camera images
   avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
-  EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl_fr_", frida[1], "-", tail(frida, n=1), ".tif"))
+  EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl.tif"))
   rm(avimgl)
   
   # Detect beads
@@ -194,7 +200,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   
   
-## Part 9. Image registration
+  ## Part 9. Image registration
   # Apply rotation compensation
   rot <- fvimgl[,,goodfr]
   for (r in 1:dim(rot)[3]){
@@ -269,7 +275,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Create F_ratio images  
   F_ratio_image(redwindowmed, redwindowmedth, greenwindowmed)
- 
+  
   # Calculate dF/F
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
@@ -293,24 +299,24 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
                           FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
-
-## Part 15. Create trajectory of the flies
-message("Creating trajectory of the flies...")
-pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
-par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
-     type = "l", lty = 1, col="red",
-     axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-par(new=T)
-plotrix::draw.ellipse(0,0,11.0795*20,10*20)
-dev.off()
-
-## Part 16. Convert fmf to tif format
-if(fmf2tif==T){
-  dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
-  dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
-}
-
-message("Finished processing!")
-gc()
+  
+  ## Part 15. Create trajectory of the flies
+  message("Creating trajectory of the flies...")
+  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
+  plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
+       type = "l", lty = 1, col="red",
+       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  par(new=T)
+  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+  dev.off()
+  
+  ## Part 16. Convert fmf to tif format
+  if(fmf2tif==T){
+    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
+    dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
+  }
+  
+  message("Finished processing!")
+  gc()
 }
