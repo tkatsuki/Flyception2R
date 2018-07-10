@@ -31,7 +31,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   ## Part 0. Initialization
   # Prepare directories and paths
-  prefix <- strsplit(dir, "/")[[1]][6]
+  prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
   outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
   dir.create(outdir)
   output_prefix <- paste0(outdir, prefix)
