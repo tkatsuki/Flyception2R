@@ -1,7 +1,7 @@
 #' Detect angle of the beads
 #'
 #'
-#' @param img A binary image or array.
+#' @param img A binary labelled image or array.
 #' @export
 #' @examples
 #' detect_angle()
@@ -13,13 +13,18 @@ detect_angle <- function(img){
   for (i in 1:dim(img)[3]){
     ftrs[[i]] <- computeFeatures.moment(img[,,i])
   }
-  
+
   ang <- c()
   centroid <- array(0, dim=c(dim(img)[3],2))
   markernum <- c()
+  
   for (im in 1:dim(img)[3]){
     m <- ftrs[[im]]
-    markernum[im] <- nrow(m)
+    if(length(m)==0){
+      markernum[im] <- 0
+    }else{
+      markernum[im] <- nrow(m)
+    }
     
     if(markernum[im]==3){
       distmat <- dist(m[1:3,1:2])

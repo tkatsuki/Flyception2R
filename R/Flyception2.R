@@ -176,6 +176,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Calculate head angle
   ang_res <- detect_angle(fvimglbwseg)
+  print(ang_res)
   ang <- ang_res[[1]]
   markernum <- ang_res[[2]]
   centroid <- ang_res[[3]]
