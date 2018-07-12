@@ -226,6 +226,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   }
   EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
   display(normalize(rottrans))
+  rm(fvimgl)
+  rm(rot)
   
   ## Apply transformation functions to fluo-view images
   redrot <- flimg2[,,goodfr]
@@ -246,6 +248,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   for (trg in 1:dim(greenrottrans)[3]){
     greenrottrans[,,trg] <- EBImage::translate(greenrot[,,trg], -centers[trg,])
   }
+  rm(redrot)
+  rm(greenrot)
   
   # Segment neurons
   ans <- "N"
