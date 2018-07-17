@@ -176,7 +176,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Calculate head angle
   ang_res <- detect_angle(fvimglbwseg)
-  print(ang_res)
   ang <- ang_res[[1]]
   centroid <- ang_res[[2]]
   markernum <- ang_res[[3]]
@@ -273,8 +272,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     #display(normalize(redwindow))
     EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
     
-    sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2])
-    sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2])
+    print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
+    print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
     ans <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
     if(ans != "Y" && ans != "y") {
       window_size[1] <- as.integer(readline("Enter new x size:"))
