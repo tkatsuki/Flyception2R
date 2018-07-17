@@ -197,6 +197,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   centermask <- EBImage::drawCircle(flimg2[,,1]*0, dim(flimg2)[1]/2, dim(flimg2)[2]/2, 100, col=1, fill=T)
   flimg2cntlog <- dipr::ssweep(flimg2log, centermask, op="*")
   quantcnt <- apply(flimg2cntlog, 3, function(x) quantile(x, 0.9))
+  png(file=paste0(output_prefix, "_quantcnt.png"), width=400, height=400)
+  plot(quantcnt)
+  dev.off()
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   
@@ -225,9 +228,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
   }
   EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
-  display(normalize(rottrans))
+  #display(normalize(rottrans))
   rm(fvimgl)
   rm(rot)
+  rm(fvimglbw)
+  rm(fvimglbwseg)
+  rm(flimg2log)
   
   ## Apply transformation functions to fluo-view images
   redrot <- flimg2[,,goodfr]
@@ -264,8 +270,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
-    display(normalize(redwindow))
-    ans <- readline("Is the window good (Y or N)?:")
+    #display(normalize(redwindow))
+    EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
+    
+    sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2])
+    sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2])
+    ans <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
+    if(ans != "Y" && ans != "y") {
+      window_size[1] <- as.integer(readline("Enter new x size:"))
+      window_size[2] <- as.integer(readline("Enter new y size:"))
+    }
+    ans <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
     if(ans != "Y" && ans != "y") {
       window_offset[1] <- as.integer(readline("Enter new x offset:"))
       window_offset[2] <- as.integer(readline("Enter new y offset:"))
@@ -274,9 +289,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
-  display(normalize(redwindowmed))
+  #display(normalize(redwindowmed))
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
-  display(redwindowmedth)
+  #display(redwindowmedth)
   
   # Create F_ratio images  
   # F_ratio image
@@ -291,7 +306,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], 180, 220)
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
-  display(grratiocolor)
+  #display(grratiocolor)
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
@@ -312,8 +327,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                   (dim(grratiocolorl)[2]/2 + window_offset[2] + window_size[2]/2),,] <- grratiocolor
   flyviewcolor <- rottranscolor + grratiocolorl
   flyviewcolor <- Image(flyviewcolor, colormode="Color")
-  display(flyviewcolor)
+  #display(flyviewcolor)
   EBImage::writeImage(flyviewcolor, file=paste0(output_prefix, "_flyviewcolor.tif"))
+  rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
   redrottranscol <- array(0, dim=c(dim(redrottrans)[c(1,2)], 3, dim(redrottrans)[3]))
@@ -323,7 +339,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redrottranscol <- normalize(redrottranscol, separate=F, inputRange=c(180, 400))
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
-  display(redcolor)
+  #display(redcolor)
+  rm(redrottranscol)
   
   # Create side-by-side view of fly_view and fluo_view images
   frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
@@ -339,7 +356,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
   
-  display(frgcombined)
+  #display(frgcombined)
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
   EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
