@@ -11,7 +11,9 @@
 analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
   trj <- fvtrj[,c(2,3)]
-  trja <- read.table(paste0(dir, list.files(dir, pattern="av-traj-")), colClasses = "character")[,2:5]
+  trja <- read.table(paste0(dir, list.files(dir, pattern="av-traj-")), colClasses = "character")
+  trjancol <- ncol(trja)
+  trja <- trja[,2:trjancol]
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\[",replacement=""), stringsAsFactors=F)
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\]",replacement=""), stringsAsFactors=F)
   trja <- sapply(trja, as.numeric)
