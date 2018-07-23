@@ -71,9 +71,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                               flash_thresh=av_flash_thresh,
                               reuse=reuse)
   
-  if(length(fluo_flash$flflashes) == length(fly_flash$flyflashes)){
+  if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
     stop("Number of flash detected differ between fluo-view and fly-view.")
   }
+  # For manually aligning flash frames
+  # fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
+  
   
   ## Find the other channel in fluo-view
   fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
