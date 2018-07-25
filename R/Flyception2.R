@@ -114,11 +114,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Align fly-view and fluo-view
   center2 <- align_cameras(source=fvref/255,
                            template=flip(fl1ref),
-                           output=paste0(output_prefix, "_fvfl1"),
+                           output=paste0(paste0(dir, prefix), "_fvfl1"),
                            center=c(0, 0),
                            zoom=1.085,
                            autopos=T,
-                           ROI=F)
+                           ROI=c(1, 1, 50, 50))
   
   ## Part 3. Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
