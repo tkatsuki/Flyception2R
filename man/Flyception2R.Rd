@@ -4,15 +4,14 @@
 \alias{Flyception2R}
 \title{Flyception2R main script}
 \usage{
-Flyception2R(dir, prefix, autopos = T, interaction = T, reuse = T,
-  fmf2tif = T, zoom = 0.85, FOI = F, binning = 1,
-  fluo_flash_thresh = 10000, fv_flash_thresh = 135, av_flash_thresh = 100,
-  dist_thresh = 4, rotate_camera = -180)
+Flyception2R(dir, autopos = T, interaction = T, reuse = T, fmf2tif = F,
+  zoom = 1.085, FOI = F, ROI = c(391, 7, 240, 240), binning = 1,
+  fluo_flash_thresh = 500, fv_flash_thresh = 240, av_flash_thresh = 100,
+  dist_thresh = 4, rotate_camera = -180, window_size = c(68, 28),
+  window_offset = c(-4, 25))
 }
 \arguments{
 \item{dir}{path to the directory that contains the data}
-
-\item{prefix}{prefix used for output files}
 
 \item{autopos}{logical. Perform camera alignment using FNCC?}
 
@@ -26,6 +25,8 @@ Flyception2R(dir, prefix, autopos = T, interaction = T, reuse = T,
 
 \item{FOI}{a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
 
+\item{ROI}{a vector of four numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
+
 \item{binning}{integer. Binning of the fluo-view camera.}
 
 \item{fluo_flash_thresh}{numeric. A threshold for detecting flashes in a fluo-view video.}
@@ -37,6 +38,10 @@ Flyception2R(dir, prefix, autopos = T, interaction = T, reuse = T,
 \item{dist_thresh}{numeric. A distance threshold for detecting fly-fly interactions.}
 
 \item{rotate_camera}{integer. Angle of the fluo-view camera.}
+
+\item{window_size}{a vector of two numbers indicating the size of a window to the brain.}
+
+\item{window_offset}{a vector of two numbers indicating the position of the window to the brain as an offset from the center of the image.}
 }
 \description{
 Flyception2R main script

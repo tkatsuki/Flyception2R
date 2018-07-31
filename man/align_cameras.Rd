@@ -4,8 +4,8 @@
 \alias{align_cameras}
 \title{Align camera axis}
 \usage{
-align_cameras(flref, fvref, output, center = c(0, 0), zoom = 1,
-  autopos = T)
+align_cameras(source, template, output, center = c(0, 0), zoom = 1,
+  autopos = T, ROI = F)
 }
 \arguments{
 \item{obj}{A target image of Image object or an array.}
