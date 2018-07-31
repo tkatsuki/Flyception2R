@@ -26,7 +26,11 @@ imageJ_crop_append <- function(dir, ch=1, roi=c(383, 0, 256, 256)){
   
   # Crop a ROI for each file
   fluo_view_files <- list.files(dir, pattern="ome\\.tif$", full.names=T) # The first file is created without a numeric extension
-  file_order <- c(length(fluo_view_files), 1:(length(fluo_view_files)-1)) # Therefore we need to bring it front
+  if(length(fluo_view_files)==1){
+    file_order <- 1
+  }else{
+    file_order <- c(length(fluo_view_files), 1:(length(fluo_view_files)-1)) # Therefore we need to bring it front
+  }
   for(s in file_order){
     macro <- paste0('open("',fluo_view_files[s],'");\n makeRectangle(', paste(roi, collapse=","), ');\n run("Crop");\n saveAs("tiff", "',tools::file_path_sans_ext(fluo_view_files[s]),'.ch',ch,'.crop.tif");\n run("Quit");\n')
     write(macro, file=paste0(dir,"macro2.txt"))
@@ -38,13 +42,16 @@ imageJ_crop_append <- function(dir, ch=1, roi=c(383, 0, 256, 256)){
     }else{
       system(paste0("java -Xmx8g -jar /Applications/ImageJ/ImageJ.app/Contents/Resources/Java/ij.jar -ijpath /Applications/ImageJ -batch ", dir, "macro2.txt"), wait=T) 
     }
-  }
+  } 
   
   # Load cropped videos
   fluo_view_cropped_files_full <- list.files(dir, pattern=paste0("ome\\.ch", ch, "\\.crop\\.tif$"),  full.names=T)
   fluo_view_cropped_files <- list.files(dir, pattern=paste0("ome\\.ch", ch, "\\.crop\\.tif$"))
-  cropped_file_order <- c(length(fluo_view_cropped_files), 1:(length(fluo_view_cropped_files)-1))
-  
+  if(length(fluo_view_cropped_files)==1){
+    return()
+  }else{
+    cropped_file_order <- c(length(fluo_view_cropped_files), 1:(length(fluo_view_cropped_files)-1))
+  }
   
   for(cr in 1:length(fluo_view_cropped_files_full)){
     if(cr == 1){

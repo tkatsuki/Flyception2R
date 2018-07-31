@@ -75,6 +75,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     stop("Number of flash detected differ between fluo-view and fly-view.")
   }
   # For manually aligning flash frames
+  # fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
   # fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
   
   
