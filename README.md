@@ -1,4 +1,4 @@
-# FlyceptionR
+# Flyception2R
 R scripts and utilities for analyzing Flyception data
 
 ## Requirement
@@ -23,14 +23,14 @@ library(Flyception2R)
 ```
 
 ## Usage example
-Normally, you just need to specify which frames of a video file you want to analyze.
+The function Flyception2R automatically processes and analyzes the data except for one step (see below). Normally, you just need to specify which frames of a video file you want to analyze.
 
 ```
 dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/"
 Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
 ```
 
-While the code is running you will be asked if the window_size and window_offset are acceptable. Check the file _redwindow.tif with ImageJ, for example, and adjust the window size or offset so that the neurons of your interest are in the window.
+Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window for segmenting neurons needs to be manually adjusted. While the code is running you will be asked if the window_size and window_offset are acceptable. Check the file _redwindow.tif with ImageJ, for example, and adjust the window size or offset so that the neurons of your interest are in the window.
 
 ```
 [1] "Current window_size is x=68 y=28"
