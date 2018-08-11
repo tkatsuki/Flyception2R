@@ -12,16 +12,14 @@ Depends:
     ggplot2,
     RNiftyReg,
     dipr
+    zoo
+    loggit
 Imports:
-    zoo,
     plotrix,
     plyr,
     reshape2,
     devtools,
-    rlogging,
-    doParallel,
-Remotes: github::tkatsuki/dipr,
-    github::mjkallen/rlogging
+Remotes: github::tkatsuki/dipr
 License: BSD 3
 Encoding: UTF-8
 LazyData: TRUE

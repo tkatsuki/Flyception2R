@@ -16,6 +16,7 @@
 #' @param rotate_camera integer. Angle of the fluo-view camera.
 #' @param window_size a vector of two numbers indicating the size of a window to the brain.
 #' @param window_offset a vector of two numbers indicating the position of the window to the brain as an offset from the center of the image.
+#' @param flash 1 if the first flash is good, 2 if the first flash is bad and the second flash is good.
 #' @export
 #' @examples
 #' Flyception2R()
@@ -391,17 +392,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
                           FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
-  
-  ## Part 15. Create trajectory of the flies
-  message("Creating trajectory of the flies...")
-  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
-  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-  plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
-       type = "l", lty = 1, col="red",
-       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
-  par(new=T)
-  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
-  dev.off()
   
   ## Part 16. Convert fmf to tif format
   if(fmf2tif==T){
