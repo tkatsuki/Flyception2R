@@ -11,9 +11,9 @@ Depends:
     EBImage,
     ggplot2,
     RNiftyReg,
-    dipr
-    zoo
-    loggit
+    dipr,
+    zoo,
+    loggit,
 Imports:
     plotrix,
     plyr,
