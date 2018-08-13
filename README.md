@@ -18,6 +18,7 @@ install.packages(c("devtools", "ggplot2", "RNiftyReg", "zoo", "loggit"))
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("BiocInstaller", "EBImage"))
 library(devtools)
+devtools::install_github("tkatsuki/dipr")
 devtools::install_github("tkatsuki/Flyception2R")
 library(Flyception2R)
 ```
