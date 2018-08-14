@@ -33,7 +33,7 @@ Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
 
 Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below).
 
-[[https://github.com/tkatsuki/Flyception2R/redwindow.png|alt=redwindow]]
+![redwindow](https://github.com/tkatsuki/Flyception2R/blob/master/redwindow.png)
 
 ```
 [1] "Current window_size is x=68 y=28"
@@ -57,4 +57,4 @@ Number of good frames was 197
 
 Check ```_frgcombined_goodfr20_normalized.tif``` that the neurons are correctly segmented.
 
-![frgcombined](https://github.com/tkatsuki/Flyception2R/frgcombined.png)
+![frgcombined](https://github.com/tkatsuki/Flyception2R/blob/master/frgcombined.png)
