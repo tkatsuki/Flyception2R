@@ -44,7 +44,7 @@ Enter new x offset:0
 Enter new y offset:0
 ```
 
-The function spits out results like so;
+The function spits out results like so:
 
 ```
 window_size was x=68 y=28
@@ -57,4 +57,4 @@ Number of good frames was 197
 
 Check ```_frgcombined_goodfr20_normalized.tif``` that the neurons are correctly segmented.
 
-[[https://github.com/tkatsuki/Flyception2R/frgcombined.png|alt=frgcombined]]
+![frgcombined](https://github.com/tkatsuki/Flyception2R/frgcombined.png)
