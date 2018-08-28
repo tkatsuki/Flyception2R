@@ -21,21 +21,16 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   message(sprintf("fluo-view exposure: %s ms", exposure))
 
   # Elapsed time (in ms) of each frame from the fluorescence camera relative to the flash
-  elapsedtimefl <- metadata[grep("ElapsedTime-ms", metadata)+2]
-  elapsedtimefl <- as.numeric(substr(elapsedtimefl, 1, nchar(elapsedtimefl)-1))
+  # elapsedtimefl <- metadata[grep("ElapsedTime-ms", metadata)+2] # Switched to a more accurate time stamp info PVCAM-TimeStampBOF
+  # elapsedtimefl <- as.numeric(substr(elapsedtimefl, 1, nchar(elapsedtimefl)-1))
+  elapsedtimefl <- as.numeric(metadata[grep("PVCAM-TimeStampBOF", metadata)+2])
+  elapsedtimefl <- elapsedtimefl/10
   fpsfl <- round(length(elapsedtimefl)/tail(elapsedtimefl, n=1)*1000)
   message(paste("fluo-view fps:", fpsfl))
   elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]]
   elapsedtimediff <- diff(elapsedtimefl)
   png(file=paste0(output, "_elapsedtimefldiff.png"), width=400, height=400)
   plot(1:length(elapsedtimediff), elapsedtimediff)
-  dev.off()
-  timestampfl <- metadata[grep("TimeStampMsec", metadata)+2]
-  timestampfl <- as.numeric(substr(timestampfl, 1, nchar(timestampfl)))
-  timestampfl <- timestampfl - timestampfl[fluo_flash$flflashes[1]]
-  timestampfldiff <- diff(timestampfl)
-  png(file=paste0(output, "_timestampfldiff.png"), width=400, height=400)
-  plot(timestampfldiff)
   dev.off()
   
   # Elapsed time (in ms) of each frame from the fly view camera
@@ -100,11 +95,11 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     message("Loading RDS file")
     frida <- readRDS(paste0(output, "_frida.RDS"))
   }else{
+    frid <- match(timestampfl, elapsedtimefv)
+    frid[which(is.na(frid))] <- sapply(timestampfl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
+    
     frameratio2 <- round(fpsav/fpsfl)
     message(paste0("av/fl frame ratio: ", frameratio2))
-    # Hypothetical trigger
-    frida <- seq(arena_flash$avflashes[1]-(fluo_flash$flflashes[1]-1)*frameratio2,
-                 arena_flash$avflashes[1]+frameratio2*(fluo_flash$nframesfl-fluo_flash$flflashes[1]), frameratio2)
     frida <- match(timestampfl, elapsedtimeav)
     frida[which(is.na(frida))] <- sapply(timestampfl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeav-x)))
 
