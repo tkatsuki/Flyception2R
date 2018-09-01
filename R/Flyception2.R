@@ -112,7 +112,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          fly_flash=fly_flash,
                          arena_flash=arena_flash,
                          output=paste0(dir, prefix),
-                         reuse=reuse)
+                         reuse=reuse,
+                         hypothetical=F)
   
   # Load fly-view flash image
   fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]

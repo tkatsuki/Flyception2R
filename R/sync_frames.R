@@ -1,38 +1,54 @@
 #' Synchronize camera frames
 #'
 #'
-#' @param obj A target image of Image object or an array.
-#' @param ref A reference image of Image object or an array.
+#' @param dir Input directory.
+#' @param fluo_flash Result of detect_flash() function for fluo-view.
+#' @param fly_flash Result of detect_flash() function for fly-view.
+#' @param arena_flash Result of detect_flash() function for arena-view.
+#' @param output Output path for saving results.
+#' @param reuse True if one wants to reuse previously saved results.
+#' @param hypothetical True if one wants to use hypothetically generated 20.0ms, 19.9ms alternating timestamp for fluo-view.
 #' @export
 #' @examples
 #' sync_frames()
 
-sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F){
+sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F, hypothetical=F){
 
   # Start time
   message("Analyzing metadata")
   metadata <-scan(paste0(dir, list.files(dir, pattern="metadata\\.txt$")), what=character(),sep="")
   log <- scan(paste0(dir, list.files(dir, pattern="fv-log-")), what=character(),sep="")
   avlog <- scan(paste0(dir, list.files(dir, pattern="av-log-")), what=character(),sep="")
-  starttimefl <- metadata[which(metadata == "Time")[1]+2]
 
   # Exposure and binning
   exposure <- substr(metadata[which(metadata == "Exposure-ms")[1]+2], 1, nchar(metadata[which(metadata == "Exposure-ms")[1]+2])-1)
   message(sprintf("fluo-view exposure: %s ms", exposure))
 
   # Elapsed time (in ms) of each frame from the fluorescence camera relative to the flash
-  # elapsedtimefl <- metadata[grep("ElapsedTime-ms", metadata)+2] # Switched to a more accurate time stamp info PVCAM-TimeStampBOF
-  # elapsedtimefl <- as.numeric(substr(elapsedtimefl, 1, nchar(elapsedtimefl)-1))
   elapsedtimefl <- as.numeric(metadata[grep("PVCAM-TimeStampBOF", metadata)+2])
   elapsedtimefl <- elapsedtimefl/10
   fpsfl <- round(length(elapsedtimefl)/tail(elapsedtimefl, n=1)*1000)
   message(paste("fluo-view fps:", fpsfl))
-  elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]]
-  elapsedtimediff <- diff(elapsedtimefl)
+    # Add 5 ms of lead as the flash fires 5 ms into a frame
+  elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]] + 5
+  elapsedtimefldiff <- diff(elapsedtimefl)
   png(file=paste0(output, "_elapsedtimefldiff.png"), width=400, height=400)
-  plot(1:length(elapsedtimediff), elapsedtimediff)
+  plot(1:length(elapsedtimefldiff), elapsedtimefldiff)
   dev.off()
   
+  if(hypothetical==T){
+    # Generate hypothetical timestamp to ignore software jitter
+    # Check if the sequence is 
+    oddmean <- mean(elapsedtimefldiff[seq(from=1,to=length(elapsedtimefldiff), by=2)])
+    if(oddmean > 19.99){
+      elapsedtimefl <- cumsum(rep(c(20,19.9),length(elapsedtimefl)/2))
+      elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]] + 5
+    }else{
+      elapsedtimefl <- cumsum(rep(c(19.9,20),length(elapsedtimefl)/2))
+      elapsedtimefl <- elapsedtimefl - elapsedtimefl[fluo_flash$flflashes[1]] + 5
+    }
+  }
+
   # Elapsed time (in ms) of each frame from the fly view camera
   timestampusec <- as.numeric(log[grep("TimeStamp", log)+1])
   elapsedtimefv <- (timestampusec - timestampusec[1])/1000
@@ -67,18 +83,10 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   }else{
     frameratio <- round(fpsfv/fpsfl)
     message(paste0("fv/fl frame ratio: ", frameratio))
-    frid <- match(timestampfl, elapsedtimefv)
-    frid[which(is.na(frid))] <- sapply(timestampfl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
+    frid <- match(elapsedtimefl, elapsedtimefv)
+    frid[which(is.na(frid))] <- sapply(elapsedtimefl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
     
     # Check if two flashes match
-    fvflashesfrid <- frid[fluo_flash$flflashes]
-    message(sprintf("Hypothetical flash for fly-view: %s", paste(fvflashesfrid, collapse=" ")))
-    message(sprintf("Actual flash for fly-view: %s", paste(fly_flash$fvflashes, collapse=" ")))
-    if(all.equal(fvflashesfrid, fly_flash$fvflashes)==T){
-      message(paste0("Hypothetical flashes match actual flashes in fly-view."))
-    }else{
-      message(paste0("Hypothetical flashes didn't match actual flashes in fly-view. Syncing failed?"))
-    }
     if(length(fluo_flash$flflashes)!=length(fly_flash$fvflashes)) {
       warning("Number of flash in fly-view and fluo-view didn't match.")
     }
@@ -95,23 +103,12 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     message("Loading RDS file")
     frida <- readRDS(paste0(output, "_frida.RDS"))
   }else{
-    frid <- match(timestampfl, elapsedtimefv)
-    frid[which(is.na(frid))] <- sapply(timestampfl[which(is.na(frid))], function(x) which.min(abs(elapsedtimefv-x)))
-    
     frameratio2 <- round(fpsav/fpsfl)
     message(paste0("av/fl frame ratio: ", frameratio2))
-    frida <- match(timestampfl, elapsedtimeav)
-    frida[which(is.na(frida))] <- sapply(timestampfl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeav-x)))
+    frida <- match(elapsedtimefl, elapsedtimeav)
+    frida[which(is.na(frida))] <- sapply(elapsedtimefl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeav-x)))
 
-        # Check if two flashes match
-    avflashesfridav <- frida[fluo_flash$flflashes]
-    message(sprintf("Hypothetical flash for arena-view: %s", paste(avflashesfridav, collapse=" ")))
-    message(sprintf("Actual flash for arena-view: %s", paste(arena_flash$avflashes, collapse=" ")))
-    if(all.equal(avflashesfridav, arena_flash$avflashes)==T){
-      message(paste0("Hypothetical flashes match actual flashes in arena-view."))
-    }else{
-      message(paste0("Hypothetical flashes didn't match actual flashes in arena-view. Syncing failed?"))
-    }
+    # Check if two flashes match
     if(length(fluo_flash$flflashes)!=length(arena_flash$avflashes)) {
       message("Number of flash in arena-view and fluo-fiew did not match.")
     }
