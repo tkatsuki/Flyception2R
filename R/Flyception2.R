@@ -74,7 +74,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                               reuse=reuse)
   
   if(flash == 2){
-    fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
+    # fluo-view can miss flashes. If only one flash was detected leave as is.
+    if(length(fluo_flash$flflashes)==2){
+      fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
+    }
     fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
   }
   if(flash != 1 && flash !=2){
