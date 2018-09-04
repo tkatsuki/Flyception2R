@@ -215,7 +215,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   
-  
+  # Save index of good frames
+  if(FOI != F) {
+    saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
+  } else {
+    saveRDS(goodfr, paste0(output_prefix, "_gfrid.RDS"))
+  }
+
   ## Part 9. Image registration
   # Apply rotation compensation
   rot <- fvimgl[,,goodfr]
