@@ -105,8 +105,8 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   }else{
     frameratio2 <- round(fpsav/fpsfl)
     message(paste0("av/fl frame ratio: ", frameratio2))
-    frida <- match(elapsedtimefl, elapsedtimeav)
-    frida[which(is.na(frida))] <- sapply(elapsedtimefl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeav-x)))
+    frida <- match(elapsedtimefl, elapsedtimeavflash)
+    frida[which(is.na(frida))] <- sapply(elapsedtimefl[which(is.na(frida))], function(x) which.min(abs(elapsedtimeavflash-x)))
 
     # Check if two flashes match
     if(length(fluo_flash$flflashes)!=length(arena_flash$avflashes)) {

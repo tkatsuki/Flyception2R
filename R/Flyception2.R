@@ -312,7 +312,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   #display(redwindowmedth)
   
   # Create F_ratio images  
-  # F_ratio image
   redmasked <- redwindowmed*redwindowmedth
   greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
@@ -324,7 +323,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], 180, 220)
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
-  #display(grratiocolor)
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
