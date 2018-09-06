@@ -79,6 +79,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
       fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
     }
     fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
+    arena_flash$avflashes[1] <- arena_flash$avflashes[2]
   }
   if(flash != 1 && flash !=2){
    if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
