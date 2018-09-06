@@ -86,15 +86,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     }
   }
 
-  
-  ## Find the other channel in fluo-view
+  ## Part 2. Camera alignment
+  # Load fluo-view flash frames for alignment
   fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
   fl1ref <- EBImage::normalize(fl1ref)
   fl2ref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
   fl2ref <- EBImage::normalize(fl2ref)
   fl2refcrop <- fl2ref[1025:2048,1:256] # Split the original image into two halves
   
-  ## Align two channels of fluo-view
+  # Align two channels of fluo-view
   center <- align_cameras(source=fl2refcrop,
                           template=fl1ref,
                           output=paste0(paste0(dir, prefix), "_fl2fl1"),
@@ -137,7 +137,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                   interaction=interaction)
   
   
-  ## Part 5. Detect interaction
+  ## Part 4. Detect interaction
   if(interaction==T){
     message("Detecting interaction")
     closefr <- which(trj_res$flydist < dist_thresh)
@@ -145,7 +145,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
   }
   
-  ## Part 6. Load images
+  ## Part 5. Image registration
   message(sprintf("Reading %s", fluo_view_tif_ch1))
   
   # Analyze only part of the movie?
@@ -192,10 +192,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   angdiff <- c(0, diff(ang))
   ang_thresh <- 0.02
   goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
-  goodmarkerfr <- which(markernum == 3) 
+  goodmarkerfr <- which(markernum == 3)
   
   objdist <- sqrt((centroid[,1]-dim(fvimgl)[1]/2)^2 + (centroid[,2]-dim(fvimgl)[2]/2)^2)
   motion <- c(0, sqrt(diff(centroid[,1])^2 + diff(centroid[,2])^2))
+  png(file=paste0(output_prefix, "_motion.png"), width=400, height=400)
+  plot(motion)
+  dev.off()
   motion_thresh <- 2
   goodmotionfr <- which(motion < motion_thresh)
   
@@ -223,7 +226,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   EBImage::writeImage(avimgl[,,goodfr]/255, file=paste0(output_prefix, "_avimgl_goodfr.tif"))
   rm(avimgl)
   
-  ## Part 9. Image registration
   # Apply rotation compensation
   rot <- fvimgl[,,goodfr]
   for (r in 1:dim(rot)[3]){
@@ -247,7 +249,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
   }
   EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
-  #display(normalize(rottrans))
   rm(fvimgl)
   rm(rot)
   rm(fvimglbw)
@@ -276,7 +277,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(redrot)
   rm(greenrot)
   
-  # Segment neurons
+  ## Part 6. Image segmentation and fluorescence quantification
+  # Interactively determine window size and offset to include neurons of interest
   ans <- "N"
   while(ans != "Y" && ans != "y"){
     
@@ -289,7 +291,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
-    #display(normalize(redwindow))
     EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
@@ -308,9 +309,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
-  #display(normalize(redwindowmed))
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
-  #display(redwindowmedth)
   
   # Create F_ratio images  
   redmasked <- redwindowmed*redwindowmedth
@@ -356,7 +355,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redrottranscol <- normalize(redrottranscol, separate=F, inputRange=c(180, 400))
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
-  #display(redcolor)
   rm(redrottranscol)
   
   # Create side-by-side view of fly_view and fluo_view images
@@ -373,7 +371,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
   
-  #display(frgcombined)
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
   EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
@@ -402,7 +399,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
                           FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
   
-  ## Part 16. Convert fmf to tif format
+  ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
