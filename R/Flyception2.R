@@ -172,11 +172,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
   EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
   
-  # Load arena-view camera images
-  avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
-  EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl.tif"))
-  rm(avimgl)
-  
   # Detect beads
   fvimglbl <- gblur(fvimgl/255, 2)
   fvimglbw <- thresh(fvimglbl, w=20, h=20, offset=0.2)
@@ -222,6 +217,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     saveRDS(goodfr, paste0(output_prefix, "_gfrid.RDS"))
   }
 
+  # Load arena-view camera images
+  avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
+  EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl.tif"))
+  EBImage::writeImage(avimgl[,,goodfr]/255, file=paste0(output_prefix, "_avimgl_goodfr.tif"))
+  rm(avimgl)
+  
   ## Part 9. Image registration
   # Apply rotation compensation
   rot <- fvimgl[,,goodfr]
