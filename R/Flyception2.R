@@ -27,12 +27,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          binning=1, fluo_flash_thresh=500,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
-                         flash=1){
+                         flash=1, preprocess=F){
   
   # TO DO
   
   ## Part 0. Initialization
   # Prepare directories and paths
+  if(preprocess == T) reuse <- F
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
   outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
   dir.create(outdir)
@@ -40,7 +41,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
-  
+  if(preprocess == T) loggit::message(paste0("Preprocessing", prefix, "..."))
+    
   # Prepare filenames 
   fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
   fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
@@ -130,6 +132,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                            zoom=1.085,
                            autopos=T,
                            ROI=c(1, 1, 50, 50))
+  
+  if(preprocess == T) {
+    loggit::message("Preprocessing done")
+    return()
+  }
   
   ## Part 3. Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
