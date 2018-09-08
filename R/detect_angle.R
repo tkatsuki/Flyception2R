@@ -11,7 +11,12 @@ detect_angle <- function(img){
   
   ftrs <- list()
   for (i in 1:dim(img)[3]){
-    ftrs[[i]] <- computeFeatures.moment(img[,,i])
+    tmp <- computeFeatures.moment(img[,,i])
+      if(is.null(tmp)){
+        ftrs[[i]] <- 0
+      }else{
+        ftrs[[i]] <- tmp
+      }
   }
 
   ang <- c()
@@ -20,7 +25,7 @@ detect_angle <- function(img){
   
   for (im in 1:dim(img)[3]){
     m <- ftrs[[im]]
-    if(length(m)==0){
+    if(length(m)==1){
       markernum[im] <- 0
     }else{
       markernum[im] <- nrow(m)

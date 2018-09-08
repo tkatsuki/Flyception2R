@@ -382,6 +382,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
+  saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
   F0int <- intensity[1]
   deltaFint <- intensity - F0int
