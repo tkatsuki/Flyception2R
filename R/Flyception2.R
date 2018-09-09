@@ -287,8 +287,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   ## Part 6. Image segmentation and fluorescence quantification
   # Interactively determine window size and offset to include neurons of interest
-  ans <- "N"
-  while(ans != "Y" && ans != "y"){
+  ans <- c("N","N")
+  while(!all(stringr::str_to_lower(ans)=="y")){
+
     
     redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
                                (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
@@ -303,12 +304,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
     print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
-    ans <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
+    ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
     if(ans != "Y" && ans != "y") {
       window_size[1] <- as.integer(readline("Enter new x size:"))
       window_size[2] <- as.integer(readline("Enter new y size:"))
     }
-    ans <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
+    ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
     if(ans != "Y" && ans != "y") {
       window_offset[1] <- as.integer(readline("Enter new x offset:"))
       window_offset[2] <- as.integer(readline("Enter new y offset:"))
