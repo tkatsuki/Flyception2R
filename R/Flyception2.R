@@ -325,6 +325,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
+  goodfrrat <- goodfr[!is.na(greenperredave)]
   greenperredave <- greenperredave[!is.na(greenperredave)]
   plot(greenperredave)
   greenperred[which(is.na(greenperred)==T)] <- 0
@@ -387,7 +388,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Calculate dF/F
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
-  datint <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=intensity)
+  datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
@@ -396,7 +397,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   F0int <- intensity[1]
   deltaFint <- intensity - F0int
   dFF0int <- deltaFint/F0int * 100
-  datdFF0 <- data.frame(x=goodfr[1:(length(goodfr)-2)], y=dFF0int)
+  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
   png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
   plot(datdFF0)
   dev.off()
