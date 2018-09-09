@@ -324,6 +324,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
+  greenperredave <- greenperredave[!is.na(greenperredave)]
   plot(greenperredave)
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
