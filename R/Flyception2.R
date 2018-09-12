@@ -27,7 +27,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          binning=1, fluo_flash_thresh=500,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
-                         flash=1, preprocess=F){
+                         colorRange= c(180, 220), flash=1, preprocess=F){
   
   # TO DO
   
@@ -331,7 +331,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
-    grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], 180, 220)
+    grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
   
