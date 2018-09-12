@@ -305,12 +305,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
     print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
     ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
-    if(ans != "Y" && ans != "y") {
+    if(ans[1] != "Y" && ans[1] != "y") {
       window_size[1] <- as.integer(readline("Enter new x size:"))
       window_size[2] <- as.integer(readline("Enter new y size:"))
     }
     ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
-    if(ans != "Y" && ans != "y") {
+    if(ans[2] != "Y" && ans[2] != "y") {
       window_offset[1] <- as.integer(readline("Enter new x offset:"))
       window_offset[2] <- as.integer(readline("Enter new y offset:"))
     }
