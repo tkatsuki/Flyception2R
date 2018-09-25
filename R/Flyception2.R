@@ -402,6 +402,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   plot(datdFF0)
   dev.off()
   
+  p <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
+    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95)
+  ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
+  
   loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
   loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
