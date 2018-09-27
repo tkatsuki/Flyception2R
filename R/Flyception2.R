@@ -134,6 +134,20 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                            ROI=c(1, 1, 50, 50))
   
   if(preprocess == T) {
+    # Check and align template
+    ans <- c("N","Y")
+    while(!all(stringr::str_to_lower(ans)=="y")){
+      
+      fvfl1ol <- fvref/255 + .75*(EBImage::translate(flip(fl1ref),center2));
+      EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
+      
+      print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
+      ans[1] <- readline("Is template match okay (Y or N)?:")
+      if(!stringr::str_to_lower(ans[1])=="y") {
+        center2[1] <- as.integer(readline("Enter new x position for center:"))
+        center2[2] <- as.integer(readline("Enter new y position for center:"))
+      }
+    }
     loggit::message("Preprocessing done")
     return()
   }
