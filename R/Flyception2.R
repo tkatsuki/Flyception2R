@@ -41,101 +41,123 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
-  if(preprocess == T) loggit::message(paste0("Preprocessing", prefix, "..."))
-    
-  # Prepare filenames 
-  fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
-  fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
-  arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
-  
-  # Crop a first channel in fluo_view images using ImageJ
-  if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
-    imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
-  }
-  fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
-  flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
-  
-  ## Part 1. Detect flash
-  message("Detecting flash in fluo-view")
-  fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
-                             type="fluo",
-                             output=paste0(dir, prefix),
-                             flash_thresh=fluo_flash_thresh,
-                             reuse=reuse)
-  message("Detecting flash in fly-view")
-  fly_flash <- detect_flash(input=fly_view_fmf,
-                            type="fly",
-                            output=paste0(dir, prefix),
-                            flash_thresh=fv_flash_thresh,
-                            reuse=reuse)
-  message("Detecting flash in arena-view")
-  arena_flash <- detect_flash(input=arena_view_fmf,
-                              type="arena",
-                              output=paste0(dir, prefix),
-                              flash_thresh=av_flash_thresh,
-                              reuse=reuse)
-  
-  if(flash == 2){
-    # fluo-view can miss flashes. If only one flash was detected leave as is.
-    if(length(fluo_flash$flflashes)==2){
-      fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
-    }
-    fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
-    arena_flash$avflashes[1] <- arena_flash$avflashes[2]
-  }
-  if(flash != 1 && flash !=2){
-   if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
-             stop("Number of flash detected differ between fluo-view and fly-view.")
-    }
-  }
 
-  ## Part 2. Camera alignment
-  # Load fluo-view flash frames for alignment
-  fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
-  fl1ref <- EBImage::normalize(fl1ref)
-  fl2ref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
-  fl2ref <- EBImage::normalize(fl2ref)
-  fl2refcrop <- fl2ref[1025:2048,1:256] # Split the original image into two halves
-  
-  # Align two channels of fluo-view
-  center <- align_cameras(source=fl2refcrop,
-                          template=fl1ref,
-                          output=paste0(paste0(dir, prefix), "_fl2fl1"),
-                          center=c(0, 0),
-                          zoom=1,
-                          autopos=T,
-                          ROI=c(1, 1, 450, 50))
-  
-  # Crop a second channel in fluo_view images using ImageJ
-  if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
-    imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
-  }
-  fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
-  
-  # Synchronize video frames
-  syncing <- sync_frames(dir=dir,
-                         fluo_flash=fluo_flash,
-                         fly_flash=fly_flash,
-                         arena_flash=arena_flash,
-                         output=paste0(dir, prefix),
-                         reuse=reuse,
-                         hypothetical=F)
-  
-  # Load fly-view flash image
-  fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
-  
-  # Align fly-view and fluo-view
-  center2 <- align_cameras(source=fvref/255,
-                           template=flip(fl1ref),
-                           output=paste0(paste0(dir, prefix), "_fvfl1"),
-                           center=c(0, 0),
-                           zoom=1.085,
-                           autopos=T,
-                           ROI=c(1, 1, 50, 50))
-  
   if(preprocess == T) {
+  
+  loggit::message(paste0("Preprocessing", prefix, "..."))
+    
+     # Prepare filenames 
+    fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
+    fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
+    arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
+    
+    # Crop a first channel in fluo_view images using ImageJ
+    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
+      imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+    }
+    fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+    flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
+    
+    ## Part 1. Detect flash
+    message("Detecting flash in fluo-view")
+    fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
+                               type="fluo",
+                               output=paste0(dir, prefix),
+                               flash_thresh=fluo_flash_thresh,
+                               reuse=reuse)
+    message("Detecting flash in fly-view")
+    fly_flash <- detect_flash(input=fly_view_fmf,
+                              type="fly",
+                              output=paste0(dir, prefix),
+                              flash_thresh=fv_flash_thresh,
+                              reuse=reuse)
+    message("Detecting flash in arena-view")
+    arena_flash <- detect_flash(input=arena_view_fmf,
+                                type="arena",
+                                output=paste0(dir, prefix),
+                                flash_thresh=av_flash_thresh,
+                                reuse=reuse)
+    
+    if(flash == 2){
+      # fluo-view can miss flashes. If only one flash was detected leave as is.
+      if(length(fluo_flash$flflashes)==2){
+        fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
+      }
+      fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
+      arena_flash$avflashes[1] <- arena_flash$avflashes[2]
+    }
+    if(flash != 1 && flash !=2){
+      if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
+        stop("Number of flash detected differ between fluo-view and fly-view.")
+      }
+    }
+    
+    ## Part 2. Camera alignment
+    # Load fluo-view flash frames for alignment
+    fl1ref <- dipr::readTIFF2(fluo_view_tif_ch1, frames=fluo_flash$flflashes[1])
+    fl1ref <- EBImage::normalize(fl1ref)
+    fl2ref <- dipr::readTIFF2(fluo_view_tif, frames=fluo_flash$flflashes[1])
+    fl2ref <- EBImage::normalize(fl2ref)
+    fl2refcrop <- fl2ref[1025:2048,1:256] # Split the original image into two halves
+    
+    # Align two channels of fluo-view
+    center <- align_cameras(source=fl2refcrop,
+                            template=fl1ref,
+                            output=paste0(paste0(dir, prefix), "_fl2fl1"),
+                            center=c(0, 0),
+                            zoom=1,
+                            autopos=T,
+                            ROI=c(1, 1, 450, 50))
+    
+    # Crop a second channel in fluo_view images using ImageJ
+    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
+      imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+    }
+    fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+    
+    # Synchronize video frames
+    syncing <- sync_frames(dir=dir,
+                           fluo_flash=fluo_flash,
+                           fly_flash=fly_flash,
+                           arena_flash=arena_flash,
+                           output=paste0(dir, prefix),
+                           reuse=reuse,
+                           hypothetical=F)
+    
+    # Load fly-view flash image
+    fvref <- dipr::readFMF(fly_view_fmf, frames=c(fly_flash$fvflashes[1] + 1))[,,1]
+    
+    # Align fly-view and fluo-view
+    center2 <- align_cameras(source=fvref/255,
+                             template=flip(fl1ref),
+                             output=paste0(paste0(dir, prefix), "_fvfl1"),
+                             center=c(0, 0),
+                             zoom=1.085,
+                             autopos=T,
+                             ROI=c(1, 1, 50, 50))
+    
+    # Check and align template
+    ans <- c("N","Y")
+    while(!all(stringr::str_to_lower(ans)=="y")){
+      
+      fvfl1ol <- fvref/255 + .75*(EBImage::translate(flip(fl1ref),center2));
+      EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
+      
+      print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
+      ans[1] <- readline("Is template match okay (Y or N)?:")
+      if(!stringr::str_to_lower(ans[1])=="y") {
+        center2[1] <- as.integer(readline("Enter new x position for center:"))
+        center2[2] <- as.integer(readline("Enter new y position for center:"))
+      }
+    }
+    
+    savefn <- paste0(dir, prefix,"_prepdata.RData")
+    save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,fly_view_fmf,savefn,syncing,file=savefn)
     loggit::message("Preprocessing done")
     return()
+  } else {
+    # Load preprocessed data
+    load(paste0(dir, prefix,"_prepdata.RData"))
   }
   
   ## Part 3. Analyze trajectories
@@ -316,6 +338,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     }
   }
   
+  rm(flimg1)
+  rm(flimg2)
+  rm(flimg2cntlog)
+
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
@@ -383,8 +409,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   frgcombined <-  Image(frgcombined, colormode="Color")
   
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
+  rm(redrottrans)
   EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
+  rm(greenrottrans)
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
+  rm(frgcombined)
   
   # Calculate dF/F
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
