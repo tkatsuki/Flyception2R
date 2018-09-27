@@ -338,6 +338,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     }
   }
   
+  rm(flimg1)
+  rm(flimg2)
+  rm(flimg2cntlog)
+
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
@@ -405,8 +409,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   frgcombined <-  Image(frgcombined, colormode="Color")
   
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
+  rm(redrottrans)
   EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
+  rm(greenrottrans)
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
+  rm(frgcombined)
   
   # Calculate dF/F
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
