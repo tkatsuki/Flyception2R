@@ -387,11 +387,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
   
   # Calculate dF/F
+  datrawint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=greenperredave)
+  datloessint <- loess(y ~ x, data=datrawint, span=0.4)
+  datsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(datloessint))
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
+
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
+
+  png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
+  plot(datloessint, type="p")
+  lines(datsmoothint, col="blue")
+  dev.off()
+  
+  saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
+  write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
+  saveRDS(datloessint, paste0(output_prefix, "_datloessint.RDS"))
+  saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS"))
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
   F0int <- intensity[1]
@@ -409,7 +423,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
   loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
-  loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
+  loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
   loggit::message(paste0("Number of good frames was ", length(goodfr)))
   
   loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
