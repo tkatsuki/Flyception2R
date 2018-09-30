@@ -456,7 +456,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   loggit::message(paste0("Number of good frames was ", length(goodfr)))
   
   loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
-                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity)))
+                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(datsmoothint$y)))
   
   ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
