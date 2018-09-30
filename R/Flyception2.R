@@ -422,9 +422,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Calculate dF/F
   datrawint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=greenperredave, r=redave, g=greenave)
   
-  datloessint <- loess(y ~ x, data=datrawint, span=0.4)
-  redloessint <- loess(r ~ x, data=datrawint, span=0.4)
-  greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
+  datloessint <- loess(y ~ x, data=datrawint, span=0.2)
+  redloessint <- loess(r ~ x, data=datrawint, span=0.2)
+  greenloessint <- loess(g ~ x, data=datrawint, span=0.2)
   datsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(datloessint))
   redsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(redloessint))
   greensmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(greenloessint))
@@ -440,8 +440,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   lines(datsmoothint, col="blue")
   par(new=TRUE)
   plot(redsmoothint, col="red", ylim=c(0, 0.0005))
+  #points(redloessint, col="red")
   par(new=TRUE)
   plot(greensmoothint, col="green", ylim=c(0, 0.0005))
+  #points(greenloessint, col="green")
   dev.off()
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
