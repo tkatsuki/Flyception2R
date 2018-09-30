@@ -350,10 +350,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redmasked <- redwindowmed*redwindowmedth
   greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
+  redave <- colMeans(redmasked, dim=2, na.rm=T)
+  greenave <- colMeans(greenmasked, dim=2, na.rm=T)
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
   goodfrrat <- goodfr[!is.na(greenperredave)]
   greenperredave <- greenperredave[!is.na(greenperredave)]
-  plot(greenperredave)
+  redave <- redave[!is.na(greenperredave)]
+  greenave <- greenave[!is.na(greenperredave)]
+
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
@@ -416,9 +420,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(frgcombined)
   
   # Calculate dF/F
-  datrawint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=greenperredave)
+  datrawint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=greenperredave, r=redave, g=greenave)
+  
   datloessint <- loess(y ~ x, data=datrawint, span=0.4)
+  redloessint <- loess(r ~ x, data=datrawint, span=0.4)
+  greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
   datsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(datloessint))
+  redsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(redloessint))
+  greensmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(greenloessint))
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
 
@@ -429,6 +438,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
   plot(datloessint, type="p")
   lines(datsmoothint, col="blue")
+  par(new=TRUE)
+  plot(redsmoothint, col="red", ylim=c(0, 0.0005))
+  par(new=TRUE)
+  plot(greensmoothint, col="green", ylim=c(0, 0.0005))
   dev.off()
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
