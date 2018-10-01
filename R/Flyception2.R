@@ -468,11 +468,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
   loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
+  loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
   loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
   loggit::message(paste0("Number of good frames was ", length(goodfr)))
   
-  loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||", 
-                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(datsmoothint$y)))
+  loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||%.3f ||", 
+                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity), max(datsmoothint$y)))
   
   ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
