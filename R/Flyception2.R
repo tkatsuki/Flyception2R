@@ -420,14 +420,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(frgcombined)
   
   # Calculate dF/F
-  datrawint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=greenperredave, r=redave, g=greenave)
+  datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
   
-  datloessint <- loess(y ~ x, data=datrawint, span=0.2)
-  redloessint <- loess(r ~ x, data=datrawint, span=0.2)
-  greenloessint <- loess(g ~ x, data=datrawint, span=0.2)
-  datsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(datloessint))
-  redsmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(redloessint))
-  greensmoothint <- data.frame(x=goodfrrat[1:(length(goodfrrat))], y=predict(greenloessint))
+  datloessint <- loess(y ~ x, data=datrawint, span=0.4)
+  redloessint <- loess(r ~ x, data=datrawint, span=0.4)
+  greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
+  datsmoothint <- data.frame(x=goodfrrat, y=predict(datloessint))
+  redsmoothint <- data.frame(x=goodfrrat, y=predict(redloessint))
+  greensmoothint <- data.frame(x=goodfrrat, y=predict(greenloessint))
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
 
@@ -436,14 +436,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   dev.off()
 
   png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
-  plot(datloessint, type="p")
+  par(mar = c(5,5,2,5))
+  plot(datrawint$x, datrawint$y, type="p", pch=16, ylab="F_ratio", xlab="frame", cex=0.5)
   lines(datsmoothint, col="blue")
   par(new=TRUE)
-  plot(redsmoothint, col="red", ylim=c(0, 0.0005))
-  #points(redloessint, col="red")
+  plot(redsmoothint, col="red", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
   par(new=TRUE)
-  plot(greensmoothint, col="green", ylim=c(0, 0.0005))
-  #points(greenloessint, col="green")
+  plot(greensmoothint, col="green", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
+  axis(side = 4)
+  mtext(side = 4, line = 3, 'Fluorescence intensity')
   dev.off()
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
