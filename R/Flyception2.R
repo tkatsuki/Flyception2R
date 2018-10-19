@@ -140,7 +140,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
       
-      fvfl1ol <- fvref/255 + .75*(EBImage::translate(flip(fl1ref),center2));
+      fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))
       EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
@@ -199,6 +199,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Apply resize and translation to align with fluo-view
   fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
+  # Match the size of the fvimgl and flimg by cropping (needs a better way though)
   fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
   EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
   
