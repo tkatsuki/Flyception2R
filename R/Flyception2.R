@@ -357,11 +357,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redave <- colMeans(redmasked, dim=2, na.rm=T)
   greenave <- colMeans(greenmasked, dim=2, na.rm=T)
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
-  goodfrrat <- goodfr[!is.na(greenperredave)]
-  greenperredave <- greenperredave[!is.na(greenperredave)]
-  redave <- redave[!is.na(greenperredave)]
-  greenave <- greenave[!is.na(greenperredave)]
-  
+  goodfrratidx <- !is.na(greenperredave)
+  greenperredave <- greenperredave[goodfrratidx]
+  goodfrrat <- goodfr[goodfrratidx]
+  redave <- redave[goodfrratidx]
+  greenave <- greenave[goodfrratidx]
+
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
