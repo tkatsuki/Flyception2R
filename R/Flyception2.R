@@ -41,12 +41,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
-
-  if(preprocess == T) {
   
-  loggit::message(paste0("Preprocessing", prefix, "..."))
+  if(preprocess == T) {
     
-     # Prepare filenames 
+    loggit::message(paste0("Preprocessing", prefix, "..."))
+    
+    # Prepare filenames 
     fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
     fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
@@ -141,6 +141,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     while(!all(stringr::str_to_lower(ans)=="y")){
       
       fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))
+      print(EBImage::display(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2))
+      print(EBImage::display(.75*(EBImage::translate(flip(fl1ref), center2))))
       EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
@@ -250,7 +252,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   } else {
     saveRDS(goodfr, paste0(output_prefix, "_gfrid.RDS"))
   }
-
+  
   # Load arena-view camera images
   avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
   EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl.tif"))
@@ -312,7 +314,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Interactively determine window size and offset to include neurons of interest
   ans <- c("N","N")
   while(!all(stringr::str_to_lower(ans)=="y")){
-
+    
     
     redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
                                (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
@@ -323,6 +325,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
+    print(EBImage::display(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif")))
     EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
@@ -342,7 +345,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(flimg1)
   rm(flimg2)
   rm(flimg2cntlog)
-
+  
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
@@ -358,7 +361,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greenperredave <- greenperredave[!is.na(greenperredave)]
   redave <- redave[!is.na(greenperredave)]
   greenave <- greenave[!is.na(greenperredave)]
-
+  
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
@@ -431,11 +434,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greensmoothint <- data.frame(x=goodfrrat, y=predict(greenloessint))
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
-
+  
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
-
+  
   png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
   par(mar = c(5,5,2,5))
   plot(datrawint$x, datrawint$y, type="p", pch=16, ylab="F_ratio", xlab="frame", cex=0.5)
