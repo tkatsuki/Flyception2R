@@ -139,12 +139,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     # Check and align template
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
+            
+      print(EBImage::display(abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+                                   .75*(EBImage::translate(flip(fl1ref), center2)),
+                                   along=3)))
       
-      fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))
-      print(EBImage::display(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2))
-      print(EBImage::display(.75*(EBImage::translate(flip(fl1ref), center2))))
+      fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))      
       EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
-      
+            
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
       if(!stringr::str_to_lower(ans[1])=="y") {
