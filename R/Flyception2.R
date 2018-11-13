@@ -339,7 +339,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
-    print(EBImage::display(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif")))
+    print(EBImage::display(normalize(redwindow))
     EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
