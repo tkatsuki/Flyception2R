@@ -48,6 +48,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     # Prepare filenames 
     fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
+    fluo_view_num_vids = length(fluo_view_tif)
     fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
     
@@ -55,7 +56,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
       imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
     }
-    fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+    if(fluo_view_num_vids < 2) {
+      fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.tif$"))
+    } else {
+      fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+    }
+   
     flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
     
     ## Part 1. Detect flash
@@ -113,7 +119,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
       imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
     }
-    fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+    if(fluo_view_num_vids < 2) {
+      fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.tif$"))
+    } else {
+      fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+    }
+    
+    
     
     # Synchronize video frames
     syncing <- sync_frames(dir=dir,
