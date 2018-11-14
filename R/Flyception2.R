@@ -48,7 +48,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     # Prepare filenames 
     fluo_view_tif <- paste0(dir, list.files(dir, pattern="Pos0\\.ome\\.tif$"))
-    fluo_view_num_vids = length(fluo_view_tif)
+    fluo_view_num_vids = length(list.files(dir, pattern="Pos0.*\\.ome\\.tif$"))
     fly_view_fmf <- paste0(dir, list.files(dir, pattern="^fv.*fmf$"))
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
     
