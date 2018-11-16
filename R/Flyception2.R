@@ -355,7 +355,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     winoffs <- window_offset
     winsize <- window_size
-
+    
     # Initialize ROI with default
     roiix[i,] <- c((wr/2 + winoffs[1] - winsize[1]/2),
                    (wr/2 + winoffs[1] + winsize[1]/2),
@@ -403,7 +403,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                        (wr/2 + winoffs[1] + winsize[1]/2),
                        (hr/2 + winoffs[2] - winsize[2]/2),
                        (hr/2 + winoffs[2] + winsize[2]/2))
-
+        
         redwindowdisp <- redval
         grnwindowdisp <- grnval
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
@@ -432,7 +432,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Preallocate Segment Masks and Masked Image
   rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
-
+  
   # Add regions to mask
   for(i in 1:num_rois) {
     
@@ -446,19 +446,33 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     rroithr[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- EBImage::thresh(rroimed, w=10, h=10, offset=0.0003)
-
+    
   }
   
   # Do something to make a seg_mask <- Moving average threshold in time
   # ie. Pool Segments for static 
-  mask <- rowSums(rroithr,dims = 2)
+  # mask <- rowSums(rroithr,dims = 2)
+  # seg_mask <- mask
+  # seg_mask[which(mask >  max(mask)*.5)] = 1
+  # seg_mask[which(mask <= max(mask)*.5)] = 0
+  # redmasked <- redmasked*replicate(dim(redmasked)[3],seg_mask)
+  # greenmasked <- greenmasked*replicate(dim(greenmasked)[3],seg_mask)
+  
+  
+  # Rolling Sum / Thresh
+  rollwin <- 10
+  res <- do.call(rbind, tapply(c(rroithr), rep(1:dim(rroithr)[1]^2,dim(rroithr)[3]), function(x) rollsum(x, rollwin)))
+  mask <- array(c(res),c(hr,wr,dim(res)[2]))
   seg_mask <- mask
   seg_mask[which(mask >  max(mask)*.5)] = 1
   seg_mask[which(mask <= max(mask)*.5)] = 0
   
-  redmasked <- redmasked*replicate(dim(redmasked)[3],seg_mask)
-  greenmasked <- greenmasked*replicate(dim(greenmasked)[3],seg_mask)
-
+  # Pad last end with last frame back to size
+  seg_mask <- abind(seg_mask,replicate(fr-dim(seg_mask)[3],seg_mask[,,dim(seg_mask)[3]]),along = 3)
+  
+  redmasked <- redmasked*seg_mask
+  greenmasked <- greenmasked*seg_mask
+  
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
   redave <- colMeans(redmasked, dim=2, na.rm=T)
