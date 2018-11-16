@@ -61,7 +61,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     } else {
       fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
     }
-   
+    
     flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
     
     ## Part 1. Detect flash
@@ -151,14 +151,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     # Check and align template
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
-            
+      
       print(EBImage::display(abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
                                    .75*(EBImage::translate(flip(fl1ref), center2)),
                                    along=3)))
       
       fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))      
       EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
-            
+      
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
       if(!stringr::str_to_lower(ans[1])=="y") {
@@ -324,49 +324,142 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(redrot)
   rm(greenrot)
   
+  
   ## Part 6. Image segmentation and fluorescence quantification
+  
+  # Normalize rotated imgs
+  offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2)))
+  redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
+  grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
+  redval <- (redval - min(redval))/(max(redval) - min(redval))
+  grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
+  
+  # Origins
+  wr <- dim(redval)[1]
+  hr <- dim(redval)[2]
+  fr <- dim(redval)[3]
+  hg <- dim(grnval)[2] #Should be same precondition?
+  wg <- dim(grnval)[1]
+  fg <- dim(grnval)[3]
+  
   # Interactively determine window size and offset to include neurons of interest
-  ans <- c("N","N")
-  while(!all(stringr::str_to_lower(ans)=="y")){
+  num_rois <- as.integer(readline("How many disjoint ROIs to be added?: "))
+  
+  # Initialize ROI masks with zero
+  roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
+  
+  # Initialize ROI coords with zero
+  roiix <-array(rep(0,num_rois*4),c(num_rois,4))
+  
+  for(i in 1:num_rois) {
+    
+    winoffs <- window_offset
+    winsize <- window_size
 
-    redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                               (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                             (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                               (dim(redrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
-    greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                                   (dim(greenrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                                 (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                                   (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
+    # Initialize ROI with default
+    roiix[i,] <- c((wr/2 + winoffs[1] - winsize[1]/2),
+                   (wr/2 + winoffs[1] + winsize[1]/2),
+                   (hr/2 + winoffs[2] - winsize[2]/2),
+                   (hr/2 + winoffs[2] + winsize[2]/2))
     
-    # Show both channels when selecting window/offset
-    print(EBImage::display(abind(normalize(redwindow),normalize(greenwindow),along=2)))
-    EBImage::writeImage(abind(normalize(redwindow),normalize(greenwindow),along=2), file=paste0(output_prefix, "_redwindow.tif"))
+    # Grab the Roi
+    redwindowdisp <- redval
+    grnwindowdisp <- grnval
+    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+    grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
     
-    print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
-    print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
-    ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
-    if(ans[1] != "Y" && ans[1] != "y") {
-      window_size[1] <- as.integer(readline("Enter new x size:"))
-      window_size[2] <- as.integer(readline("Enter new y size:"))
-    }
-    ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
-    if(ans[2] != "Y" && ans[2] != "y") {
-      window_offset[1] <- as.integer(readline("Enter new x offset:"))
-      window_offset[2] <- as.integer(readline("Enter new y offset:"))
-    }
+    # Draw box around ROI
+    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
+    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- 1
+    redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
+    redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
+    
+    # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+    print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
+    EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif"))    
+    
+    ans <- c("N","N")
+    while(!all(stringr::str_to_lower(ans)=="y")) {
+      
+      print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[1], winsize[2]))
+      print(sprintf("Current window_offset for ROI %d is: x=%d y=%d", i, winoffs[1], winoffs[2]))
+      
+      ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
+      if(ans[1] != "Y" && ans[1] != "y") {
+        winsize[1] <- as.integer(readline("Enter new x size:"))
+        winsize[2] <- as.integer(readline("Enter new y size:"))
+      }
+      ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
+      if(ans[2] != "Y" && ans[2] != "y") {
+        winoffs[1] <- as.integer(readline("Enter new x offset:"))
+        winoffs[2] <- as.integer(readline("Enter new y offset:"))
+      }
+      
+      ## NO GOOD?
+      if(!all(stringr::str_to_lower(ans)=="y")) {
+        
+        # Update ROI
+        roiix[i,] <- c((wr/2 + winoffs[1] - winsize[1]/2),
+                       (wr/2 + winoffs[1] + winsize[1]/2),
+                       (hr/2 + winoffs[2] - winsize[2]/2),
+                       (hr/2 + winoffs[2] + winsize[2]/2))
+
+        redwindowdisp <- redval
+        grnwindowdisp <- grnval
+        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        
+        # Draw box around ROI
+        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
+        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- 1
+        redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
+        redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
+        
+        # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+        print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
+        EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
+      }
+    } # Done selecting ROI i
+    roimasks[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],i] = 1
+    
   }
+  
+  roimask <- rowSums(roimasks,dims=2)
   
   rm(flimg1)
   rm(flimg2)
   rm(flimg2cntlog)
   
-  redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
-  greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
-  redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
+  # Preallocate Segment Masks and Masked Image
+  rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
+
+  # Add regions to mask
+  for(i in 1:num_rois) {
+    
+    #[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]                     # ROI in Valid
+    #[roiix[i,1]+offs:roiix[i,2]-offs,roiix[i,3]+offs:roiix[i,4]-offs,] # ROI in Original
+    
+    rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),] 
+    groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
+    rroimed  <- EBImage::medianFilter(rroi/2^16, size=2)
+    groimed  <- EBImage::medianFilter(groi/2^16, size=2)
+    redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- rroimed
+    greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
+    rroithr[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- EBImage::thresh(rroimed, w=10, h=10, offset=0.0003)
+
+  }
   
+  # Do something to make a seg_mask <- Moving average threshold in time
+  # ie. Pool Segments for static 
+  mask <- rowSums(rroithr,dims = 2)
+  seg_mask <- mask
+  seg_mask[which(mask >  max(mask)*.5)] = 1
+  seg_mask[which(mask <= max(mask)*.5)] = 0
+  
+  redmasked <- redmasked*replicate(dim(redmasked)[3],seg_mask)
+  greenmasked <- greenmasked*replicate(dim(greenmasked)[3],seg_mask)
+
   # Create F_ratio images  
-  redmasked <- redwindowmed*redwindowmedth
-  greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
   redave <- colMeans(redmasked, dim=2, na.rm=T)
   greenave <- colMeans(greenmasked, dim=2, na.rm=T)
@@ -376,7 +469,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
   greenave <- greenave[goodfrratidx]
-
+  
   greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
@@ -386,10 +479,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
-  rottransmask[(dim(rottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                 (dim(rottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-               (dim(rottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                 (dim(rottrans)[2]/2 + window_offset[2] + window_size[2]/2),] <- redwindowmedth
+  rottransmask[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),] <- seg_mask
   
   rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
   rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
@@ -397,10 +487,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rottranscolor[,,3,] <- rottrans/255*(1-rottransmask)
   
   grratiocolorl <- rottranscolor*0
-  grratiocolorl[(dim(grratiocolorl)[1]/2 + window_offset[1] - window_size[1]/2):
-                  (dim(grratiocolorl)[1]/2 + window_offset[1] + window_size[1]/2),
-                (dim(grratiocolorl)[2]/2 + window_offset[2] - window_size[2]/2):
-                  (dim(grratiocolorl)[2]/2 + window_offset[2] + window_size[2]/2),,] <- grratiocolor
+  grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
+  
   flyviewcolor <- rottranscolor + grratiocolorl
   flyviewcolor <- Image(flyviewcolor, colormode="Color")
   #display(flyviewcolor)
@@ -468,8 +556,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
   write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
+  
+  #Duplicate RDS names:
+  # LOESS model
   saveRDS(datloessint, paste0(output_prefix, "_datloessint.RDS"))
-  saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS"))
+  # Dataframe LOESS predications
+  saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
+  
+  
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
   F0int <- intensity[1]
