@@ -328,8 +328,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Interactively determine window size and offset to include neurons of interest
   ans <- c("N","N")
   while(!all(stringr::str_to_lower(ans)=="y")){
-    
-    
+
     redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
                                (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
                              (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
@@ -339,8 +338,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
-    print(EBImage::display(normalize(redwindow))
-    EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
+    # Show both channels when selecting window/offset
+    print(EBImage::display(abind(normalize(redwindow),normalize(greenwindow),along=2)))
+    EBImage::writeImage(abind(normalize(redwindow),normalize(greenwindow),along=2), file=paste0(output_prefix, "_redwindow.tif"))
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
     print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
