@@ -259,7 +259,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   dev.off()
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
-  
+  loggit::message(paste0("Good frames were ", goodfr))
+    
   # Save index of good frames
   if(FOI != F) {
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
@@ -339,8 +340,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
                                    (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
     
-    print(EBImage::display(normalize(redwindow))
+    print(EBImage::display(normalize(redwindow)))
     EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
+    EBImage::writeImage(normalize(greenwindow), file=paste0(output_prefix, "_greenwindow.tif"))
     
     print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
     print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
@@ -363,6 +365,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
   greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
   redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
+  EBImage::writeImage(redwindowmedth, file=paste0(output_prefix, "_redwindowmedth.tif"))
+  
+  # kern <- makeBrush(3, shape="diamond")
+  # redwindowmedth <- EBImage::opening(redwindowmedth, kern)
   
   # Create F_ratio images  
   redmasked <- redwindowmed*redwindowmedth
@@ -383,6 +389,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
+  EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
@@ -403,8 +410,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                   (dim(grratiocolorl)[2]/2 + window_offset[2] + window_size[2]/2),,] <- grratiocolor
   flyviewcolor <- rottranscolor + grratiocolorl
   flyviewcolor <- Image(flyviewcolor, colormode="Color")
-  #display(flyviewcolor)
-  EBImage::writeImage(flyviewcolor, file=paste0(output_prefix, "_flyviewcolor.tif"))
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
