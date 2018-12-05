@@ -53,7 +53,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
     
     # Crop a first channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
+    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
@@ -116,7 +116,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                             ROI=c(1, 1, 450, 50))
     
     # Crop a second channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
+    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
