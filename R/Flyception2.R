@@ -116,6 +116,26 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                             autopos=T,
                             ROI=c(1, 1, 450, 50))
     
+    # Check and align template between Fluoview cameras
+    ans <- c("N","Y")
+    while(!all(stringr::str_to_lower(ans)=="y")){
+      x <- ROI[1] + center[1]
+      y <- ROI[2] + center[2]
+      print(EBImage::display(abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                                   1.00*(EBImage::translate(fl1ref, center)),
+                                   along=3)))
+      
+      fl2fl1ol <- 0.6*fl2refcrop[x:(x+240-1),y:(y+240-1)] + 0.4*(EBImage::translate(fl1ref, center))      
+      EBImage::writeImage(normalize(fl2fl1ol), file=paste0(output_prefix, "_fl2fl1_overlay.tif"))
+      
+      print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
+      ans[1] <- readline("Is template match okay (Y or N)?:")
+      if(!stringr::str_to_lower(ans[1])=="y") {
+        center[1] <- as.integer(readline("Enter new x position for center:"))
+        center[2] <- as.integer(readline("Enter new y position for center:"))
+      }
+    }
+    
     # Crop a second channel in fluo_view images using ImageJ
     if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
@@ -149,7 +169,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                              autopos=T,
                              ROI=c(1, 1, 50, 50))
     
-    # Check and align template
+    # Check and align template between Flyview and Fluoview
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
       
