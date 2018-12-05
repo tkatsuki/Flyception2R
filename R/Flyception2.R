@@ -318,7 +318,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   if(!translate)
     centers <- array(0,dim(centers))
   
-  
   # Apply translation compensation
   rottrans <- fvimgl[,,goodfr]
   for (tr in 1:dim(rottrans)[3]){
@@ -353,9 +352,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(redrot)
   rm(greenrot)
   
-  
   ## Part 6. Image segmentation and fluorescence quantification
-  
   # Normalize rotated imgs
   offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2)))
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
@@ -363,7 +360,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redval <- (redval - min(redval))/(max(redval) - min(redval))
   grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
   
-  # Origins
+  # Dimensions / Number Frames
   wr <- dim(redval)[1]
   hr <- dim(redval)[2]
   fr <- dim(redval)[3]
@@ -377,19 +374,21 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Initialize ROI masks with zero
   roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
   
-  # Initialize ROI coords with zero
-  roiix <-array(rep(0,num_rois*4),c(num_rois,4))
+  # Initialize ROI coords and windows sizes/offsets
+  roiix <- array(rep(0,num_rois*4),c(num_rois,4))
+  winoffs <- array(rep(0,num_rois*2),c(num_rois,2))
+  winsize <- array(rep(0,num_rois*2),c(num_rois,2))
   
   for(i in 1:num_rois) {
     
-    winoffs <- window_offset
-    winsize <- window_size
+    winoffs[i,] <- window_offset
+    winsize[i,] <- window_size
     
     # Initialize ROI with default
-    roiix[i,] <- c((wr/2 + winoffs[1] - winsize[1]/2),
-                   (wr/2 + winoffs[1] + winsize[1]/2),
-                   (hr/2 + winoffs[2] - winsize[2]/2),
-                   (hr/2 + winoffs[2] + winsize[2]/2))
+    roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
+                   (wr/2 + winoffs[i,1] + winsize[i,1]/2),
+                   (hr/2 + winoffs[i,2] - winsize[i,2]/2),
+                   (hr/2 + winoffs[i,2] + winsize[i,2]/2))
     
     # Grab the Roi
     redwindowdisp <- redval
@@ -410,28 +409,28 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     ans <- c("N","N")
     while(!all(stringr::str_to_lower(ans)=="y")) {
       
-      print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[1], winsize[2]))
-      print(sprintf("Current window_offset for ROI %d is: x=%d y=%d", i, winoffs[1], winoffs[2]))
+      print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[i,1], winsize[i,2]))
+      print(sprintf("Current window_offset for ROI %d is: x=%d y=%d", i, winoffs[i,1], winoffs[i,2]))
       
       ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
       if(ans[1] != "Y" && ans[1] != "y") {
-        winsize[1] <- as.integer(readline("Enter new x size:"))
-        winsize[2] <- as.integer(readline("Enter new y size:"))
+        winsize[i,1] <- as.integer(readline("Enter new x size:"))
+        winsize[i,2] <- as.integer(readline("Enter new y size:"))
       }
       ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
       if(ans[2] != "Y" && ans[2] != "y") {
-        winoffs[1] <- as.integer(readline("Enter new x offset:"))
-        winoffs[2] <- as.integer(readline("Enter new y offset:"))
+        winoffs[i,1] <- as.integer(readline("Enter new x offset:"))
+        winoffs[i,2] <- as.integer(readline("Enter new y offset:"))
       }
       
-      ## NO GOOD?
+      ## Update reference
       if(!all(stringr::str_to_lower(ans)=="y")) {
         
         # Update ROI
-        roiix[i,] <- c((wr/2 + winoffs[1] - winsize[1]/2),
-                       (wr/2 + winoffs[1] + winsize[1]/2),
-                       (hr/2 + winoffs[2] - winsize[2]/2),
-                       (hr/2 + winoffs[2] + winsize[2]/2))
+        roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
+                       (wr/2 + winoffs[i,1] + winsize[i,1]/2),
+                       (hr/2 + winoffs[i,2] - winsize[i,2]/2),
+                       (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
         redwindowdisp <- redval
         grnwindowdisp <- grnval
@@ -460,7 +459,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(flimg2cntlog)
   
   # Preallocate Segment Masks and Masked Image
-  rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
+  seg_mask <- rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
+  
+  # Rolling Sum / Thresh (rollwing, threshold)
+  #rollwin <- 5 # Windows size (number frames)
   
   # Add regions to mask
   for(i in 1:num_rois) {
@@ -474,30 +476,45 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     groimed  <- EBImage::medianFilter(groi/2^16, size=2)
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
-    rroithr[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- EBImage::thresh(rroimed, w=10, h=10, offset=0.0003)
+    
+    rthrsh <- EBImage::thresh(rroimed,
+                              w=as.integer(winsize[i,1]/2),
+                              h=as.integer(winsize[i,2]/2),
+                              offset=0.0003)
+    #rroithr[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- EBImage::thresh(rroimed, w=10, h=10, offset=0.0003)
+    
+    # Sum over rollwin frames of thresholded image and reshape
+    res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
+    mask <- array(c(res),c(dim(rthrsh)[1],dim(rthrsh)[2],dim(res)[2]))
+    
+    # Create Segmentation Mask
+    seg_mask_win <- array(0,dim(mask))                  # Initialize
+    m_thresh    <- thrs_level*(max(mask) - min(mask))   # Set threshold
+    seg_mask_win[which(mask >= m_thresh)] <- 1          # Generate Mask
+    
+    # Pad end with last frame back to orignal number frames
+    seg_mask_win <- abind(seg_mask_win,replicate(fr-dim(seg_mask_win)[3],seg_mask_win[,,dim(seg_mask_win)[3]]),along = 3)
+    
+    # Add segmented ROI to overall mask
+    seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
     
   }
   
-  # Do something to make a seg_mask <- Moving average threshold in time
-  # ie. Pool Segments for static 
-  # mask <- rowSums(rroithr,dims = 2)
-  # seg_mask <- mask
-  # seg_mask[which(mask >  max(mask)*.5)] = 1
-  # seg_mask[which(mask <= max(mask)*.5)] = 0
-  # redmasked <- redmasked*replicate(dim(redmasked)[3],seg_mask)
-  # greenmasked <- greenmasked*replicate(dim(greenmasked)[3],seg_mask)
+  # Rolling Sum / Thresh (rollwing, threshold)
+  #rollwin <- 4 # Windows size (number frames)
   
+  # Sum over rollwin frames of thresholded image and reshape
+  #res <- do.call(rbind, tapply(c(rroithr), rep(1:dim(rroithr)[1]^2,dim(rroithr)[3]), function(x) rollsum(x, rollwin)))
+  #mask <- array(c(res),c(hr,wr,dim(res)[2]))
   
-  # Rolling Sum / Thresh
-  rollwin <- 10
-  res <- do.call(rbind, tapply(c(rroithr), rep(1:dim(rroithr)[1]^2,dim(rroithr)[3]), function(x) rollsum(x, rollwin)))
-  mask <- array(c(res),c(hr,wr,dim(res)[2]))
-  seg_mask <- mask
-  seg_mask[which(mask >  max(mask)*.5)] = 1
-  seg_mask[which(mask <= max(mask)*.5)] = 0
-  
+  # Create Segmentation Mask
+  # TODO: Threshold each ROI independently 
+  #seg_mask <- array(0,dim(mask))          # Initialize
+  #m_thresh = 0.8*(max(mask) - min(mask))   # Set threshold
+  #seg_mask[which(mask >= m_thresh)] = 1   # Generate Mask
+
   # Pad last end with last frame back to size
-  seg_mask <- abind(seg_mask,replicate(fr-dim(seg_mask)[3],seg_mask[,,dim(seg_mask)[3]]),along = 3)
+  #seg_mask <- abind(seg_mask,replicate(fr-dim(seg_mask)[3],seg_mask[,,dim(seg_mask)[3]]),along = 3)
   
   redmasked <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
