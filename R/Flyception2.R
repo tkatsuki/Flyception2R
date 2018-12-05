@@ -638,15 +638,33 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95)
   ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
-  loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
-  loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
+  # Format string for multi ROI window sizse/offsets
+  wins_str = "{"
+  offs_str = "{"
+  for(i in 1:num_rois) {
+    wins_str = paste0(wins_str,"(",winsize[i,1],",",winsize[i,2],")")
+    offs_str = paste0(offs_str,"(",winoffs[i,1],",",winoffs[i,2],")")
+    if(i < num_rois) {
+      wins_str = paste0(wins_str,",")
+      offs_str = paste0(offs_str,",")
+    } else {
+      wins_str = paste0(wins_str,"}")
+      offs_str = paste0(offs_str,"}")
+    }
+  }
+  
+  loggit::message(sprintf("Number of ROIs was %d", num_rois))
+  loggit::message(sprintf("window size(s): %s", wins_str))
+  loggit::message(sprintf("window offset(s): %s", offs_str))
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
   loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
   loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
   loggit::message(paste0("Number of good frames was ", length(goodfr)))
   
-  loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||%.3f ||", 
-                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity), max(datsmoothint$y)))
+  out_str = sprintf("||c(%d, %d) ||%s ||%s ||%d ||%.3f/%.3f ||%.3f/%.3f ||", 
+                    FOI[1], FOI[2], wins_str, offs_str, length(goodfr),
+                    min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
+  loggit::message(out_str)
   
   ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
@@ -656,4 +674,5 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   message("Finished processing!")
   gc()
+  return(out_str)
 }
