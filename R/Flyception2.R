@@ -283,9 +283,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Save index of good frames
   if(FOI != F) {
+    write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
-    saveRDS(goodfr, paste0(output_prefix, "_gfrid.RDS"))
+    write.table(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    saveRDS(cbind(1:length(goodfr),goodfr), paste0(output_prefix, "_gfrid.RDS"))
   }
   
   # Load arena-view camera images
