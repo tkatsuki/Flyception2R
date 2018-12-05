@@ -27,7 +27,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          binning=1, fluo_flash_thresh=500,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
-                         colorRange= c(180, 220), flash=1, preprocess=F){
+                         colorRange= c(180, 220), flash=1, preprocess=F,
+                         thrs_level=0.8,rollwin=5,translate=T){
   
   # TO DO
   
@@ -290,6 +291,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  zoom=1,
                                  autopos=T)
   }
+  
+  # TODO: Try no translate
+  if(!translate)
+    centers <- array(0,dim(centers))
+  
+  
   # Apply translation compensation
   rottrans <- fvimgl[,,goodfr]
   for (tr in 1:dim(rottrans)[3]){
