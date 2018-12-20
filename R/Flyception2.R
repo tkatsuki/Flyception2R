@@ -280,7 +280,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   dev.off()
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
-  
+  loggit::message(paste0("Good frames were ", goodfr))
+    
   # Save index of good frames
   if(FOI != F) {
     write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
@@ -481,7 +482,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                               w=as.integer(winsize[i,1]/2),
                               h=as.integer(winsize[i,2]/2),
                               offset=0.0003)
-    #rroithr[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- EBImage::thresh(rroimed, w=10, h=10, offset=0.0003)
+
+    # MERGED
+    EBImage::writeImage(redwindowmedth, file=paste0(output_prefix, "_redwindowmedth.tif"))
+    # kern <- makeBrush(3, shape="diamond")
+    # redwindowmedth <- EBImage::opening(redwindowmedth, kern)
     
     # Sum over rollwin frames of thresholded image and reshape
     res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
@@ -536,6 +541,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
+  EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
@@ -551,8 +557,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   flyviewcolor <- rottranscolor + grratiocolorl
   flyviewcolor <- Image(flyviewcolor, colormode="Color")
-  #display(flyviewcolor)
-  EBImage::writeImage(flyviewcolor, file=paste0(output_prefix, "_flyviewcolor.tif"))
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
