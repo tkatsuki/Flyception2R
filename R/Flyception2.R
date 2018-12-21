@@ -540,19 +540,24 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redmasked <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
   
-  pass <- 1 # Function arg
+  pass        <- 1 # Function arg
+  baselinegrn <- 0.003386  
+  
+  
   if(pass==1) {
-    # TODO:
+    # First pass: return average green pixel in mask
     meangreen <- sum(greenmasked)/sum(seg_mask)
     meanred   <- sum(redmasked)/sum(seg_mask)
     loggit::message(sprintf("Red Mean: %f / Green Mean %f",meanred,meangreen))
     return(meanred,meangreen)
-  } else {
+  } else if (pass==2) {
+    # Second pass: use mean of average green for second threshold
+    seg_mask[greenmasked < baselinegrn] <- 0
     
+    redmasked   <- redmasked*seg_mask
+    greenmasked <- greenmasked*seg_mask
   }
-  
 
-  
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
   # Only take mean over mask area
