@@ -28,7 +28,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
                          colorRange= c(180, 220), flash=1, preprocess=F,
-                         thrs_level=0.8,rollwin=5,translate=T){
+                         thrs_level=0.8,pass=1,baselinegrn=0.003386,translate=T){
   
   # TO DO
   
@@ -477,9 +477,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   # Preallocate Segment Masks and Masked Image
   seg_mask <- rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
   
-  # Rolling Sum / Thresh (rollwing, threshold)
-  #rollwin <- 5 # Windows size (number frames)
-  
   # Add regions to mask
   for(i in 1:num_rois) {
     
@@ -519,6 +516,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     EBImage::writeImage(rthrsh, file=paste0(output_prefix, "_redwindowmedth.tif"))    
     
     ####### Temporal Filtering #######
+    #rollwin <- 5 # Windows size (number frames) # Add as arg
+    
     # Sum over rollwin frames of thresholded image and reshape
     #res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
     #mask <- array(c(res),c(dim(rthrsh)[1],dim(rthrsh)[2],dim(res)[2]))
@@ -537,12 +536,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
   }
   
-  redmasked <- redmasked*seg_mask
+  # Mask pixels in R/G channels
+  redmasked   <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
   
-  pass        <- 1 # Function arg
-  baselinegrn <- 0.003386  
-  
+  #pass        <- 1 # Function arg
+  #baselinegrn <- 0.003386
   
   if(pass==1) {
     # First pass: return average green pixel in mask
@@ -695,6 +694,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
       offs_str = paste0(offs_str,"}")
     }
   }
+  
   
   loggit::message(sprintf("Number of ROIs was %d", num_rois))
   loggit::message(sprintf("window size(s): %s", wins_str))
