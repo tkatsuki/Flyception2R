@@ -528,20 +528,28 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   redmasked <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
   
-  
+  pass <- 1 # Function arg
   if(pass==1) {
-    # TODO: 
-    greenmean = apply(greenmasked,MARGIN=3,mean)
-    return(colMeans(greenmasked, dim=2, na.rm=T),mean(greenmasked))
-    
+    # TODO:
+    meangreen <- sum(greenmasked)/sum(seg_mask)
+    meanred   <- sum(redmasked)/sum(seg_mask)
+    loggit::message(sprintf("Red Mean: %f / Green Mean %f",meanred,meangreen))
+    return(meanred,meangreen)
   } else {
     
   }
   
+
+  
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
-  redave <- colMeans(redmasked, dim=2, na.rm=T)
-  greenave <- colMeans(greenmasked, dim=2, na.rm=T)
+  # Only take mean over mask area
+  redave   <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenave <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  
+  #redave <- colMeans(redmasked, dim=2, na.rm=T)
+  #greenave <- colMeans(greenmasked, dim=2, na.rm=T)
+  
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
   goodfrratidx <- !is.na(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
