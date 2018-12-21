@@ -85,6 +85,18 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                 flash_thresh=av_flash_thresh,
                                 reuse=reuse)
     
+    # TODO: pose/lighting during flash can be better in a particular flash frame choose best
+    if(length(fluo_flash$flflashes) > 0 && length(fly_flash$fvflashes) > 0) {
+      if(length(fluo_flash$flflashes) == length(fly_flash$fvflashes)) {
+        num_flashes <- length(fluo_flash$flflashes)
+        
+      } else {
+        num_flashes = max(fluo_flash$flflashes,fly_flash$fvflashes)
+        
+      }
+      
+    }
+    
     if(flash == 2){
       # fluo-view can miss flashes. If only one flash was detected leave as is.
       if(length(fluo_flash$flflashes)==2){
