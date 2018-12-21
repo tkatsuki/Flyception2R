@@ -280,7 +280,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   dev.off()
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
-  loggit::message(paste0("Good frames were ", goodfr))
+  loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
     
   # Save index of good frames
   if(FOI != F) {
@@ -315,7 +315,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  autopos=T)
   }
   
-  # TODO: Try no translate
+  # TODO: If matching is bad try no tranlation compensation
   if(!translate)
     centers <- array(0,dim(centers))
   
@@ -448,13 +448,16 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
         print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
         EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
       }
-    } # Done selecting ROI i
+    } # end selecting ROI i
+    
     roimasks[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],i] = 1
     
   }
   
+  # Aggregate all ROI masks
   roimask <- rowSums(roimasks,dims=2)
   
+  # Clean up
   rm(flimg1)
   rm(flimg2)
   rm(flimg2cntlog)
@@ -483,46 +486,57 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                               h=as.integer(winsize[i,2]/2),
                               offset=0.0003)
 
-    # MERGED
-    EBImage::writeImage(redwindowmedth, file=paste0(output_prefix, "_redwindowmedth.tif"))
-    # kern <- makeBrush(3, shape="diamond")
-    # redwindowmedth <- EBImage::opening(redwindowmedth, kern)
+
     
+    shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+    size_thrsh   <- 5    
+    # Label regions and filter
+    thrsh_map <- apply(rthrsh,3,bwlabel)
+    thrsh_map <- array(thrsh_map,dim=dim(rthrsh))
+    maskprops <- apply(thrsh_map,3,computeFeatures.shape)
+    objrm     <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] < size_thrsh))
+    rthrsh    <- rmObjects(thrsh_map, objrm)
+    
+    # Set to binary
+    rthrsh[rthrsh > 0] <- 1
+    
+    # Morphological Operations
+    seg_mask_win <- EBImage::erode(rthrsh,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    
+    EBImage::writeImage(rthrsh, file=paste0(output_prefix, "_redwindowmedth.tif"))    
+    
+    ####### Temporal Filtering #######
     # Sum over rollwin frames of thresholded image and reshape
-    res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
-    mask <- array(c(res),c(dim(rthrsh)[1],dim(rthrsh)[2],dim(res)[2]))
+    #res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
+    #mask <- array(c(res),c(dim(rthrsh)[1],dim(rthrsh)[2],dim(res)[2]))
     
     # Create Segmentation Mask
-    seg_mask_win <- array(0,dim(mask))                  # Initialize
-    m_thresh    <- thrs_level*(max(mask) - min(mask))   # Set threshold
-    seg_mask_win[which(mask >= m_thresh)] <- 1          # Generate Mask
+    # seg_mask_win <- array(0,dim(mask))                  # Initialize
+    # m_thresh    <- thrs_level*(max(mask) - min(mask))   # Set threshold
+    # seg_mask_win[which(mask >= m_thresh)] <- 1          # Generate Mask
     
     # Pad end with last frame back to orignal number frames
-    seg_mask_win <- abind(seg_mask_win,replicate(fr-dim(seg_mask_win)[3],seg_mask_win[,,dim(seg_mask_win)[3]]),along = 3)
+    #seg_mask_win <- abind(seg_mask_win,replicate(fr-dim(seg_mask_win)[3],seg_mask_win[,,dim(seg_mask_win)[3]]),along = 3)
+    ####### End Temporal Filtering #######
     
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
     
   }
   
-  # Rolling Sum / Thresh (rollwing, threshold)
-  #rollwin <- 4 # Windows size (number frames)
-  
-  # Sum over rollwin frames of thresholded image and reshape
-  #res <- do.call(rbind, tapply(c(rroithr), rep(1:dim(rroithr)[1]^2,dim(rroithr)[3]), function(x) rollsum(x, rollwin)))
-  #mask <- array(c(res),c(hr,wr,dim(res)[2]))
-  
-  # Create Segmentation Mask
-  # TODO: Threshold each ROI independently 
-  #seg_mask <- array(0,dim(mask))          # Initialize
-  #m_thresh = 0.8*(max(mask) - min(mask))   # Set threshold
-  #seg_mask[which(mask >= m_thresh)] = 1   # Generate Mask
-
-  # Pad last end with last frame back to size
-  #seg_mask <- abind(seg_mask,replicate(fr-dim(seg_mask)[3],seg_mask[,,dim(seg_mask)[3]]),along = 3)
-  
   redmasked <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
+  
+  
+  if(pass==1) {
+    # TODO: 
+    greenmean = apply(greenmasked,MARGIN=3,mean)
+    return(colMeans(greenmasked, dim=2, na.rm=T),mean(greenmasked))
+    
+  } else {
+    
+  }
   
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
