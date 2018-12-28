@@ -28,7 +28,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
                          colorRange= c(180, 220), flash=1, preprocess=F,
-                         thrs_level=0.8,pass=1,baselinegrn=0.003386,translate=T){
+                         thrs_level=0.8,pass=1,baselinegrn=0.003,size_thrsh=5,translate=T){
   
   # TO DO
   
@@ -499,6 +499,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
     size_thrsh   <- 5    
+    
+    
+    # Morphological Operations
+    seg_mask_win <- EBImage::erode(rthrsh,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    
+    
     # Label regions and filter
     thrsh_map <- apply(rthrsh,3,bwlabel)
     thrsh_map <- array(thrsh_map,dim=dim(rthrsh))
@@ -508,10 +515,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     # Set to binary
     rthrsh[rthrsh > 0] <- 1
-    
-    # Morphological Operations
-    seg_mask_win <- EBImage::erode(rthrsh,kern=makeBrush(3,shape="diamond"))
-    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
     
     EBImage::writeImage(rthrsh, file=paste0(output_prefix, "_redwindowmedth.tif"))    
     
@@ -544,7 +547,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   #baselinegrn <- 0.003386
   
   if(pass==1) {
-    # First pass: return average green pixel in mask
+    # First pass: return mean of mins green pixel in mask
     meangreen <- sum(greenmasked)/sum(seg_mask)
     meanred   <- sum(redmasked)/sum(seg_mask)
     loggit::message(sprintf("Red Mean: %f / Green Mean %f",meanred,meangreen))
