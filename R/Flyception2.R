@@ -37,7 +37,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   if(preprocess == T) reuse <- F
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
   outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
-  dir.create(outdir)
+  dir.create(outdir,showWarnings=FALSE)
   output_prefix <- paste0(outdir, prefix)
   
   # Start logging 
@@ -228,7 +228,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   message(sprintf("Reading %s", fluo_view_tif_ch1))
   
   # Analyze only part of the movie?
-  if(FOI!=F && length(FOI)==2){
+  if(FOI[1]!=F && length(FOI)==2){
     flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
     flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
     flimg1 <- flip(flimg1) # flip images to match fly-view
@@ -295,7 +295,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
     
   # Save index of good frames
-  if(FOI != F) {
+  if(FOI[1] != F) {
     write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
@@ -495,56 +495,30 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                               h=as.integer(winsize[i,2]/2),
                               offset=0.0003)
 
-
-    
     shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
-    size_thrsh   <- 5    
-    
     
     # Morphological Operations
-    seg_mask_win <- EBImage::erode(rthrsh,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))
     seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
-    
+    seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
     # Label regions and filter
-    thrsh_map <- apply(rthrsh,3,bwlabel)
-    thrsh_map <- array(thrsh_map,dim=dim(rthrsh))
-    maskprops <- apply(thrsh_map,3,computeFeatures.shape)
-    objrm     <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] < size_thrsh))
-    rthrsh    <- rmObjects(thrsh_map, objrm)
+    thrsh_map    <- apply(seg_mask_win,3,bwlabel)
+    thrsh_map    <- array(thrsh_map,dim=dim(seg_mask_win))
+    maskprops    <- apply(thrsh_map,3,computeFeatures.shape)
+    objrmidx     <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
+    seg_mask_win <- rmObjects(thrsh_map, objrmidx)
     
     # Set to binary
-    rthrsh[rthrsh > 0] <- 1
-    
-    EBImage::writeImage(rthrsh, file=paste0(output_prefix, "_redwindowmedth.tif"))    
-    
-    ####### Temporal Filtering #######
-    #rollwin <- 5 # Windows size (number frames) # Add as arg
-    
-    # Sum over rollwin frames of thresholded image and reshape
-    #res <- do.call(rbind, tapply(rthrsh, rep(1:(dim(rthrsh)[1]*dim(rthrsh)[2]),dim(rthrsh)[3]), function(x) rollsum(x, rollwin)))
-    #mask <- array(c(res),c(dim(rthrsh)[1],dim(rthrsh)[2],dim(res)[2]))
-    
-    # Create Segmentation Mask
-    # seg_mask_win <- array(0,dim(mask))                  # Initialize
-    # m_thresh    <- thrs_level*(max(mask) - min(mask))   # Set threshold
-    # seg_mask_win[which(mask >= m_thresh)] <- 1          # Generate Mask
-    
-    # Pad end with last frame back to orignal number frames
-    #seg_mask_win <- abind(seg_mask_win,replicate(fr-dim(seg_mask_win)[3],seg_mask_win[,,dim(seg_mask_win)[3]]),along = 3)
-    ####### End Temporal Filtering #######
-    
+    seg_mask_win[seg_mask_win > 0] <- 1
+
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
-    
   }
   
   # Mask pixels in R/G channels
   redmasked   <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
-  
-  #pass        <- 1 # Function arg
-  #baselinegrn <- 0.003386
   
   if(pass==1) {
     # First pass: return mean of mins green pixel in mask
@@ -559,15 +533,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     redmasked   <- redmasked*seg_mask
     greenmasked <- greenmasked*seg_mask
   }
-
+  
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
   # Only take mean over mask area
   redave   <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenave <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  
-  #redave <- colMeans(redmasked, dim=2, na.rm=T)
-  #greenave <- colMeans(greenmasked, dim=2, na.rm=T)
   
   greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
   goodfrratidx <- !is.na(greenperredave)
@@ -697,7 +668,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
       offs_str = paste0(offs_str,"}")
     }
   }
-  
   
   loggit::message(sprintf("Number of ROIs was %d", num_rois))
   loggit::message(sprintf("window size(s): %s", wins_str))
