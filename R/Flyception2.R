@@ -22,11 +22,10 @@
 #' Flyception2R()
 #'
 
-Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
-                         fmf2tif=F, zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), 
-                         binning=1, fluo_flash_thresh=500,
-                         fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
-                         rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
+Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
+                         zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
+                         fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
+                         rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
                          thrs_level=0.8,pass=1,F0=0.640,size_thrsh=5,translate=T){
   
@@ -367,7 +366,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   ## Part 6. Image segmentation and fluorescence quantification
   # Normalize rotated imgs
-  offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2)))
+  offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
   grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
   redval <- (redval - min(redval))/(max(redval) - min(redval))
@@ -381,8 +380,16 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   wg <- dim(grnval)[1]
   fg <- dim(grnval)[3]
   
-  # Interactively determine window size and offset to include neurons of interest
-  num_rois <- as.integer(readline("How many disjoint ROIs to be added?: "))
+  # If window size/offsets not passed do dialog
+  if(is.na(window_size) && is.na(window_offset)) {
+    # Interactively determine window size and offset to include neurons of interest
+    num_rois <- as.integer(readline("How many ROIs to be added?: "))
+  } else {
+    if(length(window_size) != length(window_offset)) 
+      stop("Length of window_size and window_offset must be the same")
+    num_rois <- length(window_size)
+  }
+
   
   # Initialize ROI masks with zero
   roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
@@ -394,8 +401,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   for(i in 1:num_rois) {
     
-    winoffs[i,] <- window_offset
-    winsize[i,] <- window_size
+    if(!(is.na(window_size) && is.na(window_offset))) {
+    
+      winoffs[i,] <- window_offset[[i]]
+      winsize[i,] <- window_size[[i]]
+      ans <- c("Y","Y")
+      
+    } else {
+      
+      winoffs[i,] <- c(0,0)
+      winsize[i,] <- c(as.integer(wr/2),as.integer(hr/2))
+      ans <- c("N","N")
+      
+    }
     
     # Initialize ROI with default
     roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
@@ -418,9 +436,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     
     # Show both channels when selecting window/offset TODO: Normalize accounts 0's
     print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
-    EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif"))    
+    EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
     
-    ans <- c("N","N")
+    
+
     while(!all(stringr::str_to_lower(ans)=="y")) {
       
       print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[i,1], winsize[i,2]))
