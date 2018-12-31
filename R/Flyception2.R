@@ -663,7 +663,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
   F0int <- intensity[1]
-  deltaFint <- intensity - F0int
+  #deltaFint <- intensity - F0int
+  # df (subtract baseline)
+  deltaFint <- intensity - F0
+  
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
   png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
