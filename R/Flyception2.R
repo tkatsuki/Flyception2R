@@ -526,14 +526,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   greenmasked <- greenmasked*seg_mask
   
   if(pass==1) {
-    # First pass: return mean of mins green pixel in mask
-    meangreen <- sum(greenmasked)/sum(seg_mask)
-    meanred   <- sum(redmasked)/sum(seg_mask)
-    loggit::message(sprintf("Red Mean: %f / Green Mean %f",meanred,meangreen))
-    return(meanred,meangreen)
+    
+    # First pass: return min green, red and ratio in mask (across frames)
+    minsgreen <- minsred <- array(0,fr)
+    for(i in 1:fr) {
+      minsgreen[i] <- min(greenmasked[,,i][seg_mask[,,i] > 0])
+      minsred[i]   <- min(redmasked[,,i][seg_mask[,,i] > 0])
+    }
+    # Min green/red ratio
+    minsrat <- minsgreen/minsred
+    
+    # Save min ratios
+    saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
+    
+    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
+  
+    loggit::message(msg)
+    return(msg)
+    
   } else if (pass==2) {
-    # Second pass: use mean of average green for second threshold
-    seg_mask[greenmasked < baselinegrn] <- 0
     
     # Second pass: pixels > mean of min ratios
     seg_mask[greenmasked/redmasked <= F0] <- 0
