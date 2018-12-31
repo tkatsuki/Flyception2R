@@ -535,13 +535,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     # Second pass: use mean of average green for second threshold
     seg_mask[greenmasked < baselinegrn] <- 0
     
+    # Second pass: pixels > mean of min ratios
+    seg_mask[greenmasked/redmasked <= F0] <- 0
     redmasked   <- redmasked*seg_mask
     greenmasked <- greenmasked*seg_mask
   }
   
   # Create F_ratio images  
   greenperred <- greenmasked/redmasked
-  # Only take mean over mask area
+  greenperred[is.na(greenperred)]<-0
+  
+  # Mean of each channel in mask
   redave   <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenave <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   
