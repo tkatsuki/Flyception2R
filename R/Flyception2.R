@@ -28,7 +28,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                          fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
                          colorRange= c(180, 220), flash=1, preprocess=F,
-                         thrs_level=0.8,pass=1,baselinegrn=0.003,size_thrsh=5,translate=T){
+                         thrs_level=0.8,pass=1,F0=0.640,size_thrsh=5,translate=T){
   
   # TO DO
   
@@ -404,10 +404,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                    (hr/2 + winoffs[i,2] + winsize[i,2]/2))
     
     # Grab the Roi
-    redwindowdisp <- redval
-    grnwindowdisp <- grnval
-    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
-    grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+    redwindowdisp <- redval^1.8
+    grnwindowdisp <- grnval^1.8 
+    
+    #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+    #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
     
     # Draw box around ROI
     redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
@@ -445,10 +446,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                        (hr/2 + winoffs[i,2] - winsize[i,2]/2),
                        (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
-        redwindowdisp <- redval
-        grnwindowdisp <- grnval
-        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
-        grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        redwindowdisp <- redval^1.8
+        grnwindowdisp <- grnval^1.8
+        
+        #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
         
         # Draw box around ROI
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
@@ -487,10 +489,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
     rroimed  <- EBImage::medianFilter(rroi/2^16, size=2)
     groimed  <- EBImage::medianFilter(groi/2^16, size=2)
-    redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- rroimed
+    redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
-    rthrsh <- EBImage::thresh(rroimed,
+    seg_mask_win <- EBImage::thresh(rroimed,
                               w=as.integer(winsize[i,1]/2),
                               h=as.integer(winsize[i,2]/2),
                               offset=0.0003)
@@ -515,6 +517,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
   }
+  
+  # Write segmentation mask to file
+  EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
   
   # Mask pixels in R/G channels
   redmasked   <- redmasked*seg_mask
