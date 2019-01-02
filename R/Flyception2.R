@@ -84,30 +84,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                                 flash_thresh=av_flash_thresh,
                                 reuse=reuse)
     
-    # TODO: pose/lighting during flash can be better in a particular flash frame choose best
-    if(length(fluo_flash$flflashes) > 0 && length(fly_flash$fvflashes) > 0) {
-      if(length(fluo_flash$flflashes) == length(fly_flash$fvflashes)) {
-        num_flashes <- length(fluo_flash$flflashes)
-        
+    # Assume flyview doesn't miss flashes
+    num_flashes <- length(fly_flash$fvflashes)
+    # Fluoview didn't miss flash 
+    if(length(fluo_flash$flflashes) == num_flashes) {
+      # TODO: pose/lighting during flash can be better in a particular flash frame choose best
+      if(num_flashes > 1) {
+        print("See display to choose flash frame...")
       } else {
-        num_flashes = max(fluo_flash$flflashes,fly_flash$fvflashes)
-        
+        print("Only detected one flash...")
       }
-      
-    }
-    
-    if(flash == 2){
-      # fluo-view can miss flashes. If only one flash was detected leave as is.
-      if(length(fluo_flash$flflashes)==2){
-        fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
-      }
-      fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
-      arena_flash$avflashes[1] <- arena_flash$avflashes[2]
-    }
-    if(flash != 1 && flash !=2){
-      if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
-        stop("Number of flash detected differ between fluo-view and fly-view.")
-      }
+    # Fluoview missed a flash. 'flash' corresponds to first good flash
+    } else if(flash <= length(fluo_flash$flflashes)) {
+      fly_flash$fvflashes[1] <- fly_flash$fvflashes[flash]
+      arena_flash$avflashes[1] <- arena_flash$avflashes[flash]
+    # Otherwise problem with flashes
+    } else {
+      stop("Number of flash detected differ between fluo-view and fly-view.")
     }
     
     ## Part 2. Camera alignment
