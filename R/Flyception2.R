@@ -90,15 +90,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     if(length(fluo_flash$flflashes) == num_flashes) {
       # TODO: pose/lighting during flash can be better in a particular flash frame choose best
       if(num_flashes > 1) {
-        print("See display to choose flash frame...")
+        loggit::message("See display to choose flash frame...")
       } else {
-        print("Only detected one flash...")
+        loggit::message("Only detected one flash...")
       }
-    # Fluoview missed a flash. 'flash' corresponds to first good flash
+      # Fluoview missed a flash. 'flash' corresponds to first good flash
     } else if(flash <= length(fluo_flash$flflashes)) {
       fly_flash$fvflashes[1] <- fly_flash$fvflashes[flash]
       arena_flash$avflashes[1] <- arena_flash$avflashes[flash]
-    # Otherwise problem with flashes
+      # Otherwise problem with flashes
     } else {
       stop("Number of flash detected differ between fluo-view and fly-view.")
     }
@@ -285,7 +285,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
-    
+  
   # Save index of good frames
   if(FOI[1] != F) {
     write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
@@ -382,7 +382,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       stop("Length of window_size and window_offset must be the same")
     num_rois <- length(window_size)
   }
-
+  
   
   # Initialize ROI masks with zero
   roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
@@ -395,7 +395,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   for(i in 1:num_rois) {
     
     if(!(is.na(window_size) && is.na(window_offset))) {
-    
+      
       winoffs[i,] <- window_offset[[i]]
       winsize[i,] <- window_size[[i]]
       ans <- c("Y","Y")
@@ -432,7 +432,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
     
     
-
+    
     while(!all(stringr::str_to_lower(ans)=="y")) {
       
       print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[i,1], winsize[i,2]))
@@ -505,10 +505,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
     seg_mask_win <- EBImage::thresh(rroimed,
-                              w=as.integer(winsize[i,1]/2),
-                              h=as.integer(winsize[i,2]/2),
-                              offset=0.0003)
-
+                                    w=as.integer(winsize[i,1]/2),
+                                    h=as.integer(winsize[i,2]/2),
+                                    offset=0.0003)
+    
     shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
     
     # Morphological Operations
@@ -525,7 +525,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     # Set to binary
     seg_mask_win[seg_mask_win > 0] <- 1
-
+    
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
   }
@@ -552,7 +552,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
     
     msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
-  
+    
     loggit::message(msg)
     return(msg)
     
@@ -569,17 +569,16 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenperred[is.na(greenperred)]<-0
   
   # Mean of each channel in mask
-  redave   <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenave <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   
-  greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
   goodfrratidx <- !is.na(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
   greenave <- greenave[goodfrratidx]
   
-  greenperred[which(is.na(greenperred)==T)] <- 0
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
@@ -634,15 +633,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
   rm(frgcombined)
   
-  # Calculate dF/F
+  # Mean Red/Green/Ratio
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
-  
+  # LOESS Model
   datloessint <- loess(y ~ x, data=datrawint, span=0.4)
   redloessint <- loess(r ~ x, data=datrawint, span=0.4)
   greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
+  # LOESS Predictions
   datsmoothint <- data.frame(x=goodfrrat, y=predict(datloessint))
   redsmoothint <- data.frame(x=goodfrrat, y=predict(redloessint))
   greensmoothint <- data.frame(x=goodfrrat, y=predict(greenloessint))
+  # Smoothed Intensity
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
   
@@ -655,9 +656,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   plot(datrawint$x, datrawint$y, type="p", pch=16, ylab="F_ratio", xlab="frame", cex=0.5)
   lines(datsmoothint, col="blue")
   par(new=TRUE)
-  plot(redsmoothint, col="red", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
+  plot(redsmoothint, col="red", axes=F, xlab=NA, ylab=NA)
   par(new=TRUE)
-  plot(greensmoothint, col="green", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
+  plot(greensmoothint, col="green", axes=F, xlab=NA, ylab=NA)
   axis(side = 4)
   mtext(side = 4, line = 3, 'Fluorescence intensity')
   dev.off()
