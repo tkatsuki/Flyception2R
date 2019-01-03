@@ -540,20 +540,46 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   if(pass==1) {
     
     # First pass: return min green, red and ratio in mask (across frames)
-    minsgreen <- minsred <- array(0,fr)
+    minsgreen <- minsred <- minsrat <- array(0,fr)
     for(i in 1:fr) {
-      minsgreen[i] <- min(greenmasked[,,i][seg_mask[,,i] > 0])
-      minsred[i]   <- min(redmasked[,,i][seg_mask[,,i] > 0])
+      grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
+      redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+      minsgreen[i] <- min(grvalpx)
+      minsred[i]   <- min(redvalpx)
+      minsrat[i]   <- min(grvalpx/redvalpx)
     }
-    # Min green/red ratio
-    minsrat <- minsgreen/minsred
     
     # Save min ratios
     saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
     
-    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
+
     
+    # Format string for multi ROI window size/offsets
+    wins_str = "list("
+    offs_str = "list("
+    for(i in 1:num_rois) {
+      wins_str = paste0(wins_str,"c(",winsize[i,1],",",winsize[i,2],")")
+      offs_str = paste0(offs_str,"c(",winoffs[i,1],",",winoffs[i,2],")")
+      if(i < num_rois) {
+        wins_str = paste0(wins_str,",")
+        offs_str = paste0(offs_str,",")
+      } else {
+        wins_str = paste0(wins_str,")")
+        offs_str = paste0(offs_str,")")
+      }
+    }
+    
+    loggit::message(sprintf("Number of ROIs was %d", num_rois))
+    loggit::message(sprintf("window size(s): %s", wins_str))
+    loggit::message(sprintf("window offset(s): %s", offs_str))
+    loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
+    
+    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
     loggit::message(msg)
+    
+    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||", 
+                      FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+    loggit::message(out_str)
     return(msg)
     
   } else if (pass==2) {
@@ -691,17 +717,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
   # Format string for multi ROI window sizse/offsets
-  wins_str = "{"
-  offs_str = "{"
+  wins_str = "list("
+  offs_str = "list("
   for(i in 1:num_rois) {
-    wins_str = paste0(wins_str,"(",winsize[i,1],",",winsize[i,2],")")
-    offs_str = paste0(offs_str,"(",winoffs[i,1],",",winoffs[i,2],")")
+    wins_str = paste0(wins_str,"c(",winsize[i,1],",",winsize[i,2],")")
+    offs_str = paste0(offs_str,"c(",winoffs[i,1],",",winoffs[i,2],")")
     if(i < num_rois) {
       wins_str = paste0(wins_str,",")
       offs_str = paste0(offs_str,",")
     } else {
-      wins_str = paste0(wins_str,"}")
-      offs_str = paste0(offs_str,"}")
+      wins_str = paste0(wins_str,")")
+      offs_str = paste0(offs_str,")")
     }
   }
   
