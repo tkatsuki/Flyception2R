@@ -694,7 +694,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   #Duplicate RDS names:
   # LOESS model
-  saveRDS(datloessint, paste0(output_prefix, "_datloessint.RDS"))
+  saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
   
