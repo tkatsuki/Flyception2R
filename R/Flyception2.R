@@ -22,12 +22,12 @@
 #' Flyception2R()
 #'
 
-Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
-                         fmf2tif=F, zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), 
-                         binning=1, fluo_flash_thresh=500,
-                         fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
-                         rotate_camera=-180, window_size=c(68, 28), window_offset=c(-4, 25),
-                         colorRange= c(180, 220), flash=1, preprocess=F){
+Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
+                         zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
+                         fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
+                         rotate_camera=-180, window_size=NA, window_offset=NA,
+                         colorRange= c(180, 220), flash=1, preprocess=F,
+                         pass=1,F0=0.640,size_thrsh=5,translate=T){
   
   # TO DO
   
@@ -36,7 +36,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   if(preprocess == T) reuse <- F
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
   outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
-  dir.create(outdir)
+  dir.create(outdir,showWarnings=FALSE)
   output_prefix <- paste0(outdir, prefix)
   
   # Start logging 
@@ -53,7 +53,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
     
     # Crop a first channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0){
+    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
@@ -61,7 +61,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     } else {
       fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
     }
-   
+    
     flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
     
     ## Part 1. Detect flash
@@ -84,18 +84,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                 flash_thresh=av_flash_thresh,
                                 reuse=reuse)
     
-    if(flash == 2){
-      # fluo-view can miss flashes. If only one flash was detected leave as is.
-      if(length(fluo_flash$flflashes)==2){
-        fluo_flash$flflashes[1] <- fluo_flash$flflashes[2]
+    # Assume flyview doesn't miss flashes
+    num_flashes <- length(fly_flash$fvflashes)
+    # Fluoview didn't miss flash 
+    if(length(fluo_flash$flflashes) == num_flashes) {
+      # TODO: pose/lighting during flash can be better in a particular flash frame choose best
+      if(num_flashes > 1) {
+        loggit::message("See display to choose flash frame...")
+      } else {
+        loggit::message("Only detected one flash...")
       }
-      fly_flash$fvflashes[1] <- fly_flash$fvflashes[2]
-      arena_flash$avflashes[1] <- arena_flash$avflashes[2]
-    }
-    if(flash != 1 && flash !=2){
-      if(length(fluo_flash$flflashes) != length(fly_flash$fvflashes)){
-        stop("Number of flash detected differ between fluo-view and fly-view.")
-      }
+      # Fluoview missed a flash. 'flash' corresponds to first good flash
+    } else if(flash <= length(fluo_flash$flflashes)) {
+      fly_flash$fvflashes[1] <- fly_flash$fvflashes[flash]
+      arena_flash$avflashes[1] <- arena_flash$avflashes[flash]
+      # Otherwise problem with flashes
+    } else {
+      stop("Number of flash detected differ between fluo-view and fly-view.")
     }
     
     ## Part 2. Camera alignment
@@ -115,8 +120,28 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                             autopos=T,
                             ROI=c(1, 1, 450, 50))
     
+    # Check and align template between Fluoview cameras
+    ans <- c("N","Y")
+    while(!all(stringr::str_to_lower(ans)=="y")){
+      x <- ROI[1] + center[1]
+      y <- ROI[2] + center[2]
+      print(EBImage::display(abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                                   1.00*(EBImage::translate(fl1ref, center)),
+                                   along=3)))
+      
+      fl2fl1ol <- 0.6*fl2refcrop[x:(x+240-1),y:(y+240-1)] + 0.4*(EBImage::translate(fl1ref, center))      
+      EBImage::writeImage(normalize(fl2fl1ol), file=paste0(output_prefix, "_fl2fl1_overlay.tif"))
+      
+      print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
+      ans[1] <- readline("Is template match okay (Y or N)?:")
+      if(!stringr::str_to_lower(ans[1])=="y") {
+        center[1] <- as.integer(readline("Enter new x position for center:"))
+        center[2] <- as.integer(readline("Enter new y position for center:"))
+      }
+    }
+    
     # Crop a second channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0){
+    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
@@ -148,17 +173,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                              autopos=T,
                              ROI=c(1, 1, 50, 50))
     
-    # Check and align template
+    # Check and align template between Flyview and Fluoview
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
-            
+      
       print(EBImage::display(abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
                                    .75*(EBImage::translate(flip(fl1ref), center2)),
                                    along=3)))
       
       fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))      
       EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
-            
+      
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
       if(!stringr::str_to_lower(ans[1])=="y") {
@@ -195,7 +220,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   message(sprintf("Reading %s", fluo_view_tif_ch1))
   
   # Analyze only part of the movie?
-  if(FOI!=F && length(FOI)==2){
+  if(FOI[1]!=F && length(FOI)==2){
     flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
     flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
     flimg1 <- flip(flimg1) # flip images to match fly-view
@@ -259,13 +284,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   dev.off()
   goodfocusfr <- which(quantcnt > 1000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
-  loggit::message(paste0("Good frames were ", goodfr))
-    
+  loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
+  
   # Save index of good frames
-  if(FOI != F) {
+  if(FOI[1] != F) {
+    write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
-    saveRDS(goodfr, paste0(output_prefix, "_gfrid.RDS"))
+    write.table(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    saveRDS(cbind(1:length(goodfr),goodfr), paste0(output_prefix, "_gfrid.RDS"))
   }
   
   # Load arena-view camera images
@@ -291,6 +318,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
                                  zoom=1,
                                  autopos=T)
   }
+  
+  # TODO: If matching is bad try no tranlation compensation
+  if(!translate)
+    centers <- array(0,dim(centers))
+  
   # Apply translation compensation
   rottrans <- fvimgl[,,goodfr]
   for (tr in 1:dim(rottrans)[3]){
@@ -326,64 +358,251 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rm(greenrot)
   
   ## Part 6. Image segmentation and fluorescence quantification
-  # Interactively determine window size and offset to include neurons of interest
-  ans <- c("N","N")
-  while(!all(stringr::str_to_lower(ans)=="y")){
-    
-    
-    redwindow <- redrottrans[(dim(redrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                               (dim(redrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                             (dim(redrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                               (dim(redrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
-    greenwindow <- greenrottrans[(dim(greenrottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                                   (dim(greenrottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-                                 (dim(greenrottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                                   (dim(greenrottrans)[2]/2 + window_offset[2] + window_size[2]/2),]
-    
-    print(EBImage::display(normalize(redwindow)))
-    EBImage::writeImage(normalize(redwindow), file=paste0(output_prefix, "_redwindow.tif"))
-    EBImage::writeImage(normalize(greenwindow), file=paste0(output_prefix, "_greenwindow.tif"))
-    
-    print(sprintf("Current window_size is x=%d y=%d", window_size[1], window_size[2]))
-    print(sprintf("Current window_offset is x=%d y=%d", window_offset[1], window_offset[2]))
-    ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
-    if(ans[1] != "Y" && ans[1] != "y") {
-      window_size[1] <- as.integer(readline("Enter new x size:"))
-      window_size[2] <- as.integer(readline("Enter new y size:"))
-    }
-    ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
-    if(ans[2] != "Y" && ans[2] != "y") {
-      window_offset[1] <- as.integer(readline("Enter new x offset:"))
-      window_offset[2] <- as.integer(readline("Enter new y offset:"))
-    }
+  # Normalize rotated imgs
+  offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
+  redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
+  grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
+  redval <- (redval - min(redval))/(max(redval) - min(redval))
+  grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
+  
+  # Dimensions / Number Frames
+  wr <- dim(redval)[1]
+  hr <- dim(redval)[2]
+  fr <- dim(redval)[3]
+  hg <- dim(grnval)[2] #Should be same precondition?
+  wg <- dim(grnval)[1]
+  fg <- dim(grnval)[3]
+  
+  # If window size/offsets not passed do dialog
+  if(is.na(window_size) && is.na(window_offset)) {
+    # Interactively determine window size and offset to include neurons of interest
+    num_rois <- as.integer(readline("How many ROIs to be added?: "))
+  } else {
+    if(length(window_size) != length(window_offset)) 
+      stop("Length of window_size and window_offset must be the same")
+    num_rois <- length(window_size)
   }
   
+  
+  # Initialize ROI masks with zero
+  roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
+  
+  # Initialize ROI coords and windows sizes/offsets
+  roiix <- array(rep(0,num_rois*4),c(num_rois,4))
+  winoffs <- array(rep(0,num_rois*2),c(num_rois,2))
+  winsize <- array(rep(0,num_rois*2),c(num_rois,2))
+  
+  for(i in 1:num_rois) {
+    
+    if(!(is.na(window_size) && is.na(window_offset))) {
+      
+      winoffs[i,] <- window_offset[[i]]
+      winsize[i,] <- window_size[[i]]
+      ans <- c("Y","Y")
+      
+    } else {
+      
+      winoffs[i,] <- c(0,0)
+      winsize[i,] <- c(as.integer(wr/2),as.integer(hr/2))
+      ans <- c("N","N")
+      
+    }
+    
+    # Initialize ROI with default
+    roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
+                   (wr/2 + winoffs[i,1] + winsize[i,1]/2),
+                   (hr/2 + winoffs[i,2] - winsize[i,2]/2),
+                   (hr/2 + winoffs[i,2] + winsize[i,2]/2))
+    
+    # Grab the Roi
+    redwindowdisp <- redval^1.8
+    grnwindowdisp <- grnval^1.8 
+    
+    #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+    #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+    
+    # Draw box around ROI
+    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
+    redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- 1
+    redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
+    redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
+    
+    # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+    print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
+    EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
+    
+    
+    
+    while(!all(stringr::str_to_lower(ans)=="y")) {
+      
+      print(sprintf("Current window_size for ROI %d is: x=%d y=%d", i, winsize[i,1], winsize[i,2]))
+      print(sprintf("Current window_offset for ROI %d is: x=%d y=%d", i, winoffs[i,1], winoffs[i,2]))
+      
+      ans[1] <- readline("Check redwindow.tif. Is the window size good (Y or N)?:")
+      if(ans[1] != "Y" && ans[1] != "y") {
+        winsize[i,1] <- as.integer(readline("Enter new x size:"))
+        winsize[i,2] <- as.integer(readline("Enter new y size:"))
+      }
+      ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
+      if(ans[2] != "Y" && ans[2] != "y") {
+        winoffs[i,1] <- as.integer(readline("Enter new x offset:"))
+        winoffs[i,2] <- as.integer(readline("Enter new y offset:"))
+      }
+      
+      ## Update reference
+      if(!all(stringr::str_to_lower(ans)=="y")) {
+        
+        # Update ROI
+        roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
+                       (wr/2 + winoffs[i,1] + winsize[i,1]/2),
+                       (hr/2 + winoffs[i,2] - winsize[i,2]/2),
+                       (hr/2 + winoffs[i,2] + winsize[i,2]/2))
+        
+        redwindowdisp <- redval^1.8
+        grnwindowdisp <- grnval^1.8
+        
+        #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
+        
+        # Draw box around ROI
+        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
+        redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,4],] <- 1
+        redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
+        redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
+        
+        # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+        print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
+        EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
+      }
+    } # end selecting ROI i
+    
+    roimasks[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],i] = 1
+    
+  }
+  
+  # Aggregate all ROI masks
+  roimask <- rowSums(roimasks,dims=2)
+  
+  # Clean up
   rm(flimg1)
   rm(flimg2)
   rm(flimg2cntlog)
   
-  redwindowmed <- EBImage::medianFilter(redwindow/2^16, size=2)
-  greenwindowmed <- EBImage::medianFilter(greenwindow/2^16, size=2)
-  redwindowmedth <- EBImage::thresh(redwindowmed, w=10, h=10, offset=0.0003)
-  EBImage::writeImage(redwindowmedth, file=paste0(output_prefix, "_redwindowmedth.tif"))
+  # Preallocate Segment Masks and Masked Image
+  seg_mask <- rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
   
-  # kern <- makeBrush(3, shape="diamond")
-  # redwindowmedth <- EBImage::opening(redwindowmedth, kern)
+  # Add regions to mask
+  for(i in 1:num_rois) {
+    
+    #[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]                     # ROI in Valid
+    #[roiix[i,1]+offs:roiix[i,2]-offs,roiix[i,3]+offs:roiix[i,4]-offs,] # ROI in Original
+    
+    rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),] 
+    groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
+    rroimed  <- EBImage::medianFilter(rroi/2^16, size=2)
+    groimed  <- EBImage::medianFilter(groi/2^16, size=2)
+    redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
+    greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
+    
+    seg_mask_win <- EBImage::thresh(rroimed,
+                                    w=as.integer(winsize[i,1]/2),
+                                    h=as.integer(winsize[i,2]/2),
+                                    offset=0.0003)
+    
+    shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+    
+    # Morphological Operations
+    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::fillHull(seg_mask_win)
+    
+    # Label regions and filter
+    thrsh_map    <- apply(seg_mask_win,3,bwlabel)
+    thrsh_map    <- array(thrsh_map,dim=dim(seg_mask_win))
+    maskprops    <- apply(thrsh_map,3,computeFeatures.shape)
+    objrmidx     <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
+    seg_mask_win <- rmObjects(thrsh_map, objrmidx)
+    
+    # Set to binary
+    seg_mask_win[seg_mask_win > 0] <- 1
+    
+    # Add segmented ROI to overall mask
+    seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
+  }
+  
+  # Write segmentation mask to file
+  EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
+  
+  # Mask pixels in R/G channels
+  redmasked   <- redmasked*seg_mask
+  greenmasked <- greenmasked*seg_mask
+  
+  if(pass==1) {
+    
+    # First pass: return min green, red and ratio in mask (across frames)
+    minsgreen <- minsred <- minsrat <- array(0,fr)
+    for(i in 1:fr) {
+      grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
+      redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+      minsgreen[i] <- min(grvalpx)
+      minsred[i]   <- min(redvalpx)
+      minsrat[i]   <- min(grvalpx/redvalpx)
+    }
+    
+    # Save min ratios
+    saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
+    
+    # Format string for multi ROI window size/offsets
+    wins_str = "list("
+    offs_str = "list("
+    for(i in 1:num_rois) {
+      wins_str = paste0(wins_str,"c(",winsize[i,1],",",winsize[i,2],")")
+      offs_str = paste0(offs_str,"c(",winoffs[i,1],",",winoffs[i,2],")")
+      if(i < num_rois) {
+        wins_str = paste0(wins_str,",")
+        offs_str = paste0(offs_str,",")
+      } else {
+        wins_str = paste0(wins_str,")")
+        offs_str = paste0(offs_str,")")
+      }
+    }
+    
+    loggit::message(sprintf("Number of ROIs was %d", num_rois))
+    loggit::message(sprintf("window size(s): %s", wins_str))
+    loggit::message(sprintf("window offset(s): %s", offs_str))
+    loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
+    
+    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
+    loggit::message(msg)
+    
+    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||", 
+                      FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+    loggit::message(out_str)
+    return(msg)
+    
+  } else if (pass==2) {
+    
+    # Second pass: pixels > mean of min ratios
+    seg_mask[greenmasked/redmasked <= F0] <- 0
+    redmasked   <- redmasked*seg_mask
+    greenmasked <- greenmasked*seg_mask
+  }
   
   # Create F_ratio images  
-  redmasked <- redwindowmed*redwindowmedth
-  greenmasked <- greenwindowmed*redwindowmedth
   greenperred <- greenmasked/redmasked
-  redave <- colMeans(redmasked, dim=2, na.rm=T)
-  greenave <- colMeans(greenmasked, dim=2, na.rm=T)
-  greenperredave <- colMeans(greenperred, dim=2, na.rm=T)
+  greenperred[is.na(greenperred)]<-0
+  
+  # Mean of each channel in mask
+  redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  
   goodfrratidx <- !is.na(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
   greenave <- greenave[goodfrratidx]
-
-  greenperred[which(is.na(greenperred)==T)] <- 0
+  
   grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
   for(cfr in 1:dim(greenperred)[3]){
     grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
@@ -393,10 +612,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
-  rottransmask[(dim(rottrans)[1]/2 + window_offset[1] - window_size[1]/2):
-                 (dim(rottrans)[1]/2 + window_offset[1] + window_size[1]/2),
-               (dim(rottrans)[2]/2 + window_offset[2] - window_size[2]/2):
-                 (dim(rottrans)[2]/2 + window_offset[2] + window_size[2]/2),] <- redwindowmedth
+  rottransmask[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),] <- seg_mask
   
   rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
   rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
@@ -404,10 +620,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   rottranscolor[,,3,] <- rottrans/255*(1-rottransmask)
   
   grratiocolorl <- rottranscolor*0
-  grratiocolorl[(dim(grratiocolorl)[1]/2 + window_offset[1] - window_size[1]/2):
-                  (dim(grratiocolorl)[1]/2 + window_offset[1] + window_size[1]/2),
-                (dim(grratiocolorl)[2]/2 + window_offset[2] - window_size[2]/2):
-                  (dim(grratiocolorl)[2]/2 + window_offset[2] + window_size[2]/2),,] <- grratiocolor
+  grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
+  
   flyviewcolor <- rottranscolor + grratiocolorl
   flyviewcolor <- Image(flyviewcolor, colormode="Color")
   rm(rottranscolor)
@@ -443,15 +657,17 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
   rm(frgcombined)
   
-  # Calculate dF/F
+  # Mean Red/Green/Ratio
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
-  
+  # LOESS Model
   datloessint <- loess(y ~ x, data=datrawint, span=0.4)
   redloessint <- loess(r ~ x, data=datrawint, span=0.4)
   greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
+  # LOESS Predictions
   datsmoothint <- data.frame(x=goodfrrat, y=predict(datloessint))
   redsmoothint <- data.frame(x=goodfrrat, y=predict(redloessint))
   greensmoothint <- data.frame(x=goodfrrat, y=predict(greenloessint))
+  # Smoothed Intensity
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
   
@@ -464,21 +680,30 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   plot(datrawint$x, datrawint$y, type="p", pch=16, ylab="F_ratio", xlab="frame", cex=0.5)
   lines(datsmoothint, col="blue")
   par(new=TRUE)
-  plot(redsmoothint, col="red", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
+  plot(redsmoothint, col="red", axes=F, xlab=NA, ylab=NA)
   par(new=TRUE)
-  plot(greensmoothint, col="green", ylim=c(0, 0.0005), axes=F, xlab=NA, ylab=NA)
+  plot(greensmoothint, col="green", axes=F, xlab=NA, ylab=NA)
   axis(side = 4)
   mtext(side = 4, line = 3, 'Fluorescence intensity')
   dev.off()
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
   write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
-  saveRDS(datloessint, paste0(output_prefix, "_datloessint.RDS"))
-  saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS"))
+  
+  #Duplicate RDS names:
+  # LOESS model
+  saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
+  # Dataframe LOESS predications
+  saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
+  
+  
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
   F0int <- intensity[1]
-  deltaFint <- intensity - F0int
+  #deltaFint <- intensity - F0int
+  # df (subtract baseline)
+  deltaFint <- intensity - F0
+  
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
   png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
@@ -489,15 +714,33 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95)
   ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
-  loggit::message(sprintf("window_size was x=%d y=%d", window_size[1], window_size[2]))
-  loggit::message(sprintf("window_offset was x=%d y=%d", window_offset[1], window_offset[2]))
+  # Format string for multi ROI window sizse/offsets
+  wins_str = "list("
+  offs_str = "list("
+  for(i in 1:num_rois) {
+    wins_str = paste0(wins_str,"c(",winsize[i,1],",",winsize[i,2],")")
+    offs_str = paste0(offs_str,"c(",winoffs[i,1],",",winoffs[i,2],")")
+    if(i < num_rois) {
+      wins_str = paste0(wins_str,",")
+      offs_str = paste0(offs_str,",")
+    } else {
+      wins_str = paste0(wins_str,")")
+      offs_str = paste0(offs_str,")")
+    }
+  }
+  
+  loggit::message(sprintf("Number of ROIs was %d", num_rois))
+  loggit::message(sprintf("window size(s): %s", wins_str))
+  loggit::message(sprintf("window offset(s): %s", offs_str))
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
   loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
   loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
   loggit::message(paste0("Number of good frames was ", length(goodfr)))
   
-  loggit::message(sprintf("||c(%d, %d) ||c(%d, %d) ||c(%d, %d) ||%d ||%.3f ||%.3f ||", 
-                          FOI[1], FOI[2], window_size[1], window_size[2], window_offset[1], window_offset[2], length(goodfr), max(intensity), max(datsmoothint$y)))
+  out_str = sprintf("||c(%d, %d) ||%s ||%s ||%d ||%.3f/%.3f ||%.3f/%.3f ||", 
+                    FOI[1], FOI[2], wins_str, offs_str, length(goodfr),
+                    min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
+  loggit::message(out_str)
   
   ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
@@ -507,4 +750,5 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T,
   
   message("Finished processing!")
   gc()
+  return(out_str)
 }
