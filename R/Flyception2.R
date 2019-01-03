@@ -27,7 +27,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
-                         thrs_level=0.8,pass=1,F0=0.640,size_thrsh=5,translate=T){
+                         pass=1,F0=0.640,size_thrsh=5,translate=T){
   
   # TO DO
   
@@ -551,8 +551,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     # Save min ratios
     saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
-    
-
     
     # Format string for multi ROI window size/offsets
     wins_str = "list("
