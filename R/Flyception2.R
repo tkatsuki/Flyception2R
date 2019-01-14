@@ -504,16 +504,21 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
-    seg_mask_win <- EBImage::thresh(rroimed,
-                                    w=as.integer(winsize[i,1]/2),
-                                    h=as.integer(winsize[i,2]/2),
-                                    offset=0.0003)
+    seg_mask_win <- array(0,dim(rroimed))
+    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.5
+    
+    for(j in 1:fr) {
+      seg_mask_win[,,j] <- EBImage::thresh(rroimed[,,j],
+                                             w=as.integer(winsize[i,1]/2),
+                                             h=as.integer(winsize[i,2]/2),
+                                             offset=toff[j])
+    }
     
     shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
     
     # Morphological Operations
-    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))
-    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
+    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
     # Label regions and filter
