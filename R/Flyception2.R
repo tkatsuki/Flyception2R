@@ -546,13 +546,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     # First pass: return min green, red and ratio in mask (across frames)
     minsgreen <- minsred <- minsrat <- array(0,fr)
+    meanqgr   <- meanqred <- array(0,fr)
     for(i in 1:fr) {
+      # Per Frame Pixels in Mask
       grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
       redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+      # Per Frame Mean of Lowest 10%
+      meanqgr[i]   <- mean(grvalpx[grvalpx > quantile(grvalpx,.05)])
+      meanqred[i]  <- mean(redvalpx[redvalpx > quantile(redvalpx,.05)])
+      # Per Frame Min Pixels
       minsgreen[i] <- min(grvalpx)
       minsred[i]   <- min(redvalpx)
       minsrat[i]   <- min(grvalpx/redvalpx)
     }
+    # Lowest 10% Pixels/Frame
+    blredq   <- meanqred
+    blgreenq <- meanqgr
+    # Lowest Pixel/Frame
+    blredm   <- minsred
+    blgreenm <- minsgreen
     
     # Save min ratios
     saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
@@ -580,15 +592,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
     loggit::message(msg)
     
-    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||", 
-                      FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||%f ||%f ||%f ||", 
+                      #FOI[1], FOI[2], wins_str, offs_str, min(blgreenq), mean(blgreenq,na.rm=TRUE), min(blgreenm), mean(blgreenm,na.rm=TRUE)) # Green
+                      FOI[1], FOI[2], wins_str, offs_str, min(blredq), mean(blredq,na.rm=TRUE), min(blredm), mean(blredm,na.rm=TRUE)) # Red
+                      #FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+   
     loggit::message(out_str)
-    return(msg)
+    return(out_str)
     
   } else if (pass==2) {
     
     # Second pass: pixels > mean of min ratios
-    seg_mask[greenmasked/redmasked <= F0] <- 0
+    #seg_mask[greenmasked/redmasked <= F0] <- 0
+    
+    # Second Pass: Green Pixels > mean(mean(lowest 10% per frame))
+    #seg_mask[greenmasked <= F0] <- 0
+    
+    # Second Pass: Green Pixels > mean(mean(lowest 10% per frame))
+    seg_mask[redmasked <= F0] <- 0
+    
     redmasked   <- redmasked*seg_mask
     greenmasked <- greenmasked*seg_mask
   }
