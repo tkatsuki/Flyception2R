@@ -657,10 +657,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenperred <- greenmasked/redmasked
   greenperred[is.na(greenperred)]<-0
   
+  ratioqfilt       <- greenperred
+  qfiltcutoff      <- array(0,fr)
+  ratioqfiltave    <- array(0,fr)
+  
+  for(i in 1:fr) {
+    # Get ratio qauntile for each frame
+    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.10)
+    # Filter pixel ratios below quantile
+    ratioqfilt[,,i][greenperred[,,i] < qfiltcutoff[i]] <- 0
+    ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+  }
+  
   # Mean of each channel in mask
   redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  #greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenperredave <- ratioqfiltave
   
   goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
