@@ -125,12 +125,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     while(!all(stringr::str_to_lower(ans)=="y")){
       x <- ROI[1] + center[1]
       y <- ROI[2] + center[2]
-      print(EBImage::display(abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
-                                   1.00*(EBImage::translate(fl1ref, center)),
-                                   along=3)))
       
-      fl2fl1ol <- 0.6*fl2refcrop[x:(x+240-1),y:(y+240-1)] + 0.4*(EBImage::translate(fl1ref, center))      
-      EBImage::writeImage(normalize(fl2fl1ol), file=paste0(output_prefix, "_fl2fl1_overlay.tif"))
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                           1.00*(EBImage::translate(fl1ref, center)),
+                           along=3)
+      
+      print(EBImage::display(fl2fl1stack))
+      EBImage::writeImage(normalize(fl2fl1stack),
+                          file=paste0(output_prefix,
+                          "_fl2fl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
@@ -177,12 +180,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     ans <- c("N","Y")
     while(!all(stringr::str_to_lower(ans)=="y")){
       
-      print(EBImage::display(abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
                                    .75*(EBImage::translate(flip(fl1ref), center2)),
-                                   along=3)))
+                                   along=3)
       
-      fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))      
-      EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
+      print(EBImage::display(fvfl1stack))
+      EBImage::writeImage(normalize(fvfl1stack),
+                          file=paste0(output_prefix,
+                          "_fvfl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
