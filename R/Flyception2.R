@@ -538,7 +538,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
     seg_mask_win <- array(0,dim(rroimed))
-    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.50
+    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.10
     
     for(j in 1:fr) {
       seg_mask_win[,,j] <- EBImage::thresh(rroimed[,,j],
