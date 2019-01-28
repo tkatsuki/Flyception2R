@@ -25,6 +25,7 @@
 Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
+                         fl1fl2center=NA,flvfl1center=NA,
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
                          pass=1,F0=0.640,size_thrsh=5,translate=T){
@@ -121,7 +122,22 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                             ROI=c(1, 1, 450, 50))
     
     # Check and align template between Fluoview cameras
-    ans <- c("N","Y")
+    if(is.na(fl1fl2center[1])) {
+      ans <- c("N","Y")
+    } else {
+      ans <- c("Y","Y")
+      center <- fl1fl2center
+      x <- ROI[1] + center[1]
+      y <- ROI[2] + center[2]
+      
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                           1.00*(EBImage::translate(fl1ref, center)),
+                           along=3)
+      
+      EBImage::writeImage(normalize(fl2fl1stack),
+                          file=paste0(output_prefix,
+                          "_fl2fl1_stack.tif"))
+    }
     while(!all(stringr::str_to_lower(ans)=="y")){
       x <- ROI[1] + center[1]
       y <- ROI[2] + center[2]
@@ -177,7 +193,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                              ROI=c(1, 1, 50, 50))
     
     # Check and align template between Flyview and Fluoview
-    ans <- c("N","Y")
+    if(is.na(flvfl1center[1])) {
+      ans <- c("N","Y")
+    } else {
+      ans <- c("Y","Y")
+      center2 <- flvfl1center
+      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+                          .75*(EBImage::translate(flip(fl1ref), center2)),
+                          along=3)
+      EBImage::writeImage(normalize(fvfl1stack),
+                          file=paste0(output_prefix,
+                          "_fvfl1_stack.tif"))
+    }
+    
     while(!all(stringr::str_to_lower(ans)=="y")){
       
       fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
