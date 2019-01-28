@@ -580,13 +580,18 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     # First pass: return min green, red and ratio in mask (across frames)
     minsgreen <- minsred <- minsrat <- array(0,fr)
     meanqgr   <- meanqred <- array(0,fr)
+    quantgr   <- quantred <- array(0,fr)
+    
     for(i in 1:fr) {
       # Per Frame Pixels in Mask
       grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
       redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+      # Per frame quantile (10th percentile)
+      quantgr[i]   <- quantile(grvalpx,.1)
+      quantred[i]  <- quantile(redvalpx,.1)
       # Per Frame Mean of Lowest 10%
-      meanqgr[i]   <- mean(grvalpx[grvalpx > quantile(grvalpx,.1)])
-      meanqred[i]  <- mean(redvalpx[redvalpx > quantile(redvalpx,.1)])
+      meanqgr[i]   <- mean(grvalpx[grvalpx > quantgr[i]])
+      meanqred[i]  <- mean(redvalpx[redvalpx > quantred[i]])
       # Per Frame Min Pixels
       minsgreen[i] <- min(grvalpx)
       minsred[i]   <- min(redvalpx)
