@@ -25,6 +25,7 @@
 Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
+                         fl1fl2center=NA,flvfl1center=NA,
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
                          pass=1,F0=0.640,size_thrsh=5,translate=T){
@@ -121,16 +122,34 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                             ROI=c(1, 1, 450, 50))
     
     # Check and align template between Fluoview cameras
-    ans <- c("N","Y")
+    if(is.na(fl1fl2center[1])) {
+      ans <- c("N","Y")
+    } else {
+      ans <- c("Y","Y")
+      center <- fl1fl2center
+      x <- ROI[1] + center[1]
+      y <- ROI[2] + center[2]
+      
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                           1.00*(EBImage::translate(fl1ref, center)),
+                           along=3)
+      
+      EBImage::writeImage(normalize(fl2fl1stack),
+                          file=paste0(output_prefix,
+                          "_fl2fl1_stack.tif"))
+    }
     while(!all(stringr::str_to_lower(ans)=="y")){
       x <- ROI[1] + center[1]
       y <- ROI[2] + center[2]
-      print(EBImage::display(abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
-                                   1.00*(EBImage::translate(fl1ref, center)),
-                                   along=3)))
       
-      fl2fl1ol <- 0.6*fl2refcrop[x:(x+240-1),y:(y+240-1)] + 0.4*(EBImage::translate(fl1ref, center))      
-      EBImage::writeImage(normalize(fl2fl1ol), file=paste0(output_prefix, "_fl2fl1_overlay.tif"))
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+                           1.00*(EBImage::translate(fl1ref, center)),
+                           along=3)
+      
+      print(EBImage::display(fl2fl1stack))
+      EBImage::writeImage(normalize(fl2fl1stack),
+                          file=paste0(output_prefix,
+                          "_fl2fl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
@@ -174,15 +193,29 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                              ROI=c(1, 1, 50, 50))
     
     # Check and align template between Flyview and Fluoview
-    ans <- c("N","Y")
+    if(is.na(flvfl1center[1])) {
+      ans <- c("N","Y")
+    } else {
+      ans <- c("Y","Y")
+      center2 <- flvfl1center
+      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+                          .75*(EBImage::translate(flip(fl1ref), center2)),
+                          along=3)
+      EBImage::writeImage(normalize(fvfl1stack),
+                          file=paste0(output_prefix,
+                          "_fvfl1_stack.tif"))
+    }
+    
     while(!all(stringr::str_to_lower(ans)=="y")){
       
-      print(EBImage::display(abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
                                    .75*(EBImage::translate(flip(fl1ref), center2)),
-                                   along=3)))
+                                   along=3)
       
-      fvfl1ol <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250] + .75*(EBImage::translate(flip(fl1ref), center2))      
-      EBImage::writeImage(normalize(fvfl1ol), file=paste0(output_prefix, "_fvfl1_overlay.tif"))
+      print(EBImage::display(fvfl1stack))
+      EBImage::writeImage(normalize(fvfl1stack),
+                          file=paste0(output_prefix,
+                          "_fvfl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
@@ -504,16 +537,21 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
-    seg_mask_win <- EBImage::thresh(rroimed,
-                                    w=as.integer(winsize[i,1]/2),
-                                    h=as.integer(winsize[i,2]/2),
-                                    offset=0.0003)
+    seg_mask_win <- array(0,dim(rroimed))
+    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.10
+    
+    for(j in 1:fr) {
+      seg_mask_win[,,j] <- EBImage::thresh(rroimed[,,j],
+                                             w=as.integer(winsize[i,1]/2),
+                                             h=as.integer(winsize[i,2]/2),
+                                             offset=toff[j])
+    }
     
     shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
     
     # Morphological Operations
-    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))
-    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))
+    seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
+    seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
     # Label regions and filter
@@ -541,13 +579,30 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     # First pass: return min green, red and ratio in mask (across frames)
     minsgreen <- minsred <- minsrat <- array(0,fr)
+    meanqgr   <- meanqred <- array(0,fr)
+    quantgr   <- quantred <- array(0,fr)
+    
     for(i in 1:fr) {
+      # Per Frame Pixels in Mask
       grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
       redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+      # Per frame quantile (10th percentile)
+      quantgr[i]   <- quantile(grvalpx,.1)
+      quantred[i]  <- quantile(redvalpx,.1)
+      # Per Frame Mean of Lowest 10%
+      meanqgr[i]   <- mean(grvalpx[grvalpx > quantgr[i]])
+      meanqred[i]  <- mean(redvalpx[redvalpx > quantred[i]])
+      # Per Frame Min Pixels
       minsgreen[i] <- min(grvalpx)
       minsred[i]   <- min(redvalpx)
       minsrat[i]   <- min(grvalpx/redvalpx)
     }
+    # Lowest 10% Pixels/Frame
+    blredq   <- meanqred
+    blgreenq <- meanqgr
+    # Lowest Pixel/Frame
+    blredm   <- minsred
+    blgreenm <- minsgreen
     
     # Save min ratios
     saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
@@ -575,15 +630,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
     loggit::message(msg)
     
-    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||", 
-                      FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||%f ||%f ||%f ||", 
+                      #FOI[1], FOI[2], wins_str, offs_str, min(blgreenq), mean(blgreenq,na.rm=TRUE), min(blgreenm), mean(blgreenm,na.rm=TRUE)) # Green
+                      FOI[1], FOI[2], wins_str, offs_str, min(blredq), mean(blredq,na.rm=TRUE), min(blredm), mean(blredm,na.rm=TRUE)) # Red
+                      #FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
+   
     loggit::message(out_str)
-    return(msg)
+    return(out_str)
     
   } else if (pass==2) {
     
     # Second pass: pixels > mean of min ratios
-    seg_mask[greenmasked/redmasked <= F0] <- 0
+    #seg_mask[greenmasked/redmasked <= F0] <- 0
+    
+    # Second Pass: Green Pixels > mean(mean(lowest 10% per frame))
+    #seg_mask[greenmasked <= F0] <- 0
+    
+    # Second Pass: Red Pixels > mean(mean(lowest 10% per frame))
+    seg_mask[redmasked <= F0] <- 0
+    
     redmasked   <- redmasked*seg_mask
     greenmasked <- greenmasked*seg_mask
   }
@@ -592,12 +657,25 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenperred <- greenmasked/redmasked
   greenperred[is.na(greenperred)]<-0
   
+  ratioqfilt       <- greenperred
+  qfiltcutoff      <- array(0,fr)
+  ratioqfiltave    <- array(0,fr)
+  
+  for(i in 1:fr) {
+    # Get ratio qauntile for each frame
+    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.10)
+    # Filter pixel ratios below quantile
+    ratioqfilt[,,i][greenperred[,,i] < qfiltcutoff[i]] <- 0
+    ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+  }
+  
   # Mean of each channel in mask
   redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  #greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenperredave <- ratioqfiltave
   
-  goodfrratidx <- !is.na(greenperredave)
+  goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
@@ -735,10 +813,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
   loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
   loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
-  loggit::message(paste0("Number of good frames was ", length(goodfr)))
+  loggit::message(paste0("Number of good frames was ", length(goodfrratidx)))
   
   out_str = sprintf("||c(%d, %d) ||%s ||%s ||%d ||%.3f/%.3f ||%.3f/%.3f ||", 
-                    FOI[1], FOI[2], wins_str, offs_str, length(goodfr),
+                    FOI[1], FOI[2], wins_str, offs_str, length(goodfrratidx),
                     min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
   loggit::message(out_str)
   
