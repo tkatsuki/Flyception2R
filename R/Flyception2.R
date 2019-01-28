@@ -662,7 +662,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   
-  goodfrratidx <- !is.na(greenperredave)
+  goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
@@ -800,10 +800,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
   loggit::message(paste0("Max F_ratio intensity in this bout was ", max(intensity)))
   loggit::message(paste0("Max F_ratio smoothed intensity in this bout was ", max(datsmoothint$y)))
-  loggit::message(paste0("Number of good frames was ", length(goodfr)))
+  loggit::message(paste0("Number of good frames was ", length(goodfrratidx)))
   
   out_str = sprintf("||c(%d, %d) ||%s ||%s ||%d ||%.3f/%.3f ||%.3f/%.3f ||", 
-                    FOI[1], FOI[2], wins_str, offs_str, length(goodfr),
+                    FOI[1], FOI[2], wins_str, offs_str, length(goodfrratidx),
                     min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
   loggit::message(out_str)
   
