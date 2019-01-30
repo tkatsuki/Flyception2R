@@ -600,9 +600,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     # Per frame quantile
     blquant    <- quantred
     # Per frame piixel < quantile
-    blmquant   <- mean(meanqred)
+    blmquant   <- meanqred
     # Per frame min pixel
-    blmin    <- minsred
+    blmin      <- minsred
     
     bldata <- data.frame(x=goodfr, quantred=quantred, quantgr=quantgr,
                                    meanqred=meanqred, meanqgr=meanqgr,
