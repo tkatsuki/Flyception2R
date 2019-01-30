@@ -593,19 +593,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       meanqgr[i]   <- mean(grvalpx[grvalpx > quantgr[i]])
       meanqred[i]  <- mean(redvalpx[redvalpx > quantred[i]])
       # Per Frame Min Pixels
-      minsgreen[i] <- min(grvalpx)
+      minsgr[i]    <- min(grvalpx)
       minsred[i]   <- min(redvalpx)
       minsrat[i]   <- min(grvalpx/redvalpx)
     }
-    # Lowest 10% Pixels/Frame
-    blredq   <- meanqred
-    blgreenq <- meanqgr
-    # Lowest Pixel/Frame
-    blredm   <- minsred
-    blgreenm <- minsgreen
+    # Per frame quantile
+    blquant    <- quantred
+    # Per frame piixel < quantile
+    blmquant   <- mean(meanqred)
+    # Per frame min pixel
+    blmin    <- minsred
     
-    # Save min ratios
-    saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
+    bldata <- data.frame(x=goodfr, quantred=quantred, quantgr=quantgr,
+                                   meanqred=meanqred, meanqgr=meanqgr,
+                                   minsred=minsred, minsgr=minsgr)
+    
+    # Save all baselines
+    saveRDS(bldata, paste0(output_prefix, "_minratios.RDS"))
     
     # Format string for multi ROI window size/offsets
     wins_str = "list("
@@ -622,18 +626,26 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       }
     }
     
+    #################
+    # Min Quantile        -   Min of per frame quantiles
+    # Mean Quantile       -   Mean of per frame quantiles
+    # Min Mean Quantile   -   Min of per frame mean of pix < quantile
+    # Mean Mean Quantile  -   Mean of per frame mean of pix < quantile
+    # Min Mins            -   Min of per frame min pixels
+    # Mean Mins           -   Mean of per frame min pixels
+    
+    # Min Quantile || Mean Quantile || Min Mean Quantile || Mean Mean Quantile || Min Mins || Mean Mins
+    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||%f ||%f ||%f ||%f || %f ||", 
+                      FOI[1], FOI[2], wins_str, offs_str,
+                      min(blquant), mean(blquant,na.rm=TRUE),
+                      min(blmquant), mean(blmquant,na.rm=TRUE),
+                      min(blmin), mean(blmin,na.rm=TRUE))
+    
     loggit::message(sprintf("Number of ROIs was %d", num_rois))
     loggit::message(sprintf("window size(s): %s", wins_str))
     loggit::message(sprintf("window offset(s): %s", offs_str))
     loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
     
-    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
-    loggit::message(msg)
-    
-    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||%f ||%f ||%f ||", 
-                      #FOI[1], FOI[2], wins_str, offs_str, min(blgreenq), mean(blgreenq,na.rm=TRUE), min(blgreenm), mean(blgreenm,na.rm=TRUE)) # Green
-                      FOI[1], FOI[2], wins_str, offs_str, min(blredq), mean(blredq,na.rm=TRUE), min(blredm), mean(blredm,na.rm=TRUE)) # Red
-                      #FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
    
     loggit::message(out_str)
     return(out_str)
