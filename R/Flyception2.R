@@ -578,7 +578,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   if(pass==1) {
     
     # First pass: return min green, red and ratio in mask (across frames)
-    minsgreen <- minsred <- minsrat <- array(0,fr)
+    minsgr <- minsred <- minsrat <- array(0,fr)
     meanqgr   <- meanqred <- array(0,fr)
     quantgr   <- quantred <- array(0,fr)
     
@@ -590,8 +590,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       quantgr[i]   <- quantile(grvalpx,.1)
       quantred[i]  <- quantile(redvalpx,.1)
       # Per Frame Mean of Lowest 10%
-      meanqgr[i]   <- mean(grvalpx[grvalpx > quantgr[i]])
-      meanqred[i]  <- mean(redvalpx[redvalpx > quantred[i]])
+      meanqgr[i]   <- mean(grvalpx[grvalpx < quantgr[i]])
+      meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
       # Per Frame Min Pixels
       minsgr[i]    <- min(grvalpx)
       minsred[i]   <- min(redvalpx)
@@ -646,7 +646,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     loggit::message(sprintf("window offset(s): %s", offs_str))
     loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
     
-   
     loggit::message(out_str)
     return(out_str)
     
