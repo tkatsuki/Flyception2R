@@ -674,7 +674,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   for(i in 1:fr) {
     # Get ratio qauntile for each frame
-    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.10)
+    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
     # Filter pixel ratios below quantile
     ratioqfilt[,,i][greenperred[,,i] < qfiltcutoff[i]] <- 0
     ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
