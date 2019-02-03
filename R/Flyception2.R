@@ -43,7 +43,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
-  if(preprocess == T) {
+  if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
     
     loggit::message(paste0("Preprocessing", prefix, "..."))
     
@@ -228,7 +228,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     savefn <- paste0(dir, prefix,"_prepdata.RData")
     save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,fly_view_fmf,savefn,syncing,file=savefn)
     loggit::message("Preprocessing done")
-    return()
+    if(preprocess == T) return()
   } else {
     # Load preprocessed data
     load(paste0(dir, prefix,"_prepdata.RData"))
