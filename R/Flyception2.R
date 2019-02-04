@@ -460,11 +460,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
     redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
     
-    # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+    # Show both channels when selecting window/offset
     print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
     EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
-    
-    
     
     while(!all(stringr::str_to_lower(ans)=="y")) {
       
@@ -491,11 +489,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                        (hr/2 + winoffs[i,2] - winsize[i,2]/2),
                        (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
+        # Gamma correction
         redwindowdisp <- redval^1.8
         grnwindowdisp <- grnval^1.8
-        
-        #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
-        #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
         
         # Draw box around ROI
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
@@ -510,7 +506,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     } # end selecting ROI i
     
     roimasks[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],i] = 1
-    
   }
   
   # Aggregate all ROI masks
@@ -547,20 +542,18 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                                            offset=toff[j])
     }
     
-    # Morphological Operations    
-    shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+    # Morphological Operations (Opening + Fill)
     seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
-    # Set to binary
-    seg_mask_win[seg_mask_win > 0] <- 1
-    
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
   }
-  
+
   # Mask pixels in R/G channels
+  #redroimask  <- redmasked
+  #grroimask   <- greenmasked
   redmasked   <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
   
@@ -571,11 +564,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   for(i in 1:fr) {
     # Per Frame Pixels in Mask
-    grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
-    redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
+    grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0] #grroimask[,,i][roimask > 0]
+    redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]   #redroimask[,,i][roimask > 0]
     # Per frame quantile (10th percentile)
-    quantgr[i]   <- quantile(grvalpx,.1)
-    quantred[i]  <- quantile(redvalpx,.1)
+    quantgr[i]   <- quantile(grvalpx,0.10)
+    quantred[i]  <- quantile(redvalpx,0.10)
     # Per Frame Mean of Lowest 10%
     meanqgr[i]   <- mean(grvalpx[grvalpx < quantgr[i]])
     meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
@@ -584,6 +577,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     minsred[i]   <- min(redvalpx)
     minsrat[i]   <- min(grvalpx/redvalpx)
   }
+  
   # Per frame quantile
   blquant    <- quantred
   # Per frame piixel < quantile
@@ -599,23 +593,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   # Save all baselines
   saveRDS(bldata, paste0(output_prefix, "_minratios.RDS"))
 
-  FO <- mean(blmin,na.rm=TRUE)
+  # Filter red channel below baseline
+  bl <- mean(meanqred,na.rm=TRUE)
   
   # Red Pixels > TODO: Baseline = mean(mean(lowest 10% per frame))
-  seg_mask[redmasked <= F0] <- 0
-  
-  # Label regions and filter
-  thrsh_map <- apply(seg_mask,3,bwlabel)
-  thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
-  maskprops <- apply(thrsh_map,3,computeFeatures.shape)
-  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
-  seg_mask  <- rmObjects(thrsh_map, objrmidx)
-  
-  seg_mask[seg_mask > 0] <- 1
+  seg_mask[redmasked <= bl] <- 0
 
-  # Write segmentation mask to file
-  EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
-  
   # Mask pixels in R/G channels
   redmasked   <- redmasked*seg_mask
   greenmasked <- greenmasked*seg_mask
@@ -626,21 +609,42 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   ratioqfilt       <- greenperred
   qfiltcutoff      <- array(0,fr)
-  ratioqfiltave    <- array(0,fr)
+  ##ratioqfiltave    <- array(0,fr)
+  
+  qfcutoff         <- quantile(greenperred[seg_mask>0],0.10)
   
   for(i in 1:fr) {
     # Get ratio qauntile for each frame
-    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.5)
-    # Filter pixel ratios below quantile
-    ratioqfilt[,,i][greenperred[,,i] < qfiltcutoff[i]] <- 0
-    ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+    ## qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
+    # Filter pixel ratios below quantile cutoff
+    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
+    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
   }
+  
+  # Label regions and apply area filtering
+  shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+  thrsh_map <- apply(seg_mask,3,bwlabel)
+  thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
+  maskprops <- apply(thrsh_map,3,computeFeatures.shape)
+  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
+  seg_mask  <- rmObjects(thrsh_map, objrmidx)
+  
+  # Return filtered regions to binary mask
+  seg_mask[seg_mask > 0] <- 1
+  
+  # Write segmentation mask to file
+  EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
+  
+  # Mask pixels in R/G channels
+  redmasked   <- redmasked*seg_mask
+  greenmasked <- greenmasked*seg_mask
+  greenperred <- greenperred*seg_mask
 
   # Mean of each channel in mask
   redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  #greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- ratioqfiltave
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  #greenperredave <- ratioqfiltave
   
   goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
@@ -747,7 +751,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   F0int <- intensity[1]
   #deltaFint <- intensity - F0int
   # df (subtract baseline)
-  deltaFint <- intensity - F0
+  deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
