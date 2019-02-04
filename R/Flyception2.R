@@ -700,8 +700,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   grratiocolorl <- rottranscolor*0
   grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
   
-  flyviewcolor <- rottranscolor + grratiocolorl
-  flyviewcolor <- Image(flyviewcolor, colormode="Color")
+  # flyviewcolor <- rottranscolor + grratiocolorl
+  # flyviewcolor <- Image(flyviewcolor, colormode="Color")
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -713,6 +713,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
   rm(redrottranscol)
+  rm(rottransmask)
   
   # Create side-by-side view of fly_view and fluo_view images
   frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
