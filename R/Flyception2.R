@@ -591,7 +591,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                        minsred=minsred, minsgr=minsgr)
   
   # Save all baselines
-  saveRDS(bldata, paste0(output_prefix, "_minratios.RDS"))
+  saveRDS(bldata, paste0(output_prefix, "_baselines.RDS"))
 
   # Filter red channel below baseline
   bl <- mean(meanqred,na.rm=TRUE)
