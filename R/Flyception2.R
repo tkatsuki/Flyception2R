@@ -611,7 +611,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   qfiltcutoff      <- array(0,fr)
   ##ratioqfiltave    <- array(0,fr)
   
-  qfcutoff         <- quantile(greenperred[seg_mask>0],0.10)
+  qfcutoff         <- quantile(greenperred[seg_mask>0],0.05)
   
   for(i in 1:fr) {
     # Get ratio qauntile for each frame
