@@ -44,7 +44,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   # Start logging 
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
-  if(preprocess == T) {
+  if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
     
     loggit::message(paste0("Preprocessing", prefix, "..."))
     
@@ -229,7 +229,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     savefn <- paste0(dir, prefix,"_prepdata.RData")
     save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,fly_view_fmf,savefn,syncing,file=savefn)
     loggit::message("Preprocessing done")
-    return()
+    if(preprocess == T) return()
   } else {
     # Load preprocessed data
     load(paste0(dir, prefix,"_prepdata.RData"))
@@ -663,8 +663,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   grratiocolorl <- rottranscolor*0
   grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
   
-  flyviewcolor <- rottranscolor + grratiocolorl
-  flyviewcolor <- Image(flyviewcolor, colormode="Color")
+  # flyviewcolor <- rottranscolor + grratiocolorl
+  # flyviewcolor <- Image(flyviewcolor, colormode="Color")
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -676,6 +676,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
   rm(redrottranscol)
+  rm(rottransmask)
   
   # Create side-by-side view of fly_view and fluo_view images
   frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
