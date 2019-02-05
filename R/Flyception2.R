@@ -26,6 +26,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          fl1fl2center=NA,flvfl1center=NA,
+                         bgratio=0.80,ratiocutoff=0.10, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
                          size_thrsh=5,translate=T){
@@ -552,70 +553,61 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   }
 
   # Mask pixels in R/G channels
-  #redroimask  <- redmasked
-  #grroimask   <- greenmasked
-  redmasked   <- redmasked*seg_mask
-  greenmasked <- greenmasked*seg_mask
+  redseg    <- redmasked*seg_mask
+  greenseg <- greenmasked*seg_mask
   
   # Allocate for per frame baseline metrics
-  minsgr <- minsred <- minsrat <- array(0,fr)
-  meanqgr   <- meanqred <- array(0,fr)
-  quantgr   <- quantred <- array(0,fr)
+  minsred <- array(0,fr)
+  meanqred <- array(0,fr)
+  quantred <- array(0,fr)
   
   for(i in 1:fr) {
     # Per Frame Pixels in Mask
-    grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0] #grroimask[,,i][roimask > 0]
-    redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]   #redroimask[,,i][roimask > 0]
+    redvalpx      <- redmasked[,,i][roimask > 0]
+    #redvalpx     <- redseg[,,i][seg_mask[,,i] > 0]
+    
     # Per frame quantile (10th percentile)
-    quantgr[i]   <- quantile(grvalpx,0.10)
-    quantred[i]  <- quantile(redvalpx,0.10)
+    quantred[i]  <- quantile(redvalpx,bgratio)
+    
     # Per Frame Mean of Lowest 10%
-    meanqgr[i]   <- mean(grvalpx[grvalpx < quantgr[i]])
     meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
+    
     # Per Frame Min Pixels
-    minsgr[i]    <- min(grvalpx)
     minsred[i]   <- min(redvalpx)
-    minsrat[i]   <- min(grvalpx/redvalpx)
   }
   
-  # Per frame quantile
-  blquant    <- quantred
-  # Per frame piixel < quantile
-  blmquant   <- meanqred
-  # Per frame min pixel
-  blmin      <- minsred
-  
   # Dataframe of baseline metrics
-  bldata <- data.frame(x=goodfr, quantred=quantred, quantgr=quantgr,
-                       meanqred=meanqred, meanqgr=meanqgr,
-                       minsred=minsred, minsgr=minsgr)
+  bldata <- data.frame(x=goodfr, 
+                       quantred=quantred,
+                       meanqred=meanqred,
+                       minsred=minsred)
   
   # Save all baselines
   saveRDS(bldata, paste0(output_prefix, "_baselines.RDS"))
 
   # Filter red channel below baseline
-  bl <- mean(meanqred,na.rm=TRUE)
+  bl <- mean(quantred,na.rm=TRUE)
   
   # Red Pixels > TODO: Baseline = mean(mean(lowest 10% per frame))
-  seg_mask[redmasked <= bl] <- 0
+  seg_mask[redseg <= bl] <- 0
 
   # Mask pixels in R/G channels
-  redmasked   <- redmasked*seg_mask
-  greenmasked <- greenmasked*seg_mask
+  redseg   <- redseg*seg_mask
+  greenseg <- greenseg*seg_mask
   
   # Create F_ratio images  
-  greenperred <- greenmasked/redmasked
+  greenperred <- greenseg/redseg
   greenperred[is.na(greenperred)]<-0
   
   ratioqfilt       <- greenperred
   qfiltcutoff      <- array(0,fr)
   ##ratioqfiltave    <- array(0,fr)
   
-  qfcutoff         <- quantile(greenperred[seg_mask>0],0.05)
+  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
   
   for(i in 1:fr) {
     # Get ratio qauntile for each frame
-    ## qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
+    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
     # Filter pixel ratios below quantile cutoff
     seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
     #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
@@ -636,13 +628,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
   
   # Mask pixels in R/G channels
-  redmasked   <- redmasked*seg_mask
-  greenmasked <- greenmasked*seg_mask
+  redseg   <- redseg*seg_mask
+  greenseg <- greenseg*seg_mask
   greenperred <- greenperred*seg_mask
 
   # Mean of each channel in mask
-  redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  redave         <- apply(redseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenave       <- apply(greenseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
   #greenperredave <- ratioqfiltave
   
