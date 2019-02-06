@@ -26,9 +26,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          fl1fl2center=NA,flvfl1center=NA,
+                         bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
-                         pass=1,F0=0.640,size_thrsh=5,translate=T){
+                         size_thrsh=5,translate=T){
   
   # TO DO
   
@@ -136,7 +137,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       
       EBImage::writeImage(normalize(fl2fl1stack),
                           file=paste0(output_prefix,
-                          "_fl2fl1_stack.tif"))
+                                      "_fl2fl1_stack.tif"))
     }
     while(!all(stringr::str_to_lower(ans)=="y")){
       x <- ROI[1] + center[1]
@@ -149,7 +150,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       print(EBImage::display(fl2fl1stack))
       EBImage::writeImage(normalize(fl2fl1stack),
                           file=paste0(output_prefix,
-                          "_fl2fl1_stack.tif"))
+                                      "_fl2fl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
@@ -203,19 +204,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                           along=3)
       EBImage::writeImage(normalize(fvfl1stack),
                           file=paste0(output_prefix,
-                          "_fvfl1_stack.tif"))
+                                      "_fvfl1_stack.tif"))
     }
     
     while(!all(stringr::str_to_lower(ans)=="y")){
       
       fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
-                                   .75*(EBImage::translate(flip(fl1ref), center2)),
-                                   along=3)
+                          .75*(EBImage::translate(flip(fl1ref), center2)),
+                          along=3)
       
       print(EBImage::display(fvfl1stack))
       EBImage::writeImage(normalize(fvfl1stack),
                           file=paste0(output_prefix,
-                          "_fvfl1_stack.tif"))
+                                      "_fvfl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
       ans[1] <- readline("Is template match okay (Y or N)?:")
@@ -460,11 +461,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
     redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
     
-    # Show both channels when selecting window/offset TODO: Normalize accounts 0's
+    # Show both channels when selecting window/offset
     print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
     EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
-    
-    
     
     while(!all(stringr::str_to_lower(ans)=="y")) {
       
@@ -491,11 +490,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                        (hr/2 + winoffs[i,2] - winsize[i,2]/2),
                        (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
+        # Gamma correction
         redwindowdisp <- redval^1.8
         grnwindowdisp <- grnval^1.8
-        
-        #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
-        #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
         
         # Draw box around ROI
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
@@ -510,7 +507,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     } # end selecting ROI i
     
     roimasks[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],i] = 1
-    
   }
   
   # Aggregate all ROI masks
@@ -538,142 +534,109 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
     seg_mask_win <- array(0,dim(rroimed))
-    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.10
+    toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.4
     
     for(j in 1:fr) {
       seg_mask_win[,,j] <- EBImage::thresh(rroimed[,,j],
-                                             w=as.integer(winsize[i,1]/2),
-                                             h=as.integer(winsize[i,2]/2),
-                                             offset=toff[j])
+                                           w=as.integer(winsize[i,1]/2),
+                                           h=as.integer(winsize[i,2]/2),
+                                           offset=toff[j])
     }
     
-    shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
-    
-    # Morphological Operations
+    # Morphological Operations (Opening + Fill)
     seg_mask_win <- EBImage::erode(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::dilate(seg_mask_win,kern=makeBrush(3,shape="diamond"))    
     seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
-    # Label regions and filter
-    thrsh_map    <- apply(seg_mask_win,3,bwlabel)
-    thrsh_map    <- array(thrsh_map,dim=dim(seg_mask_win))
-    maskprops    <- apply(thrsh_map,3,computeFeatures.shape)
-    objrmidx     <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
-    seg_mask_win <- rmObjects(thrsh_map, objrmidx)
-    
-    # Set to binary
-    seg_mask_win[seg_mask_win > 0] <- 1
-    
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
   }
+
+  # Mask pixels in R/G channels
+  redseg    <- redmasked*seg_mask
+  greenseg <- greenmasked*seg_mask
+  
+  # Allocate for per frame baseline metrics
+  minsred <- array(0,fr)
+  meanqred <- array(0,fr)
+  quantred <- array(0,fr)
+  
+  for(i in 1:fr) {
+    # Per Frame Pixels in Mask
+    redvalpx      <- redmasked[,,i][roimask > 0]
+    #redvalpx     <- redseg[,,i][seg_mask[,,i] > 0]
+    
+    # Per frame quantile (10th percentile)
+    quantred[i]  <- quantile(redvalpx,bgratio)
+    
+    # Per Frame Mean of Lowest 10%
+    meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
+    
+    # Per Frame Min Pixels
+    minsred[i]   <- min(redvalpx)
+  }
+  
+  # Dataframe of baseline metrics
+  bldata <- data.frame(x=goodfr, 
+                       quantred=quantred,
+                       meanqred=meanqred,
+                       minsred=minsred)
+  
+  # Save all baselines
+  saveRDS(bldata, paste0(output_prefix, "_baselines.RDS"))
+
+  # Filter red channel below baseline
+  bl <- mean(quantred,na.rm=TRUE)
+  
+  # Red Pixels > TODO: Baseline = mean(mean(lowest 10% per frame))
+  seg_mask[redseg <= bl] <- 0
+
+  # Mask pixels in R/G channels
+  redseg   <- redseg*seg_mask
+  greenseg <- greenseg*seg_mask
+  
+  # Create F_ratio images  
+  greenperred <- greenseg/redseg
+  greenperred[is.na(greenperred)]<-0
+  
+  ratioqfilt       <- greenperred
+  qfiltcutoff      <- array(0,fr)
+  ##ratioqfiltave    <- array(0,fr)
+  
+  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
+  
+  for(i in 1:fr) {
+    # Get ratio qauntile for each frame
+    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
+    # Filter pixel ratios below quantile cutoff
+    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
+    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+  }
+  
+  # Label regions and apply area filtering
+  shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+  thrsh_map <- apply(seg_mask,3,bwlabel)
+  thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
+  maskprops <- apply(thrsh_map,3,computeFeatures.shape)
+  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
+  seg_mask  <- rmObjects(thrsh_map, objrmidx)
+  
+  # Return filtered regions to binary mask
+  seg_mask[seg_mask > 0] <- 1
   
   # Write segmentation mask to file
   EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
   
   # Mask pixels in R/G channels
-  redmasked   <- redmasked*seg_mask
-  greenmasked <- greenmasked*seg_mask
-  
-  if(pass==1) {
-    
-    # First pass: return min green, red and ratio in mask (across frames)
-    minsgreen <- minsred <- minsrat <- array(0,fr)
-    meanqgr   <- meanqred <- array(0,fr)
-    quantgr   <- quantred <- array(0,fr)
-    
-    for(i in 1:fr) {
-      # Per Frame Pixels in Mask
-      grvalpx      <- greenmasked[,,i][seg_mask[,,i] > 0]
-      redvalpx     <- redmasked[,,i][seg_mask[,,i] > 0]
-      # Per frame quantile (10th percentile)
-      quantgr[i]   <- quantile(grvalpx,.1)
-      quantred[i]  <- quantile(redvalpx,.1)
-      # Per Frame Mean of Lowest 10%
-      meanqgr[i]   <- mean(grvalpx[grvalpx > quantgr[i]])
-      meanqred[i]  <- mean(redvalpx[redvalpx > quantred[i]])
-      # Per Frame Min Pixels
-      minsgreen[i] <- min(grvalpx)
-      minsred[i]   <- min(redvalpx)
-      minsrat[i]   <- min(grvalpx/redvalpx)
-    }
-    # Lowest 10% Pixels/Frame
-    blredq   <- meanqred
-    blgreenq <- meanqgr
-    # Lowest Pixel/Frame
-    blredm   <- minsred
-    blgreenm <- minsgreen
-    
-    # Save min ratios
-    saveRDS(minsrat, paste0(output_prefix, "_minratios.RDS"))
-    
-    # Format string for multi ROI window size/offsets
-    wins_str = "list("
-    offs_str = "list("
-    for(i in 1:num_rois) {
-      wins_str = paste0(wins_str,"c(",winsize[i,1],",",winsize[i,2],")")
-      offs_str = paste0(offs_str,"c(",winoffs[i,1],",",winoffs[i,2],")")
-      if(i < num_rois) {
-        wins_str = paste0(wins_str,",")
-        offs_str = paste0(offs_str,",")
-      } else {
-        wins_str = paste0(wins_str,")")
-        offs_str = paste0(offs_str,")")
-      }
-    }
-    
-    loggit::message(sprintf("Number of ROIs was %d", num_rois))
-    loggit::message(sprintf("window size(s): %s", wins_str))
-    loggit::message(sprintf("window offset(s): %s", offs_str))
-    loggit::message(sprintf("FOI was from %d to %d",  FOI[1], FOI[2])) 
-    
-    msg <- sprintf("Red Min: %f / Green Min %f / Ratio Min %f",min(minsred),min(minsgreen),min(minsrat))
-    loggit::message(msg)
-    
-    out_str = sprintf("||c(%d, %d) ||%s ||%s ||%f ||%f ||%f ||%f ||", 
-                      #FOI[1], FOI[2], wins_str, offs_str, min(blgreenq), mean(blgreenq,na.rm=TRUE), min(blgreenm), mean(blgreenm,na.rm=TRUE)) # Green
-                      FOI[1], FOI[2], wins_str, offs_str, min(blredq), mean(blredq,na.rm=TRUE), min(blredm), mean(blredm,na.rm=TRUE)) # Red
-                      #FOI[1], FOI[2], wins_str, offs_str, min(minsrat))
-   
-    loggit::message(out_str)
-    return(out_str)
-    
-  } else if (pass==2) {
-    
-    # Second pass: pixels > mean of min ratios
-    #seg_mask[greenmasked/redmasked <= F0] <- 0
-    
-    # Second Pass: Green Pixels > mean(mean(lowest 10% per frame))
-    #seg_mask[greenmasked <= F0] <- 0
-    
-    # Second Pass: Red Pixels > mean(mean(lowest 10% per frame))
-    seg_mask[redmasked <= F0] <- 0
-    
-    redmasked   <- redmasked*seg_mask
-    greenmasked <- greenmasked*seg_mask
-  }
-  
-  # Create F_ratio images  
-  greenperred <- greenmasked/redmasked
-  greenperred[is.na(greenperred)]<-0
-  
-  ratioqfilt       <- greenperred
-  qfiltcutoff      <- array(0,fr)
-  ratioqfiltave    <- array(0,fr)
-  
-  for(i in 1:fr) {
-    # Get ratio qauntile for each frame
-    qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.10)
-    # Filter pixel ratios below quantile
-    ratioqfilt[,,i][greenperred[,,i] < qfiltcutoff[i]] <- 0
-    ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
-  }
-  
+  redseg   <- redseg*seg_mask
+  greenseg <- greenseg*seg_mask
+  greenperred <- greenperred*seg_mask
+
   # Mean of each channel in mask
-  redave         <- apply(redmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenave       <- apply(greenmasked,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  #greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- ratioqfiltave
+  redave         <- apply(redseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenave       <- apply(greenseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
+  #greenperredave <- ratioqfiltave
   
   goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
@@ -781,7 +744,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   F0int <- intensity[1]
   #deltaFint <- intensity - F0int
   # df (subtract baseline)
-  deltaFint <- intensity - F0
+  deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
