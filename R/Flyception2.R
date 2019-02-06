@@ -26,7 +26,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          fl1fl2center=NA,flvfl1center=NA,
-                         bgratio=0.80,ratiocutoff=0.10, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
+                         bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=1, preprocess=F,
                          size_thrsh=5,translate=T){
