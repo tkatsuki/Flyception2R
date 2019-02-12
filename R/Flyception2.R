@@ -28,7 +28,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          fl1fl2center=NA,flvfl1center=NA,
                          bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
-                         colorRange= c(180, 220), flash=1, preprocess=F,
+                         colorRange= c(180, 220), flash=NA, preprocess=F,
                          size_thrsh=5,translate=T){
   
   # TO DO
@@ -67,19 +67,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
     
     ## Part 1. Detect flash
-    message("Detecting flash in fluo-view")
+    loggit::message("Detecting flash in fluo-view")
     fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                                type="fluo",
                                output=paste0(dir, prefix),
                                flash_thresh=fluo_flash_thresh,
                                reuse=reuse)
-    message("Detecting flash in fly-view")
+    loggit::message("Detecting flash in fly-view")
     fly_flash <- detect_flash(input=fly_view_fmf,
                               type="fly",
                               output=paste0(dir, prefix),
                               flash_thresh=fv_flash_thresh,
                               reuse=reuse)
-    message("Detecting flash in arena-view")
+    loggit::message("Detecting flash in arena-view")
     arena_flash <- detect_flash(input=arena_view_fmf,
                                 type="arena",
                                 output=paste0(dir, prefix),
@@ -96,12 +96,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       } else {
         loggit::message("Only detected one flash...")
       }
-      # Fluoview missed a flash. 'flash' corresponds to first good flash
-    } else if(flash <= length(fluo_flash$flflashes)) {
+      # For now use the first flash as default if Fluoview didn't miss flash
+      if(is.na(flash)) flash <- 1
+      # Fluoview missed a flash. If second flash is specified, use it.
+    } else if(flash >= length(fluo_flash$flflashes)) {
       fly_flash$fvflashes[1] <- fly_flash$fvflashes[flash]
       arena_flash$avflashes[1] <- arena_flash$avflashes[flash]
-      # Otherwise problem with flashes
-    } else {
+      # If first flash is specified, use it, otherwise stop.
+    } else if(flash != 1) {
       stop("Number of flash detected differ between fluo-view and fly-view.")
     }
     
@@ -244,14 +246,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   ## Part 4. Detect interaction
   if(interaction==T){
-    message("Detecting interaction")
+    loggit::message("Detecting interaction")
     closefr <- which(trj_res$flydist < dist_thresh)
     closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
     write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
   }
   
   ## Part 5. Image registration
-  message(sprintf("Reading %s", fluo_view_tif_ch1))
+  loggit::message(sprintf("Reading %s", fluo_view_tif_ch1))
   
   # Analyze only part of the movie?
   if(FOI[1]!=F && length(FOI)==2){
@@ -259,11 +261,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
     flimg1 <- flip(flimg1) # flip images to match fly-view
     flimg2 <- flip(flimg2) # flip images to match fly-view
-    message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
+    loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
     frid <- syncing$frid[FOI[1]:FOI[2]]
     frida <- syncing$frida[FOI[1]:FOI[2]]
   }else{
-    message("All frames will be analyzed.")
+    loggit::message("All frames will be analyzed.")
     frid <- syncing$frid
     frida <- syncing$frida
     FOI <- c(1, flnframe)
@@ -790,7 +792,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
   }
   
-  message("Finished processing!")
+  loggit::message("Finished processing!")
   gc()
   return(out_str)
 }

@@ -14,11 +14,11 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
 
   if(type=="fluo"){
     if(file.exists(paste0(output, "_flimgint.RDS"))==T & reuse==T){
-      message("Loading from RDS file")
+      loggit::message("Loading from RDS file")
       flimgint <- readRDS(paste0(output, "_flimgint.RDS"))
     } else{
-    message(sprintf("Reading %s", input))
-    message(sprintf("Flash thresh is %f", flash_thresh))
+      loggit::message(sprintf("Reading %s", input))
+      loggit::message(sprintf("Flash thresh is %f", flash_thresh))
     flimgint <- dipr::readTIFF2(input, intensity=T)
     saveRDS(flimgint, file=paste0(output, "_flimgint.RDS"))
     }
@@ -26,22 +26,22 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     plot(flimgint)
     dev.off()
     nframesfl <- dipr::readTIFF2(input, getFrames=T)
-    message(paste0("Number of frames in fluo-view: ", nframesfl))
+    loggit::message(paste0("Number of frames in fluo-view: ", nframesfl))
     flflashes <- which(flimgint > flash_thresh)
     flimgflash <- min(flflashes)
     if(flimgflash==Inf) stop("Flash was not detected in fluo-view.")
-    message(sprintf("Flash was detected in fluo-view frames: %s", paste(flflashes, collapse=" ")))
+    loggit::message(sprintf("Flash was detected in fluo-view frames: %s", paste(flflashes, collapse=" ")))
     return(list("flflashes"=flflashes, "nframesfl"=nframesfl))
   }
 
   # Detect flash in fly-view
   if(type=="fly"){
     if(file.exists(paste0(output, "_fvimgsubint.RDS"))==T & reuse==T){
-      message("Loading from RDS file")
+      loggit::message("Loading from RDS file")
       fvimgsubint <- readRDS(paste0(output, "_fvimgsubint.RDS"))
     } else{
-      message(sprintf("Reading %s", input))
-      message(sprintf("Flash thresh is %f", flash_thresh))
+      loggit::message(sprintf("Reading %s", input))
+      loggit::message(sprintf("Flash thresh is %f", flash_thresh))
       # Load only diagonal ROIs
       fvimgsub1 <- dipr::readFMF(input, crop=c(5,10,5,10))
       fvimgsub2 <- dipr::readFMF(input, crop=c(220,225,220,225))
@@ -60,18 +60,18 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     fvflashes <- which(fvimgsubint > flash_thresh)
     fvimgflash <- min(fvflashes)
     if(fvimgflash==Inf) stop("Flash was not detected in fly-view.")
-    message(sprintf("Flash was detected in fly-view frames: %s", paste(fvflashes, collapse=" ")))
+    loggit::message(sprintf("Flash was detected in fly-view frames: %s", paste(fvflashes, collapse=" ")))
     return(list("fvflashes"=fvflashes, "nframesfv"=nframesfv))
   }
 
   # Detect flash in arena-view
   if(type=="arena"){
     if(file.exists(paste0(output, "_avimgsubint.RDS"))==T & reuse==T){
-      message("Loading from RDS file")
+      loggit::message("Loading from RDS file")
       avimgsubint <- readRDS(paste0(output, "_avimgsubint.RDS"))
      }else{
-      message(sprintf("Reading %s", input))
-      message(sprintf("Flash thresh is %f", flash_thresh))
+       loggit::message(sprintf("Reading %s", input))
+       loggit::message(sprintf("Flash thresh is %f", flash_thresh))
       avimgsub <- dipr::readFMF(input, crop=c(5,10,5,10))
       avimgsubint <- colMeans(avimgsub, dim=2)
       rm(avimgsub)
@@ -85,7 +85,7 @@ detect_flash <- function(input, output, type=c("fluo", "fly", "arena"), flash_th
     avflashes <- which(avimgsubint > flash_thresh)
     avimgflash <- min(avflashes)
     if(avimgflash==Inf) stop("Flash was not detected in arena-view.")
-    message(sprintf("Flash was detected in arena-view frames: %s", paste(avflashes, collapse=" ")))
+    loggit::message(sprintf("Flash was detected in arena-view frames: %s", paste(avflashes, collapse=" ")))
     return(list("avflashes"=avflashes, "nframesav"=nframesav))
   }
 }
