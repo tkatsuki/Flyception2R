@@ -531,8 +531,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),] 
     groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
-    rroimed  <- EBImage::medianFilter(rroi/2^16, size=2)
-    groimed  <- EBImage::medianFilter(groi/2^16, size=2)
+    rroimed  <- EBImage::medianFilter(rroi/2^16, size=3)
+    groimed  <- EBImage::medianFilter(groi/2^16, size=3)
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
