@@ -229,7 +229,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     }
     
     savefn <- paste0(dir, prefix,"_prepdata.RData")
-    save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,fly_view_fmf,savefn,syncing,file=savefn)
+    save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,
+         fly_view_fmf,savefn,syncing,fluo_flash,arena_flash,fly_flash,file=savefn)
     loggit::message("Preprocessing done")
     if(preprocess == T) return()
   } else {
