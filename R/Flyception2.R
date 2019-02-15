@@ -319,7 +319,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   png(file=paste0(output_prefix, "_quantcnt.png"), width=400, height=400)
   plot(quantcnt)
   dev.off()
-  goodfocusfr <- which(quantcnt > 1000)
+  goodfocusfr <- which(quantcnt > 1000 & quantcnt < 10000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
