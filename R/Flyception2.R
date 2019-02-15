@@ -595,11 +595,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   seg_mask[redseg <= bl] <- 0
 
   # Mask pixels in R/G channels
-  redseg   <- redseg*seg_mask
-  greenseg <- greenseg*seg_mask
+  redseg <- redseg*seg_mask
+  grnseg <- grnseg*seg_mask
   
   # Create F_ratio images  
-  greenperred <- greenseg/redseg
+  greenperred <- grnseg/redseg
   greenperred[is.na(greenperred)]<-0
   
   ratioqfilt       <- greenperred
@@ -632,16 +632,43 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
   
   # Mask pixels in R/G channels
-  redseg   <- redseg*seg_mask
-  greenseg <- greenseg*seg_mask
-  greenperred <- greenperred*seg_mask
+  #redseg      <- redmasked*seg_mask
+  #greenseg    <- greenmasked*seg_mask
+  #greenperred <- (greenmasked/redmasked)*seg_mask
+
+  # Mask pixels around margin of segmented area for background subtraction
+  bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
+              - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+  
+  # Constrain bg pixels to roi
+  bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
+  
+  bggrn    <- greenmasked * bg_mask
+  bgred    <- redmasked   * bg_mask
+  bgarea   <- apply(bg_mask,MARGIN=3,sum)
+  bggrnave <- apply(bggrn,MARGIN=3,sum)/bgarea
+  bgredave <- apply(bgred,MARGIN=3,sum)/bgarea
+  
+  # Background subtraction
+  for(i in 1:fr) {
+   redseg[,,i]   <- redmasked[,,i]   - bgredave[i]
+   grnseg[,,i]   <- greenmasked[,,i] - bggrnave[i]
+  }
+  
+  #Background subtracted Channels/Ratio Image
+  redseg      <- redseg*seg_mask
+  grnseg      <- grnseg*seg_mask
+  greenperred <- (grnseg/redseg)
+  
+  greenperred[!is.finite(greenperred)] <- 0.0
+  greenperred[greenperred < 0]         <- 0.0
 
   # Mean of each channel in mask
-  redave         <- apply(redseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenave       <- apply(greenseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  #greenperredave <- ratioqfiltave
-  
+  segarea        <- apply(seg_mask,MARGIN=3,sum)
+  redave         <- apply(redseg,MARGIN=3,sum)/segarea
+  greenave       <- apply(grnseg,MARGIN=3,sum)/segarea
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/segarea
+
   goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
