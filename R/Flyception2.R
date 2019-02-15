@@ -620,7 +620,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
   thrsh_map <- apply(seg_mask,3,bwlabel)
   thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
-  maskprops <- apply(thrsh_map,3,computeFeatures.shape)
+  maskprops <- apply(thrsh_map,3,function(x) list(computeFeatures.shape(x)))
+  maskprops <- lapply(maskprops, "[[", 1)
   objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
   seg_mask  <- rmObjects(thrsh_map, objrmidx)
   
