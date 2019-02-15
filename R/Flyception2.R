@@ -557,7 +557,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
 
   # Mask pixels in R/G channels
   redseg    <- redmasked*seg_mask
-  greenseg <- greenmasked*seg_mask
+  grnseg <- greenmasked*seg_mask
   
   # Allocate for per frame baseline metrics
   minsred <- array(0,fr)
@@ -675,12 +675,18 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   redave <- redave[goodfrratidx]
   greenave <- greenave[goodfrratidx]
   
-  grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
-  for(cfr in 1:dim(greenperred)[3]){
-    grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
+  # Temp copy of ratio image for heatmap
+  gprimage <- greenperred
+  gprimage[gprimage > 1]         <- 0.99 # Threshold ratios > 1 for heatmap
+  
+  # Create heatmap image
+  grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(gprimage)[3]))
+  for(cfr in 1:dim(gprimage)[3]){
+    grratiocolor[,,,cfr] <- dipr::pseudoColor(gprimage[,,cfr], colorRange[1], colorRange[2])
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
   EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
+  rm(gprimage)
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
