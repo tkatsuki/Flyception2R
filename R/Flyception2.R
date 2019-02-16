@@ -229,7 +229,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     }
     
     savefn <- paste0(dir, prefix,"_prepdata.RData")
-    save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,fly_view_fmf,savefn,syncing,file=savefn)
+    save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,
+         fly_view_fmf,savefn,syncing,fluo_flash,arena_flash,fly_flash,file=savefn)
     loggit::message("Preprocessing done")
     if(preprocess == T) return()
   } else {
@@ -318,7 +319,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   png(file=paste0(output_prefix, "_quantcnt.png"), width=400, height=400)
   plot(quantcnt)
   dev.off()
-  goodfocusfr <- which(quantcnt > 1000)
+  goodfocusfr <- which(quantcnt > 1000 & quantcnt < 10000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
@@ -530,8 +531,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),] 
     groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
-    rroimed  <- EBImage::medianFilter(rroi/2^16, size=2)
-    groimed  <- EBImage::medianFilter(groi/2^16, size=2)
+    rroimed  <- EBImage::medianFilter(rroi/2^16, size=3)
+    groimed  <- EBImage::medianFilter(groi/2^16, size=3)
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
     greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
@@ -556,7 +557,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
 
   # Mask pixels in R/G channels
   redseg    <- redmasked*seg_mask
-  greenseg <- greenmasked*seg_mask
+  grnseg <- greenmasked*seg_mask
   
   # Allocate for per frame baseline metrics
   minsred <- array(0,fr)
@@ -594,11 +595,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   seg_mask[redseg <= bl] <- 0
 
   # Mask pixels in R/G channels
-  redseg   <- redseg*seg_mask
-  greenseg <- greenseg*seg_mask
+  redseg <- redseg*seg_mask
+  grnseg <- grnseg*seg_mask
   
   # Create F_ratio images  
-  greenperred <- greenseg/redseg
+  greenperred <- grnseg/redseg
   greenperred[is.na(greenperred)]<-0
   
   ratioqfilt       <- greenperred
@@ -619,7 +620,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
   thrsh_map <- apply(seg_mask,3,bwlabel)
   thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
-  maskprops <- apply(thrsh_map,3,computeFeatures.shape)
+  maskprops <- apply(thrsh_map,3,function(x) list(computeFeatures.shape(x)))
+  maskprops <- lapply(maskprops, "[[", 1)
   objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
   seg_mask  <- rmObjects(thrsh_map, objrmidx)
   
@@ -630,28 +632,61 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
   
   # Mask pixels in R/G channels
-  redseg   <- redseg*seg_mask
-  greenseg <- greenseg*seg_mask
-  greenperred <- greenperred*seg_mask
+  #redseg      <- redmasked*seg_mask
+  #greenseg    <- greenmasked*seg_mask
+  #greenperred <- (greenmasked/redmasked)*seg_mask
+
+  # Mask pixels around margin of segmented area for background subtraction
+  bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
+              - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+  
+  # Constrain bg pixels to roi
+  bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
+  
+  bggrn    <- greenmasked * bg_mask
+  bgred    <- redmasked   * bg_mask
+  bgarea   <- apply(bg_mask,MARGIN=3,sum)
+  bggrnave <- apply(bggrn,MARGIN=3,sum)/bgarea
+  bgredave <- apply(bgred,MARGIN=3,sum)/bgarea
+  
+  # Background subtraction
+  for(i in 1:fr) {
+   redseg[,,i]   <- redmasked[,,i]   - bgredave[i]
+   grnseg[,,i]   <- greenmasked[,,i] - bggrnave[i]
+  }
+  
+  #Background subtracted Channels/Ratio Image
+  redseg      <- redseg*seg_mask
+  grnseg      <- grnseg*seg_mask
+  greenperred <- (grnseg/redseg)
+  
+  greenperred[!is.finite(greenperred)] <- 0.0
+  greenperred[greenperred < 0]         <- 0.0
 
   # Mean of each channel in mask
-  redave         <- apply(redseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenave       <- apply(greenseg,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  greenperredave <- apply(greenperred,MARGIN=3,sum)/apply(seg_mask,MARGIN=3,sum)
-  #greenperredave <- ratioqfiltave
-  
+  segarea        <- apply(seg_mask,MARGIN=3,sum)
+  redave         <- apply(redseg,MARGIN=3,sum)/segarea
+  greenave       <- apply(grnseg,MARGIN=3,sum)/segarea
+  greenperredave <- apply(greenperred,MARGIN=3,sum)/segarea
+
   goodfrratidx <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat <- goodfr[goodfrratidx]
   redave <- redave[goodfrratidx]
   greenave <- greenave[goodfrratidx]
   
-  grratiocolor <- array(0, dim=c(dim(greenperred)[c(1,2)], 3, dim(greenperred)[3]))
-  for(cfr in 1:dim(greenperred)[3]){
-    grratiocolor[,,,cfr] <- dipr::pseudoColor(greenperred[,,cfr], colorRange[1], colorRange[2])
+  # Temp copy of ratio image for heatmap
+  gprimage <- greenperred
+  gprimage[gprimage > 1]         <- 0.99 # Threshold ratios > 1 for heatmap
+  
+  # Create heatmap image
+  grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(gprimage)[3]))
+  for(cfr in 1:dim(gprimage)[3]){
+    grratiocolor[,,,cfr] <- dipr::pseudoColor(gprimage[,,cfr], colorRange[1], colorRange[2])
   }
   grratiocolor <- Image(grratiocolor, colormode="Color")
   EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
+  rm(gprimage)
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
