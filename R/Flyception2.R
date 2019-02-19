@@ -452,8 +452,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                    (hr/2 + winoffs[i,2] + winsize[i,2]/2))
     
     # Grab the Roi
-    redwindowdisp <- redval^1.8
-    grnwindowdisp <- grnval^1.8 
+    redwindowdisp <- normalize(redval, separate=F)
+    grnwindowdisp <- normalize(grnval, separate=F)
     
     #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
     #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
@@ -494,8 +494,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                        (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
         # Gamma correction
-        redwindowdisp <- redval^1.8
-        grnwindowdisp <- grnval^1.8
+        redwindowdisp <- normalize(redval, separate=F)
+        grnwindowdisp <- normalize(grnval, separate=F)
         
         # Draw box around ROI
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
