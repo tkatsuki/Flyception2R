@@ -29,7 +29,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=NA, preprocess=F,
-                         size_thrsh=5,translate=T){
+                         size_thrsh=5, focus_thresh=950, translate=T){
   
   # TO DO
   
@@ -319,7 +319,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   png(file=paste0(output_prefix, "_quantcnt.png"), width=400, height=400)
   plot(quantcnt)
   dev.off()
-  goodfocusfr <- which(quantcnt > 1000 & quantcnt < 10000)
+  goodfocusfr <- which(quantcnt > focus_thresh & quantcnt < 10000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
@@ -339,6 +339,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(avimgl)
   
   # Apply rotation compensation
+  loggit::message(paste0("Applying rotation compensation to the flyview viode..."))
   rot <- fvimgl[,,goodfr]
   for (r in 1:dim(rot)[3]){
     rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
@@ -346,7 +347,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Template matching
   centers <- array(0, dim=c(dim(rot)[3],2))
-  
+  loggit::message(paste0("Performing template matching on the flyview video..."))
   for (c in 1:dim(rot)[3]){
     centers[c,] <- align_cameras(source=rot[,,c],
                                  template=rot[,,1],
@@ -361,6 +362,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     centers <- array(0,dim(centers))
   
   # Apply translation compensation
+  loggit::message(paste0("Applying translation compensation to the flyview video..."))
   rottrans <- fvimgl[,,goodfr]
   for (tr in 1:dim(rottrans)[3]){
     rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
@@ -372,7 +374,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(fvimglbwseg)
   rm(flimg2log)
   
+  
   ## Apply transformation functions to fluo-view images
+  loggit::message(paste0("Applying rotation compensation to the fluoview video..."))
   redrot <- flimg2[,,goodfr]
   for (rr in 1:dim(redrot)[3]){
     redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr[rr]], ang[goodfr[rr]], anchor = c("center")))
@@ -382,6 +386,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr[rg]], ang[goodfr[rg]], anchor = c("center")))
   }
   
+  loggit::message(paste0("Applying translation compensation to the fluoview video..."))
   redrottrans <- redrot
   for (trr in 1:dim(redrottrans)[3]){
     redrottrans[,,trr] <- EBImage::translate(redrot[,,trr], -centers[trr,])
@@ -411,7 +416,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   fg <- dim(grnval)[3]
   
   # If window size/offsets not passed do dialog
-  if(is.na(window_size) && is.na(window_offset)) {
+  if(is.na(window_size) || is.na(window_offset)) {
     # Interactively determine window size and offset to include neurons of interest
     num_rois <- as.integer(readline("How many ROIs to be added?: "))
   } else {
@@ -514,6 +519,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Aggregate all ROI masks
   roimask <- rowSums(roimasks,dims=2)
+  loggit::message(paste0("ROIs created."))
   
   # Clean up
   rm(flimg1)
@@ -554,7 +560,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     # Add segmented ROI to overall mask
     seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
   }
-
+  loggit::message(paste0("ROI masks create."))
+  
   # Mask pixels in R/G channels
   redseg    <- redmasked*seg_mask
   grnseg <- greenmasked*seg_mask
@@ -624,9 +631,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   maskprops <- lapply(maskprops, "[[", 1)
   objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
   seg_mask  <- rmObjects(thrsh_map, objrmidx)
+  loggit::message(paste0("Removed objects smaller than ", size_thrsh, " pixels."))
   
   # Return filtered regions to binary mask
   seg_mask[seg_mask > 0] <- 1
+  loggit::message(paste0("Segmentation finished."))
   
   # Write segmentation mask to file
   EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
