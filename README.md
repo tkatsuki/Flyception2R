@@ -31,7 +31,7 @@ dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GC
 Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
 ```
 
-Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below). When you want to move the window up, decrease the y value. When you want to move the window left, increase the x value.
+Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below). When you want to move the window up, decrease the y value. When you want to move the window left, decrease the x value.
 
 ![redwindow](https://github.com/tkatsuki/Flyception2R/blob/master/redwindow.png)
 
