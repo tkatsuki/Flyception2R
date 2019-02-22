@@ -98,10 +98,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       }
       # For now use the first flash as default if Fluoview didn't miss flash
       if(is.na(flash)) flash <- 1
+      loggit::message("Using first flash...")
       # Fluoview missed a flash. If second flash is specified, use it.
     } else if(flash >= length(fluo_flash$flflashes)) {
       fly_flash$fvflashes[1] <- fly_flash$fvflashes[flash]
       arena_flash$avflashes[1] <- arena_flash$avflashes[flash]
+      loggit::message("Using second flash...")
       # If first flash is specified, use it, otherwise stop.
     } else if(flash != 1) {
       stop("Number of flash detected differ between fluo-view and fly-view.")
