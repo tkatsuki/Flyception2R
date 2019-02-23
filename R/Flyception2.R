@@ -413,9 +413,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   wr <- dim(redval)[1]
   hr <- dim(redval)[2]
   fr <- dim(redval)[3]
-  hg <- dim(grnval)[2] #Should be same precondition?
-  wg <- dim(grnval)[1]
-  fg <- dim(grnval)[3]
   
   # If window size/offsets not passed do dialog
   if(is.na(window_size) || is.na(window_offset)) {
@@ -426,7 +423,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       stop("Length of window_size and window_offset must be the same")
     num_rois <- length(window_size)
   }
-  
   
   # Initialize ROI masks with zero
   roimasks <- array(rep(FALSE,hr*wr*num_rois),c(hr,wr,num_rois))
@@ -439,13 +435,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   for(i in 1:num_rois) {
     
     if(!(is.na(window_size) && is.na(window_offset))) {
-      
+      # Use passed parameters for size/offset
       winoffs[i,] <- window_offset[[i]]
       winsize[i,] <- window_size[[i]]
       ans <- c("Y","Y")
       
+      # Check if ROI is valid
+      win_valid <- all((winsize[i,]/2 + winoffs[i,]) <= wr/2)
+      if(!win_valid)
+        stop("Invalid window size/offset")
+      
     } else {
       
+      # Set ROI size at half crop size no offset
       winoffs[i,] <- c(0,0)
       winsize[i,] <- c(as.integer(wr/2),as.integer(hr/2))
       ans <- c("N","N")
@@ -491,8 +493,14 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
         winoffs[i,2] <- as.integer(readline("Enter new y offset:"))
       }
       
+      # Check if selected ROI is valid else set to default
+      win_valid <- all((winsize[i,]/2 + abs(winoffs[i,])) <= wr/2)
+      if(!win_valid)
+        warning("Invalid window size/offset")
+
+      
       ## Update reference
-      if(!all(stringr::str_to_lower(ans)=="y")) {
+      if(!all(stringr::str_to_lower(ans)=="y") & win_valid) {
         
         # Update ROI
         roiix[i,] <- c((wr/2 + winoffs[i,1] - winsize[i,1]/2),
@@ -615,16 +623,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   qfiltcutoff      <- array(0,fr)
   ##ratioqfiltave    <- array(0,fr)
   
-  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
-  
-  for(i in 1:fr) {
-    # Get ratio qauntile for each frame
-    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
-    # Filter pixel ratios below quantile cutoff
-    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
-    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
-  }
-  
   # Label regions and apply area filtering
   shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
   thrsh_map <- apply(seg_mask,3,bwlabel)
@@ -674,6 +672,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenperred[!is.finite(greenperred)] <- 0.0
   greenperred[greenperred < 0]         <- 0.0
 
+  # Filter out lowest ratio values in case of only subset of labeled neurons active
+  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
+  for(i in 1:fr) {
+    # Get ratio qauntile for each frame
+    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
+    # Filter pixel ratios below quantile cutoff
+    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
+    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+  }
+  
+  # Ratio thresholded Channel/Ratio Images
+  redseg      <- redseg*seg_mask
+  grnseg      <- grnseg*seg_mask
+  greenperred <- (grnseg/redseg)
+  greenperred[!is.finite(greenperred)] <- 0.0
+  greenperred[greenperred < 0]         <- 0.0
+  
   # Mean of each channel in mask
   segarea        <- apply(seg_mask,MARGIN=3,sum)
   redave         <- apply(redseg,MARGIN=3,sum)/segarea
