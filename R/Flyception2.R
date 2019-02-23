@@ -406,6 +406,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
   grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
+  EBImage::writeImage(normalize(rottrans[(1+offs):(dim(rottrans)[2]-offs),(1+offs):(dim(rottrans)[2]-offs),], separate=F), file=paste0(output_prefix, "_rottrans100.tif")) 
+  EBImage::writeImage(normalize(redval, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redval.tif")) 
+  EBImage::writeImage(normalize(grnval, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_grnval.tif")) 
   redval <- (redval - min(redval))/(max(redval) - min(redval))
   grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
   
@@ -754,7 +757,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
   frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
-  
+
+  redcolor100 <- redcolor[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),,]
+  EBImage::writeImage(redcolor100, file=paste0(output_prefix, "_redcolor100.tif"))
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
   rm(redrottrans)
   EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
