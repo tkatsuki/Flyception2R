@@ -623,16 +623,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   qfiltcutoff      <- array(0,fr)
   ##ratioqfiltave    <- array(0,fr)
   
-  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
-  
-  for(i in 1:fr) {
-    # Get ratio qauntile for each frame
-    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
-    # Filter pixel ratios below quantile cutoff
-    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
-    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
-  }
-  
   # Label regions and apply area filtering
   shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
   thrsh_map <- apply(seg_mask,3,bwlabel)
@@ -682,6 +672,23 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   greenperred[!is.finite(greenperred)] <- 0.0
   greenperred[greenperred < 0]         <- 0.0
 
+  # Filter out lowest ratio values in case of only subset of labeled neurons active
+  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
+  for(i in 1:fr) {
+    # Get ratio qauntile for each frame
+    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
+    # Filter pixel ratios below quantile cutoff
+    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
+    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
+  }
+  
+  # Ratio thresholded Channel/Ratio Images
+  redseg      <- redseg*seg_mask
+  grnseg      <- grnseg*seg_mask
+  greenperred <- (grnseg/redseg)
+  greenperred[!is.finite(greenperred)] <- 0.0
+  greenperred[greenperred < 0]         <- 0.0
+  
   # Mean of each channel in mask
   segarea        <- apply(seg_mask,MARGIN=3,sum)
   redave         <- apply(redseg,MARGIN=3,sum)/segarea
