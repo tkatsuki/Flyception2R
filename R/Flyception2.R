@@ -859,7 +859,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
   }
   
-  loggit::message("Finished processing!")
+  loggit::message("Cleaning up...")
+  closeAllConnections()
+  rm(list=setdiff(ls(), "out_str"))
   gc()
+  loggit::message("Finished processing!")
   return(out_str)
 }
