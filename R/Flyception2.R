@@ -341,7 +341,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(avimgl)
   
   # Apply rotation compensation
-  loggit::message(paste0("Applying rotation compensation to the flyview viode..."))
+  loggit::message(paste0("Applying rotation compensation to the flyview video..."))
   rot <- fvimgl[,,goodfr]
   for (r in 1:dim(rot)[3]){
     rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
@@ -360,8 +360,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   }
   
   # TODO: If matching is bad try no tranlation compensation
-  if(!translate)
-    centers <- array(0,dim(centers))
+  if(!is.na(translate[1]))
+    centers <- t(t(centers) + translate)
+    
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
@@ -499,7 +500,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       # Check if selected ROI is valid else set to default
       win_valid <- all((winsize[i,]/2 + abs(winoffs[i,])) <= wr/2)
       if(!win_valid)
-        warning("Invalid window size/offset")
+        loggit::message("Invalid window size/offset")
 
       
       ## Update reference
