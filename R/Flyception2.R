@@ -707,7 +707,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
-  gprimage[gprimage > 1]         <- 0.99 # Threshold ratios > 1 for heatmap
+  gprimage[gprimage >= 1]         <- 0.99 # Threshold ratios > 1 for heatmap
   
   # Create heatmap image
   grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(gprimage)[3]))
