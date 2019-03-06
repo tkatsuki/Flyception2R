@@ -327,7 +327,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Save index of good frames
   if(FOI[1] != F) {
-    write.table(cbind(1:length(goodfr),goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    write.table(cbind(1:length(goodfr),goodfr,goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
     write.table(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
@@ -341,7 +341,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(avimgl)
   
   # Apply rotation compensation
-  loggit::message(paste0("Applying rotation compensation to the flyview viode..."))
+  loggit::message(paste0("Applying rotation compensation to the flyview video..."))
   rot <- fvimgl[,,goodfr]
   for (r in 1:dim(rot)[3]){
     rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
@@ -360,8 +360,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   }
   
   # TODO: If matching is bad try no tranlation compensation
-  if(!translate)
-    centers <- array(0,dim(centers))
+  if(!is.na(translate[1]))
+    centers <- t(t(centers) + translate)
+    
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
@@ -499,7 +500,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       # Check if selected ROI is valid else set to default
       win_valid <- all((winsize[i,]/2 + abs(winoffs[i,])) <= wr/2)
       if(!win_valid)
-        warning("Invalid window size/offset")
+        loggit::message("Invalid window size/offset")
 
       
       ## Update reference
@@ -706,7 +707,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
-  gprimage[gprimage > 1]         <- 0.99 # Threshold ratios > 1 for heatmap
+  gprimage[gprimage >= 1]         <- 0.99 # Threshold ratios > 1 for heatmap
   
   # Create heatmap image
   grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(gprimage)[3]))
@@ -858,7 +859,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
   }
   
-  loggit::message("Finished processing!")
+  loggit::message("Cleaning up...")
+  closeAllConnections()
+  rm(list=setdiff(ls(), "out_str"))
   gc()
+  loggit::message("Finished processing!")
   return(out_str)
 }
