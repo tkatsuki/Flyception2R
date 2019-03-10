@@ -65,7 +65,7 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
   avtimestampsec[1] <- avtimestampcyclesec[1]
   for(t in 2:length(avtimestampsec)){
     if(avtimestampcyclesec[t-1]==127 & avtimestampcyclesec[t]==0) cnt <- cnt + 1
-    avtimestampsec[t] <- avtimestampcyclesec[t] + 127*cnt
+    avtimestampsec[t] <- avtimestampcyclesec[t] + 128*cnt
   }
   avtimestampsec <- avtimestampsec*1000
   avtimestampcnt <- avlog[grep("TimeStamp", avlog)+2]
