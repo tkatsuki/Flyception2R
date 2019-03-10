@@ -29,7 +29,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=NA, preprocess=F,
-                         size_thrsh=5, focus_thresh=950, translate=T){
+                         size_thrsh=5, focus_thresh=950,badfr=NA,translate=T){
   
   # TO DO
   
@@ -45,6 +45,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
   if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
+
+  # Log function arguments
+  args<-as.list(environment())
+  loggit::message(paste(names(args),"->",args,collapse=","))
+
     
     loggit::message(paste0("Preprocessing", prefix, "..."))
     
@@ -323,6 +328,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   dev.off()
   goodfocusfr <- which(quantcnt > focus_thresh & quantcnt < 10000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
+  badix  <- badfr - (FOI[1] - 1)
+  goodfr <- setdiff(goodfr,badix)
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
   # Save index of good frames
@@ -330,7 +337,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     write.table(cbind(1:length(goodfr),goodfr,goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
-    write.table(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    write.table(goodfr, paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(cbind(1:length(goodfr),goodfr), paste0(output_prefix, "_gfrid.RDS"))
   }
   
@@ -342,9 +349,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Apply rotation compensation
   loggit::message(paste0("Applying rotation compensation to the flyview video..."))
-  rot <- fvimgl[,,goodfr]
+  rot <- fvimgl
   for (r in 1:dim(rot)[3]){
-    rot[,,r] <- RNiftyReg::rotate(fvimgl[,,goodfr[r]], ang[goodfr[r]], anchor = c("center"))
+    rot[,,r] <- RNiftyReg::rotate(fvimgl[,,r], ang[r], anchor = c("center"))
   }
   
   # Template matching
@@ -352,21 +359,21 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::message(paste0("Performing template matching on the flyview video..."))
   for (c in 1:dim(rot)[3]){
     centers[c,] <- align_cameras(source=rot[,,c],
-                                 template=rot[,,1],
+                                 template=rot[,,goofdr[1]],
                                  output=output_prefix,
                                  center=c(0, 0),
                                  zoom=1,
                                  autopos=T)
   }
   
-  # TODO: If matching is bad try no tranlation compensation
+  # Translation compensation for bead/coverslip offset
   if(!is.na(translate[1]))
     centers <- t(t(centers) + translate)
-    
+  
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
-  rottrans <- fvimgl[,,goodfr]
+  rottrans <- fvimgl[,,]
   for (tr in 1:dim(rottrans)[3]){
     rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
   }
@@ -377,16 +384,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(fvimglbwseg)
   rm(flimg2log)
   
-  
   ## Apply transformation functions to fluo-view images
   loggit::message(paste0("Applying rotation compensation to the fluoview video..."))
-  redrot <- flimg2[,,goodfr]
+  redrot <- flimg2[,,]
   for (rr in 1:dim(redrot)[3]){
-    redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,goodfr[rr]], ang[goodfr[rr]], anchor = c("center")))
+    redrot[,,rr] <- as.Image(RNiftyReg::rotate(flimg2[,,rr], ang[rr], anchor = c("center")))
   }
-  greenrot <- flimg1[,,goodfr]
+  greenrot <- flimg1[,,]
   for (rg in 1:dim(greenrot)[3]){
-    greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,goodfr[rg]], ang[goodfr[rg]], anchor = c("center")))
+    greenrot[,,rg] <- as.Image(RNiftyReg::rotate(flimg1[,,rg], ang[rg], anchor = c("center")))
   }
   
   loggit::message(paste0("Applying translation compensation to the fluoview video..."))
@@ -407,9 +413,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
   grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
-  EBImage::writeImage(normalize(rottrans[(1+offs):(dim(rottrans)[2]-offs),(1+offs):(dim(rottrans)[2]-offs),], separate=F), file=paste0(output_prefix, "_rottrans100.tif")) 
+  EBImage::writeImage(normalize(rottrans[(1+offs):(dim(rottrans)[2]-offs),(1+offs):(dim(rottrans)[2]-offs),goodfr], separate=F), file=paste0(output_prefix, "_rottrans100.tif")) 
   EBImage::writeImage(normalize(redval, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redval.tif")) 
   EBImage::writeImage(normalize(grnval, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_grnval.tif")) 
+  redval <- redval[,,goodfr]
+  grnval <- grnval[,,goodfr]
   redval <- (redval - min(redval))/(max(redval) - min(redval))
   grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
   
@@ -502,7 +510,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       if(!win_valid)
         loggit::message("Invalid window size/offset")
 
-      
       ## Update reference
       if(!all(stringr::str_to_lower(ans)=="y") & win_valid) {
         
@@ -522,7 +529,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
         redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
         redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
         
-        # Show both channels when selecting window/offset TODO: Normalize accounts 0's
         print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
         EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
       }
@@ -549,8 +555,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     #[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]                     # ROI in Valid
     #[roiix[i,1]+offs:roiix[i,2]-offs,roiix[i,3]+offs:roiix[i,4]-offs,] # ROI in Original
     
-    rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),] 
-    groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),]
+    rroi     <- redrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),goodfr] 
+    groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),goodfr]
     rroimed  <- EBImage::medianFilter(rroi/2^16, size=3)
     groimed  <- EBImage::medianFilter(groi/2^16, size=3)
     redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
@@ -611,10 +617,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
 
   # Filter red channel below baseline
   bl <- mean(quantred,na.rm=TRUE)
-  
-  # Red Pixels > TODO: Baseline = mean(mean(lowest 10% per frame))
-  seg_mask[redseg <= bl] <- 0
 
+  # Red Pixels > Baseline = mean(mean(lowest 10% per frame))
+  seg_mask[redseg <= bl] <- 0
+  
   # Mask pixels in R/G channels
   redseg <- redseg*seg_mask
   grnseg <- grnseg*seg_mask
@@ -648,10 +654,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   #redseg      <- redmasked*seg_mask
   #greenseg    <- greenmasked*seg_mask
   #greenperred <- (greenmasked/redmasked)*seg_mask
-
+  
   # Mask pixels around margin of segmented area for background subtraction
   bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
-              - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+               - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
   
   # Constrain bg pixels to roi
   bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
@@ -664,8 +670,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   # Background subtraction
   for(i in 1:fr) {
-   redseg[,,i]   <- redmasked[,,i]   - bgredave[i]
-   grnseg[,,i]   <- greenmasked[,,i] - bggrnave[i]
+    redseg[,,i]   <- redmasked[,,i]   - bgredave[i]
+    grnseg[,,i]   <- greenmasked[,,i] - bggrnave[i]
   }
   
   #Background subtracted Channels/Ratio Image
@@ -675,7 +681,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   greenperred[!is.finite(greenperred)] <- 0.0
   greenperred[greenperred < 0]         <- 0.0
-
+  
   # Filter out lowest ratio values in case of only subset of labeled neurons active
   qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
   for(i in 1:fr) {
@@ -698,29 +704,39 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   redave         <- apply(redseg,MARGIN=3,sum)/segarea
   greenave       <- apply(grnseg,MARGIN=3,sum)/segarea
   greenperredave <- apply(greenperred,MARGIN=3,sum)/segarea
-
-  goodfrratidx <- is.finite(greenperredave)
+  
+  goodfrratidx   <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
-  goodfrrat <- goodfr[goodfrratidx]
-  redave <- redave[goodfrratidx]
-  greenave <- greenave[goodfrratidx]
+  goodfrrat      <- goodfr[goodfrratidx]
+  redave         <- redave[goodfrratidx]
+  greenave       <- greenave[goodfrratidx]
+  greenperred    <- greenperred[,,goodfrratidx]
+  seg_mask       <- seg_mask[,,goodfrratidx]
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
   gprimage[gprimage >= 1]         <- 0.99 # Threshold ratios > 1 for heatmap
   
-  # Create heatmap image
-  grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(gprimage)[3]))
-  for(cfr in 1:dim(gprimage)[3]){
-    grratiocolor[,,,cfr] <- dipr::pseudoColor(gprimage[,,cfr], colorRange[1], colorRange[2])
+  # Pad segmentation mask for un-analyzed frames with 0 mask
+  seg_mask_all <- array(0, dim=c(dim(seg_mask)[c(1,2)],dim(rottrans)[3]))
+  for(sfr in 1:length(goodfrrat)) {
+    seg_mask_all[,,goodfrrat[sfr]] <- seg_mask[,,sfr]
   }
+  
+  # Create heatmap image
+  grratiocolor <- array(0, dim=c(dim(gprimage)[c(1,2)], 3, dim(rottrans)[3]))
+  for(cfr in 1:dim(gprimage)[3]){
+    gcfr = goodfrrat[cfr]
+    grratiocolor[,,,gcfr] <- dipr::pseudoColor(gprimage[,,cfr], colorRange[1], colorRange[2])
+  }
+  
   grratiocolor <- Image(grratiocolor, colormode="Color")
   EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
   rm(gprimage)
   
   # Overlay fly_view and F_ratio image
   rottransmask <- array(0, dim=c(dim(rottrans)[c(1,2)], dim(rottrans)[3]))
-  rottransmask[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),] <- seg_mask
+  rottransmask[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),] <- seg_mask_all
   
   rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
   rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
@@ -730,8 +746,31 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   grratiocolorl <- rottranscolor*0
   grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
   
-  # flyviewcolor <- rottranscolor + grratiocolorl
-  # flyviewcolor <- Image(flyviewcolor, colormode="Color")
+  # Create and add marker to denote frames not analyzed in output video
+  mrk_img <- array(0,dim(grratiocolorl)[c(1,2)])
+  mrk_dim <- 19
+  mrk_ctr <- (mrk_dim-1)/2
+  mrk_r1  <- 7
+  mrk_r2  <- 5
+  mrk_sym <- array(0,c(mrk_dim,mrk_dim))
+  mrk_sym <- drawCircle(mrk_sym,mrk_ctr,mrk_ctr,mrk_r1,1,fill=T)
+  mrk_sym <- drawCircle(mrk_sym,mrk_ctr,mrk_ctr,mrk_r2,0,fill=T) 
+  
+  xw <- 1
+  rx <- as.integer(sqrt(2)/2*mrk_r1 - xw)
+  start <- mrk_ctr - rx
+  end   <- mrk_ctr + rx
+  
+  for(ix in start:end)
+    mrk_sym[ix,(ix-xw):(ix+xw)] = 1
+  
+  mrk_sym <- apply(mrk_sym,1,rev)
+  mrk_img[(dim(mrk_img)[2]-mrk_dim+1):(dim(mrk_img)[2]),1:mrk_dim]<-mrk_sym
+  
+  for(gf in setdiff(1:dim(grratiocolorl)[4],goodfrrat)) {
+    grratiocolorl[,,1,gf] <- grratiocolorl[,,1,gf] + mrk_img
+  }
+
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -758,7 +797,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
   frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
-
+  
   redcolor100 <- redcolor[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),,]
   EBImage::writeImage(redcolor100, file=paste0(output_prefix, "_redcolor100.tif"))
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
