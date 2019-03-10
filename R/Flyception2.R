@@ -359,7 +359,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::message(paste0("Performing template matching on the flyview video..."))
   for (c in 1:dim(rot)[3]){
     centers[c,] <- align_cameras(source=rot[,,c],
-                                 template=rot[,,1],
+                                 template=rot[,,goofdr[1]],
                                  output=output_prefix,
                                  center=c(0, 0),
                                  zoom=1,
