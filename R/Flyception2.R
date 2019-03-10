@@ -45,6 +45,11 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   loggit::setLogFile(paste0(dir, prefix, "_log.json"))
   
   if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
+
+  # Log function arguments
+  args<-as.list(environment())
+  loggit::message(paste(names(args),"->",args,collapse=","))
+
     
     loggit::message(paste0("Preprocessing", prefix, "..."))
     
