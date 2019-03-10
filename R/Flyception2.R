@@ -29,7 +29,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(180, 220), flash=NA, preprocess=F,
-                         size_thrsh=5, focus_thresh=950, translate=T){
+                         size_thrsh=5, focus_thresh=950,badfr=NA,translate=T){
   
   # TO DO
   
@@ -323,6 +323,8 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   dev.off()
   goodfocusfr <- which(quantcnt > focus_thresh & quantcnt < 10000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
+  badix  <- badfr - (FOI[1] - 1)
+  goodfr <- setdiff(goodfr,badix)
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
   # Save index of good frames
@@ -330,7 +332,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     write.table(cbind(1:length(goodfr),goodfr,goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
-    write.table(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    write.table(goodfr, paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
     saveRDS(cbind(1:length(goodfr),goodfr), paste0(output_prefix, "_gfrid.RDS"))
   }
   
