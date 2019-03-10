@@ -361,10 +361,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                                  autopos=T)
   }
   
-  # TODO: If matching is bad try no tranlation compensation
+  # Translation compensation for bead/coverslip offset
   if(!is.na(translate[1]))
     centers <- t(t(centers) + translate)
-    
+  
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
@@ -378,7 +378,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   rm(fvimglbw)
   rm(fvimglbwseg)
   rm(flimg2log)
-  
   
   ## Apply transformation functions to fluo-view images
   loggit::message(paste0("Applying rotation compensation to the fluoview video..."))
@@ -504,7 +503,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       if(!win_valid)
         loggit::message("Invalid window size/offset")
 
-      
       ## Update reference
       if(!all(stringr::str_to_lower(ans)=="y") & win_valid) {
         
@@ -524,7 +522,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
         redwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,1],roiix[i,3]:roiix[i,4],] <- 1
         redwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnwindowdisp[roiix[i,2],roiix[i,3]:roiix[i,4],] <- 1
         
-        # Show both channels when selecting window/offset TODO: Normalize accounts 0's
         print(EBImage::display(abind(redwindowdisp,grnwindowdisp,along=2)))
         EBImage::writeImage(abind(redwindowdisp,grnwindowdisp,along=2), file=paste0(output_prefix, "_redwindow" ,i ,".tif")) 
       }
@@ -613,10 +610,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
 
   # Filter red channel below baseline
   bl <- mean(quantred,na.rm=TRUE)
-  
-  # Red Pixels > TODO: Baseline = mean(mean(lowest 10% per frame))
-  seg_mask[redseg <= bl] <- 0
 
+  # Red Pixels > Baseline = mean(mean(lowest 10% per frame))
+  seg_mask[redseg <= bl] <- 0
+  
   # Mask pixels in R/G channels
   redseg <- redseg*seg_mask
   grnseg <- grnseg*seg_mask
@@ -650,10 +647,10 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   #redseg      <- redmasked*seg_mask
   #greenseg    <- greenmasked*seg_mask
   #greenperred <- (greenmasked/redmasked)*seg_mask
-
+  
   # Mask pixels around margin of segmented area for background subtraction
   bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
-              - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+               - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
   
   # Constrain bg pixels to roi
   bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
@@ -677,7 +674,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   
   greenperred[!is.finite(greenperred)] <- 0.0
   greenperred[greenperred < 0]         <- 0.0
-
+  
   # Filter out lowest ratio values in case of only subset of labeled neurons active
   qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
   for(i in 1:fr) {
@@ -716,6 +713,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   for(cfr in 1:dim(gprimage)[3]){
     grratiocolor[,,,cfr] <- dipr::pseudoColor(gprimage[,,cfr], colorRange[1], colorRange[2])
   }
+  
   grratiocolor <- Image(grratiocolor, colormode="Color")
   EBImage::writeImage(grratiocolor, file=paste0(output_prefix, "_grratiocolor.tif"))
   rm(gprimage)
@@ -732,8 +730,6 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   grratiocolorl <- rottranscolor*0
   grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
   
-  # flyviewcolor <- rottranscolor + grratiocolorl
-  # flyviewcolor <- Image(flyviewcolor, colormode="Color")
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -760,7 +756,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
   frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
-
+  
   redcolor100 <- redcolor[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),,]
   EBImage::writeImage(redcolor100, file=paste0(output_prefix, "_redcolor100.tif"))
   EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
