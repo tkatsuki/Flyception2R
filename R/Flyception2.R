@@ -411,11 +411,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   ## Part 6. Image segmentation and fluorescence quantification
   # Normalize rotated imgs
   offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
-  redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),goodfr]
-  grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),goodfr]
+  redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
+  grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
   EBImage::writeImage(normalize(rottrans[(1+offs):(dim(rottrans)[2]-offs),(1+offs):(dim(rottrans)[2]-offs),goodfr], separate=F), file=paste0(output_prefix, "_rottrans100.tif")) 
   EBImage::writeImage(normalize(redval, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redval.tif")) 
   EBImage::writeImage(normalize(grnval, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_grnval.tif")) 
+  redval <- redval[,,goodfr]
+  grnval <- grnval[,,goodfr]
   redval <- (redval - min(redval))/(max(redval) - min(redval))
   grnval <- (grnval - min(grnval))/(max(grnval) - min(grnval))
   
