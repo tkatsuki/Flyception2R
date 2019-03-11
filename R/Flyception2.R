@@ -370,6 +370,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   if(!is.na(translate[1]))
     centers <- t(t(centers) + translate)
   
+  # Translation clipping
+  TRANS_THRESH <- 10
+  for (i in 1:dim(centers)[1]){
+    rmag  <- sqrt(sum(centers[i,]**2))
+    rnorm <- centers[i,]/r
+    rmax  <- as.integer(rnorm*TRANS_THRESH)
+    if(rmag > TRANS_THRESH)
+      centers[i,] <- rmax
+  }
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
