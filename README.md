@@ -1,5 +1,5 @@
 # Flyception2R
-R scripts and utilities for analyzing Flyception data
+R scripts and utilities for analyzing Flyception2 data
 
 ## Requirement
 Windows: R and Rtools
@@ -11,13 +11,14 @@ ImageJ https://imagej.nih.gov/ij/
 Set ImageJ (and Fiji if present) to save Tiff in Intel byte order from Edit -> Options -> Input/Output... 
 
 ## Installation
-The following commands will install packages necessary for running FlyceptionR.
+The following commands will install packages necessary for running Flyception2R.
 
 ```
 install.packages(c("devtools", "ggplot2", "RNiftyReg", "zoo", "loggit"))
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("BiocInstaller", "EBImage"))
 library(devtools)
+install.Rtools()
 devtools::install_github("tkatsuki/dipr")
 devtools::install_github("tkatsuki/Flyception2R")
 library(Flyception2R)
@@ -27,11 +28,11 @@ library(Flyception2R)
 The function Flyception2R automatically processes and analyzes the data except for the one step mentioned below. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
 
 ```
-dir <- "/Volumes/LaCie/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/"
+dir <- "/PATH/TO/DATA/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/"
 Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
 ```
 
-Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below). When you want to move the window up, decrease the y value. When you want to move the window left, decrease the x value.
+Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window (ROI) for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below). When you want to move the window up, decrease the y value. When you want to move the window left, decrease the x value. You can create multiple ROIs if you wish.
 
 ![redwindow](https://github.com/tkatsuki/Flyception2R/blob/master/redwindow.png)
 
