@@ -371,7 +371,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     centers <- t(t(centers) + translate)
   
   # Translation clipping
-  TRANS_THRESH <- 10
+  TRANS_THRESH <- 30
   for (i in 1:dim(centers)[1]){
     rmag  <- sqrt(sum(centers[i,]**2))
     rnorm <- centers[i,]/r
