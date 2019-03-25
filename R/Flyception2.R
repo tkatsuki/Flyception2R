@@ -15,8 +15,8 @@
 #' @param dist_thresh numeric. A distance threshold for detecting fly-fly interactions.
 #' @param fl1fl2center a vector of two integers indicating the x and y offset between the two fluo-view videos. If not specified, an interactive dialog will pop up.
 #' @param flvfl1center a vector of two integers indicating the x and y offset between the fluo-view and fly-view videos. If not specified, an interactive dialog will pop up.
-#' @param bgratio a numeric between 0 and 1 indicating the ratio of bg/roi
-#' @param ratiocutoff ratio filter percentile
+#' @param bgratio 
+#' @param ratiocutoff 
 #' @param rotate_camera integer. Angle of the fluo-view camera.
 #' @param window_size a vector of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.
 #' @param window_offset a vector of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.
