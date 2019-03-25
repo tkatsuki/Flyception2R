@@ -6,17 +6,27 @@
 #' @param reuse logical. Reuse .RDS files?
 #' @param fmf2tif logical. Convert fly-view and arena-view fmf files into tif format?
 #' @param zoom numeric. Zoom factor between fly-view and fluo-view cameras.
-#' @param FOI a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
-#' @param ROI a vector of four numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
+#' @param FOI a vector of two integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
+#' @param ROI a vector of four integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
 #' @param binning integer. Binning of the fluo-view camera.
 #' @param fluo_flash_thresh numeric. A threshold for detecting flashes in a fluo-view video.
 #' @param fv_flash_thresh integer. A threshold for detecting flashes in a fly-view video.
 #' @param av_flash_thresh integer. A threshold for detecting flashes in a arena-view video.
 #' @param dist_thresh numeric. A distance threshold for detecting fly-fly interactions.
+#' @param fl1fl2center a vector of two integers indicating the x and y offset between the two fluo-view videos. If not specified, an interactive dialog will pop up.
+#' @param flvfl1center a vector of two integers indicating the x and y offset between the fluo-view and fly-view videos. If not specified, an interactive dialog will pop up.
+#' @param bgratio a numeric between 0 and 1 indicating the ratio of bg/roi
+#' @param ratiocutoff ratio filter percentile
 #' @param rotate_camera integer. Angle of the fluo-view camera.
-#' @param window_size a vector of two numbers indicating the size of a window to the brain.
-#' @param window_offset a vector of two numbers indicating the position of the window to the brain as an offset from the center of the image.
+#' @param window_size a vector of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.
+#' @param window_offset a vector of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.
+#' @param colorRange a vector of two integers indicating the min (blue) and max (red) for pseudocolor representation.
 #' @param flash 1 if the first flash is good, 2 if the first flash is bad and the second flash is good.
+#' @param preprocess logical. True if flash detection and camera alignment need to be performed.
+#' @param size_thresh integer. A threshold for removing object at the segmentation step.
+#' @param focus_thresh integer. A threshold for determining out-of-focus frames.
+#' @param badfr
+#' @param translate
 #' @export
 #' @examples
 #' Flyception2R()
@@ -25,11 +35,11 @@
 Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
-                         fl1fl2center=NA,flvfl1center=NA,
-                         bgratio=0.80,ratiocutoff=0.00, # bgratio - ratio of bg/roi : ratiocutoff - ratio filter percentile
+                         fl1fl2center=NA, flvfl1center=NA,
+                         bgratio=0.80, ratiocutoff=0.00,  
                          rotate_camera=-180, window_size=NA, window_offset=NA,
-                         colorRange= c(180, 220), flash=NA, preprocess=F,
-                         size_thrsh=5, focus_thresh=950,badfr=NA,translate=T){
+                         colorRange= c(0, 200), flash=NA, preprocess=F,
+                         size_thresh=5, focus_thresh=950, badfr=NA, translate=T){
   
   # TO DO
   
@@ -648,9 +658,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
   maskprops <- apply(thrsh_map,3,function(x) list(computeFeatures.shape(x)))
   maskprops <- lapply(maskprops, "[[", 1)
-  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thrsh))
+  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thresh))
   seg_mask  <- rmObjects(thrsh_map, objrmidx)
-  loggit::message(paste0("Removed objects smaller than ", size_thrsh, " pixels."))
+  loggit::message(paste0("Removed objects smaller than ", size_thresh, " pixels."))
   
   # Return filtered regions to binary mask
   seg_mask[seg_mask > 0] <- 1
