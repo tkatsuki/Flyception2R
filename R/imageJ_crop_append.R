@@ -34,7 +34,7 @@ imageJ_crop_append <- function(dir, ch=1, roi=c(383, 0, 256, 256)){
     file_order <- c(length(fluo_view_files), 1:(length(fluo_view_files)-1)) # Therefore we need to bring it front
   }
   for(s in file_order){
-    macro <- paste0('open("',fluo_view_files[s],'");\n makeRectangle(', paste(roi, collapse=","), ');\n run("Crop");\n saveAs("tiff", "',tools::file_path_sans_ext(fluo_view_files[s]),'.ch',ch,'.crop.tif");\n run("Quit");\n')
+    macro <- paste0('run("Input/Output...", "jpeg=85 gif=-1 file=.csv use_file save copy_row save_column save_row");\nopen("',fluo_view_files[s],'");\n makeRectangle(', paste(roi, collapse=","), ');\n run("Crop");\n saveAs("tiff", "',tools::file_path_sans_ext(fluo_view_files[s]),'.ch',ch,'.crop.tif");\n run("Quit");\n')
     write(macro, file=paste0(dir,"macro2.txt"))
     if (os == "windows"){
       bat <- paste0('pushd "C:\\Program Files\\ImageJ"', '\n jre\\bin\\java -jar -Xmx8g ij.jar  -batch "', windir, 'macro2.txt" ', dir, '\n pause\n exit')
@@ -77,6 +77,7 @@ imageJ_crop_append <- function(dir, ch=1, roi=c(383, 0, 256, 256)){
     }
   }
   write(paste('run("Concatenate...", "  title=[Concatenated Stacks]', paste(strs, collapse=" "), '");\n'), file=paste0(dir,"macro3.txt"), append=T)
+  write('run("Input/Output...", "jpeg=85 gif=-1 file=.csv use_file save copy_row save_column save_row");\n', file=paste0(dir,"macro3.txt"), append=T)
   write(paste0('saveAs("tiff", "', tools::file_path_sans_ext(fluo_view_cropped_files_full[1]), '.concat.tif");\n run("Quit");\n'), file=paste0(dir,"macro3.txt"), append=T)
   
   # Execute the macro
