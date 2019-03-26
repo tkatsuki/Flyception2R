@@ -15,8 +15,8 @@
 #' @param dist_thresh numeric. A distance threshold for detecting fly-fly interactions.
 #' @param fl1fl2center a vector of two integers indicating the x and y offset between the two fluo-view videos. If not specified, an interactive dialog will pop up.
 #' @param flvfl1center a vector of two integers indicating the x and y offset between the fluo-view and fly-view videos. If not specified, an interactive dialog will pop up.
-#' @param bgratio 
-#' @param ratiocutoff 
+#' @param bgratio float. The ratio of background pixels to total pixels in the ROI. Pixels with intensity values below this percentile of pixels in the ROI are excluded from segmentation mask.
+#' @param ratiocutoff float. A percentile below witch ratios are removed from analysis if active region is a subset of the labeled region.
 #' @param rotate_camera integer. Angle of the fluo-view camera.
 #' @param window_size a vector of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.
 #' @param window_offset a vector of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.
@@ -25,8 +25,8 @@
 #' @param preprocess logical. True if flash detection and camera alignment need to be performed.
 #' @param size_thresh integer. A threshold for removing object at the segmentation step.
 #' @param focus_thresh integer. A threshold for determining out-of-focus frames.
-#' @param badfr
-#' @param translate
+#' @param badfr vector. A list of frames which to be manually excluded from analysis.
+#' @param ctr_offset vector. x,y offset from center of markers to center of brain window to compensate for coverslip/bead placement variation.
 #' @export
 #' @examples
 #' Flyception2R()
@@ -39,7 +39,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          bgratio=0.80, ratiocutoff=0.00,  
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
-                         size_thresh=5, focus_thresh=950, badfr=NA, translate=T){
+                         size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA){
   
   # TO DO
   
@@ -376,9 +376,9 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                                  autopos=T)
   }
   
-  # Translation compensation for bead/coverslip offset
-  if(!is.na(translate[1]))
-    centers <- t(t(centers) + translate)
+  # Offset compensation for bead/coverslip offset
+  if(!is.na(ctr_offset[1]))
+    centers <- t(t(centers) + ctr_offset)
   
   # Translation clipping
   TRANS_THRESH <- 30
