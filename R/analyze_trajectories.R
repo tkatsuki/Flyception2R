@@ -1,8 +1,10 @@
 #' Analyze trajectory of flies
 #'
 #'
-#' @param obj A target image of Image object or an array.
-#' @param ref A reference image of Image object or an array.
+#' @param dir Input directory.
+#' @param output Output path for saving results.
+#' @param fpsfv fly-view frame fate.
+#' @param interaction logical. If True, measures distance between two flies.
 #' @export
 #' @examples
 #' analyze_trajectories()

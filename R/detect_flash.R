@@ -1,8 +1,11 @@
-#' Detect flash
+#' Detect flashed frames in a Flyception video file
 #'
 #'
-#' @param obj A target image of Image object or an array.
-#' @param ref A reference image of Image object or an array.
+#' @param input string, input file name.
+#' @param output string, output file name.
+#' @param type "fluo" for fluo-view, "fly" for fly-view, and "arena" for arena-view
+#' @param flash_thresh numeric value indicating the threshold for flash detection
+#' @param reuse logical, True if previously saved RDS file is to be used
 #' @export
 #' @examples
 #' detect_flash()
