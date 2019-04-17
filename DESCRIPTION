@@ -2,10 +2,7 @@ Package: Flyception2R
 Type: Package
 Title: R scripts and utilities for Flyception2 data analysis
 Version: 0.1.0
-Authors@R: c(
-person("Takeo", "Katsuki", email = "takeo.katsuki@gmail.com", role = c("aut", "cre")),
-person("Thomas", "Dawkins", email = "tjdawkin@eng.ucsd.edu", role = c("aut"))
-)
+Authors@R: c(person("Takeo", "Katsuki", email = "takeo.katsuki@gmail.com", role = c("aut", "cre")),person("Thomas", "Dawkins", email = "tjdawkin@eng.ucsd.edu", role = c("aut")))
 Maintainer: Takeo Katsuki <takeo.katsuki@gmail.com>
 Description: Flyception2R provides functions useful for analyzing data collected
     with Flyception2.
