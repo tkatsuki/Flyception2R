@@ -2,18 +2,24 @@
 % Please edit documentation in R/detect_flash.R
 \name{detect_flash}
 \alias{detect_flash}
-\title{Detect flash}
+\title{Detect flashed frames in a Flyception video file}
 \usage{
 detect_flash(input, output, type = c("fluo", "fly", "arena"), flash_thresh,
   reuse = F)
 }
 \arguments{
-\item{obj}{A target image of Image object or an array.}
+\item{input}{string, input file name.}
 
-\item{ref}{A reference image of Image object or an array.}
+\item{output}{string, output file name.}
+
+\item{type}{"fluo" for fluo-view, "fly" for fly-view, and "arena" for arena-view}
+
+\item{flash_thresh}{numeric value indicating the threshold for flash detection}
+
+\item{reuse}{logical, True if previously saved RDS file is to be used}
 }
 \description{
-Detect flash
+Detect flashed frames in a Flyception video file
 }
 \examples{
 detect_flash()

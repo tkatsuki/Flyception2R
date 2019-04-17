@@ -4,12 +4,23 @@
 \alias{sync_frames}
 \title{Synchronize camera frames}
 \usage{
-sync_frames(dir, fluo_flash, fly_flash, arena_flash, output, reuse = F)
+sync_frames(dir, fluo_flash, fly_flash, arena_flash, output, reuse = F,
+  hypothetical = F)
 }
 \arguments{
-\item{obj}{A target image of Image object or an array.}
+\item{dir}{Input directory.}
 
-\item{ref}{A reference image of Image object or an array.}
+\item{fluo_flash}{Result of detect_flash() function for fluo-view.}
+
+\item{fly_flash}{Result of detect_flash() function for fly-view.}
+
+\item{arena_flash}{Result of detect_flash() function for arena-view.}
+
+\item{output}{Output path for saving results.}
+
+\item{reuse}{True if one wants to reuse previously saved results.}
+
+\item{hypothetical}{True if one wants to use hypothetically generated 20.0ms, 19.9ms alternating timestamp for fluo-view.}
 }
 \description{
 Synchronize camera frames

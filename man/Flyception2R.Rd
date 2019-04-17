@@ -7,8 +7,11 @@
 Flyception2R(dir, autopos = T, interaction = T, reuse = T, fmf2tif = F,
   zoom = 1.085, FOI = F, ROI = c(391, 7, 240, 240), binning = 1,
   fluo_flash_thresh = 500, fv_flash_thresh = 240, av_flash_thresh = 100,
-  dist_thresh = 4, rotate_camera = -180, window_size = c(68, 28),
-  window_offset = c(-4, 25))
+  dist_thresh = 4, fl1fl2center = NA, flvfl1center = NA, bgratio = 0.8,
+  ratiocutoff = 0, rotate_camera = -180, window_size = NA,
+  window_offset = NA, colorRange = c(0, 200), flash = NA,
+  preprocess = F, size_thresh = 5, focus_thresh = 950, badfr = NA,
+  ctr_offset = NA)
 }
 \arguments{
 \item{dir}{path to the directory that contains the data}
@@ -23,9 +26,9 @@ Flyception2R(dir, autopos = T, interaction = T, reuse = T, fmf2tif = F,
 
 \item{zoom}{numeric. Zoom factor between fly-view and fluo-view cameras.}
 
-\item{FOI}{a vector of two numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
+\item{FOI}{a vector of two integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
 
-\item{ROI}{a vector of four numbers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
+\item{ROI}{a vector of four integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.}
 
 \item{binning}{integer. Binning of the fluo-view camera.}
 
@@ -37,11 +40,33 @@ Flyception2R(dir, autopos = T, interaction = T, reuse = T, fmf2tif = F,
 
 \item{dist_thresh}{numeric. A distance threshold for detecting fly-fly interactions.}
 
+\item{fl1fl2center}{a vector of two integers indicating the x and y offset between the two fluo-view videos. If not specified, an interactive dialog will pop up.}
+
+\item{flvfl1center}{a vector of two integers indicating the x and y offset between the fluo-view and fly-view videos. If not specified, an interactive dialog will pop up.}
+
+\item{bgratio}{float. The ratio of background pixels to total pixels in the ROI. Pixels with intensity values below this percentile of pixels in the ROI are excluded from segmentation mask.}
+
+\item{ratiocutoff}{float. A percentile below witch ratios are removed from analysis if active region is a subset of the labeled region.}
+
 \item{rotate_camera}{integer. Angle of the fluo-view camera.}
 
-\item{window_size}{a vector of two numbers indicating the size of a window to the brain.}
+\item{window_size}{a vector of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.}
 
-\item{window_offset}{a vector of two numbers indicating the position of the window to the brain as an offset from the center of the image.}
+\item{window_offset}{a vector of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.}
+
+\item{colorRange}{a vector of two integers indicating the min (blue) and max (red) for pseudocolor representation.}
+
+\item{flash}{1 if the first flash is good, 2 if the first flash is bad and the second flash is good.}
+
+\item{preprocess}{logical. True if flash detection and camera alignment need to be performed.}
+
+\item{size_thresh}{integer. A threshold for removing object at the segmentation step.}
+
+\item{focus_thresh}{integer. A threshold for determining out-of-focus frames.}
+
+\item{badfr}{vector. A list of frames which to be manually excluded from analysis.}
+
+\item{ctr_offset}{vector. x,y offset from center of markers to center of brain window to compensate for coverslip/bead placement variation.}
 }
 \description{
 Flyception2R main script

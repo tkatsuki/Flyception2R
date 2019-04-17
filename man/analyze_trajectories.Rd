@@ -7,9 +7,13 @@
 analyze_trajectories(dir, output, fpsfv, interaction = F)
 }
 \arguments{
-\item{obj}{A target image of Image object or an array.}
+\item{dir}{Input directory.}
 
-\item{ref}{A reference image of Image object or an array.}
+\item{output}{Output path for saving results.}
+
+\item{fpsfv}{fly-view frame fate.}
+
+\item{interaction}{logical. If True, measures distance between two flies.}
 }
 \description{
 Analyze trajectory of flies
