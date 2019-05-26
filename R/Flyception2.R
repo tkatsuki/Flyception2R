@@ -874,14 +874,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
-  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]])
-  png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
-  plot(datdFF0)
-  dev.off()
-  
+  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, 
+                        d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
+                        a=ang[1:(length(goodfrrat)-2)])
   p <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
-    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=d))
+    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=d)) +
+    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=a))
   ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
   # Format string for multi ROI window sizse/offsets
