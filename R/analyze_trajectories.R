@@ -20,8 +20,8 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\]",replacement=""), stringsAsFactors=F)
   trja <- sapply(trja, as.numeric)
   headpos <- fvtrj[,c(4,5)]
-  edgepos <- fvtrj[,c(6,7)]
-  angles <- atan2((headpos - edgepos)[,1], (headpos - edgepos)[,2])
+  #edgepos <- fvtrj[,c(6,7)]
+  #angles <- atan2((headpos - edgepos)[,1], (headpos - edgepos)[,2])
   distance <- dipr::trackDistance(trj)
   distance <- zoo::rollmedian(distance, k=5)
   speed <- zoo::rollsum(distance, k=200)/200*fpsfv
@@ -38,5 +38,7 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   } else {
     flydist <- NA
   }
-  return(list("speed"=speed, "error"=error, "trja"=trja, "flydist"=flydist, "angles"=angles))
+  #return(list("speed"=speed, "error"=error, "trja"=trja, "flydist"=flydist, "angles"=angles))
+  return(list("speed"=speed, "error"=error, "trja"=trja, "flydist"=flydist))
+  
 }
