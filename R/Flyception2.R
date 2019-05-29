@@ -1,6 +1,7 @@
 #' Flyception2R main script
 #'
 #' @param dir path to the directory that contains the data
+#' @param outdir path to root of directory for analysis outputs. Directory structure of data will be created under root. Default to data directory. 
 #' @param autopos logical. Perform camera alignment using FNCC?
 #' @param interaction logical. Perform interaction detection? Requires two flies.
 #' @param reuse logical. Reuse .RDS files?
@@ -32,7 +33,7 @@
 #' Flyception2R()
 #'
 
-Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
+Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          fl1fl2center=NA, flvfl1center=NA,
@@ -47,12 +48,20 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
   # Prepare directories and paths
   if(preprocess == T) reuse <- F
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
-  outdir <- paste0(dir, paste0(FOI, collapse="_"), "/")
-  dir.create(outdir,showWarnings=FALSE)
+  # Set output directory if prefix specified
+  if(is.na(outdir)) {
+    outdirr <- paste0(dir, paste0(FOI, collapse="_"), "/")
+  } else {
+    outdirr <- paste0(outdir,
+                   substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
+  }
+  outdir <- paste0(outdirr, paste0(FOI, collapse="_"), "/")
+  dir.create(outdir,showWarnings=FALSE,recursive=TRUE)
+  
   output_prefix <- paste0(outdir, prefix)
   
   # Start logging 
-  loggit::setLogFile(paste0(dir, prefix, "_log.json"))
+  loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
   if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
 
@@ -70,13 +79,13 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     arena_view_fmf <- paste0(dir, list.files(dir, pattern="^av.*fmf$"))
     
     # Crop a first channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0 || preprocess){
-      imageJ_crop_append(dir, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
+    if(length(list.files(outdirr, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))==0 || preprocess){
+      imageJ_crop_append(dir, outdirr, ch=1, roi=ROI) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
-      fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.tif$"))
+      fluo_view_tif_ch1 <- paste0(outdirr, list.files(outdirr, pattern="ome\\.ch1\\.crop\\.tif$"))
     } else {
-      fluo_view_tif_ch1 <- paste0(dir, list.files(dir, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
+      fluo_view_tif_ch1 <- paste0(outdirr, list.files(outdirr, pattern="ome\\.ch1\\.crop\\.concat\\.tif$"))
     }
     
     flnframe <- dipr::readTIFF2(fluo_view_tif_ch1, getFrames = T)
@@ -85,19 +94,19 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     loggit::message("Detecting flash in fluo-view")
     fluo_flash <- detect_flash(input=fluo_view_tif_ch1,
                                type="fluo",
-                               output=paste0(dir, prefix),
+                               output=paste0(outdirr, prefix),
                                flash_thresh=fluo_flash_thresh,
                                reuse=reuse)
     loggit::message("Detecting flash in fly-view")
     fly_flash <- detect_flash(input=fly_view_fmf,
                               type="fly",
-                              output=paste0(dir, prefix),
+                              output=paste0(outdirr, prefix),
                               flash_thresh=fv_flash_thresh,
                               reuse=reuse)
     loggit::message("Detecting flash in arena-view")
     arena_flash <- detect_flash(input=arena_view_fmf,
                                 type="arena",
-                                output=paste0(dir, prefix),
+                                output=paste0(outdirr, prefix),
                                 flash_thresh=av_flash_thresh,
                                 reuse=reuse)
     
@@ -135,7 +144,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     # Align two channels of fluo-view
     center <- align_cameras(source=fl2refcrop,
                             template=fl1ref,
-                            output=paste0(paste0(dir, prefix), "_fl2fl1"),
+                            output=paste0(paste0(outdirr, prefix), "_fl2fl1"),
                             center=c(0, 0),
                             zoom=1,
                             autopos=T,
@@ -181,12 +190,12 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     
     # Crop a second channel in fluo_view images using ImageJ
     if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
-      imageJ_crop_append(dir, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+      imageJ_crop_append(dir, outdirr, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
-      fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.tif$"))
+      fluo_view_tif_ch2 <- paste0(outdirr, list.files(outdirr, pattern="ome\\.ch2\\.crop\\.tif$"))
     } else {
-      fluo_view_tif_ch2 <- paste0(dir, list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
+      fluo_view_tif_ch2 <- paste0(outdirr, list.files(outdirr, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))
     }
     
     
@@ -196,7 +205,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
                            fluo_flash=fluo_flash,
                            fly_flash=fly_flash,
                            arena_flash=arena_flash,
-                           output=paste0(dir, prefix),
+                           output=paste0(outdirr, prefix),
                            reuse=reuse,
                            hypothetical=F)
     
@@ -206,7 +215,7 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
     # Align fly-view and fluo-view
     center2 <- align_cameras(source=fvref/255,
                              template=flip(fl1ref),
-                             output=paste0(paste0(dir, prefix), "_fvfl1"),
+                             output=paste0(paste0(outdirr, prefix), "_fvfl1"),
                              center=c(0, 0),
                              zoom=1.085,
                              autopos=T,
@@ -245,14 +254,15 @@ Flyception2R <- function(dir, autopos=T, interaction=T, reuse=T, fmf2tif=F,
       }
     }
     
-    savefn <- paste0(dir, prefix,"_prepdata.RData")
+    closeAllConnections()
+    savefn <- paste0(outdirr, prefix,"_prepdata.RData")
     save(arena_view_fmf,center,center2,flnframe,fluo_view_tif_ch1,fluo_view_tif_ch2,
          fly_view_fmf,savefn,syncing,fluo_flash,arena_flash,fly_flash,file=savefn)
     loggit::message("Preprocessing done")
     if(preprocess == T) return()
   } else {
     # Load preprocessed data
-    load(paste0(dir, prefix,"_prepdata.RData"))
+    load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
   
   ## Part 3. Analyze trajectories
