@@ -394,7 +394,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   TRANS_THRESH <- 30
   for (i in 1:dim(centers)[1]){
     rmag  <- sqrt(sum(centers[i,]**2))
-    rnorm <- centers[i,]/r
+    rnorm <- centers[i,]/rmag
     rmax  <- as.integer(rnorm*TRANS_THRESH)
     if(rmag > TRANS_THRESH)
       centers[i,] <- rmax
