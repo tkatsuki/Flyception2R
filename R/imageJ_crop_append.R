@@ -104,4 +104,9 @@ imageJ_crop_append <- function(dir, outdir=NA, ch=1, roi=c(383, 0, 256, 256)){
     system(paste0("java -Xmx8g -jar /Applications/ImageJ/ImageJ.app/Contents/Resources/Java/ij.jar ",
                   "-ijpath /Applications/ImageJ --headless -batch ", outdir, "macro2.txt"), wait=T) 
   }
+  
+  # Remove intermedite files
+  for(i in 1:length(fluo_view_cropped_files_full))
+    file.remove(fluo_view_cropped_files_full[i])
+  
 }
