@@ -884,13 +884,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
-  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int)
-  png(file=paste0(output_prefix, "_datdFF0.png"), width=400, height=400)
-  plot(datdFF0)
-  dev.off()
-  
+  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, 
+                        d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
+                        a=ang[1:(length(goodfrrat)-2)])
   p <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
-    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95)
+    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
+    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=d)) +
+    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=a))
   ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
   # Format string for multi ROI window sizse/offsets
@@ -920,6 +920,17 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
                     FOI[1], FOI[2], wins_str, offs_str, length(goodfrratidx),
                     min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
   loggit::message(out_str)
+  
+  ## Part 15. Create trajectory of the flies
+  message("Creating trajectory of the flies...")
+  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
+  plot(trj_res$trja[frida,1], -trj_res$trja[frida,2],
+       type = "l", lty = 1, col="red",
+       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  par(new=T)
+  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+  dev.off()
   
   ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
