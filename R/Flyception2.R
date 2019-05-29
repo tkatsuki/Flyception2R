@@ -346,7 +346,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   png(file=paste0(output_prefix, "_quantcnt.png"), width=400, height=400)
   plot(quantcnt)
   dev.off()
-  goodfocusfr <- which(quantcnt > focus_thresh & quantcnt < 10000)
+  goodfocusfr <- which(quantcnt > focus_thresh & quantcnt < 8000)
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   badix  <- badfr - (FOI[1] - 1)
   goodfr <- setdiff(goodfr,badix)
