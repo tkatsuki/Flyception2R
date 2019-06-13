@@ -925,9 +925,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   message("Creating trajectory of the flies...")
   pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
   par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-  plot(trj_res$trja[frida,1], -trj_res$trja[frida,2],
+  if(interaction == F){
+    plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
        type = "l", lty = 1, col="red",
        axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  }else{
+    matplot(trj_res$trja[frida,c(1,3)]*10, -trj_res$trja[frida,c(2,4)]*10,
+            type = "l", lty = 1, col=2:3,
+            axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+  }
   par(new=T)
   plotrix::draw.ellipse(0,0,11.0795*20,10*20)
   dev.off()
