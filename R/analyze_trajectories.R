@@ -20,10 +20,7 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\]",replacement=""), stringsAsFactors=F)
   trja <- data.frame(sapply(trja, as.numeric)) # trajectory is in pixel coordinate
   data(map, package = "Flyception2R") # load the pixel to degree map
-  #trjaint <- round(trja)
-  #matchedrow <- row.match(trjaint[,1:2], map[,3:4])
-  #matchedrow[which(is.na(matchedrow))] <- sapply(which(is.na(matchedrow)), function(x) which.min(abs((map[,3]-trjaint[x, 1])^2) + (map[,4]-trjaint[x, 2])^2))
-  
+
   if(interaction == F){
     matchedrow <- sapply(1:nrow(trja), function(x) which.min(abs((map[,3]-trja[x, 1])^2) + (map[,4]-trja[x, 2])^2))
     trjadeg <- map[matchedrow, 1:2]

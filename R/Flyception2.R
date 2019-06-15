@@ -53,7 +53,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
     outdirr <- paste0(dir, paste0(FOI, collapse="_"), "/")
   } else {
     outdirr <- paste0(outdir,
-                   substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
+                      substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
   }
   outdir <- paste0(outdirr, paste0(FOI, collapse="_"), "/")
   dir.create(outdir,showWarnings=FALSE,recursive=TRUE)
@@ -64,11 +64,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
   if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
-
-  # Log function arguments
-  args<-as.list(environment())
-  loggit::message(paste(names(args),"->",args,collapse=","))
-
+    
+    # Log function arguments
+    args<-as.list(environment())
+    loggit::message(paste(names(args),"->",args,collapse=","))
+    
     
     loggit::message(paste0("Preprocessing", prefix, "..."))
     
@@ -320,7 +320,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   # Calculate head angle
   ang_res <- detect_angle(fvimglbwseg)
-  ang <- ang_res[[1]]
+  ang <- ang_res[[1]] # in radianss
   centroid <- ang_res[[2]]
   markernum <- ang_res[[3]]
   
@@ -538,7 +538,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
       win_valid <- all((winsize[i,]/2 + abs(winoffs[i,])) <= wr/2)
       if(!win_valid)
         loggit::message("Invalid window size/offset")
-
+      
       ## Update reference
       if(!all(stringr::str_to_lower(ans)=="y") & win_valid) {
         
@@ -643,10 +643,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   # Save all baselines
   saveRDS(bldata, paste0(output_prefix, "_baselines.RDS"))
-
+  
   # Filter red channel below baseline
   bl <- mean(quantred,na.rm=TRUE)
-
+  
   # Red Pixels > Baseline = mean(mean(lowest 10% per frame))
   seg_mask[redseg <= bl] <- 0
   
@@ -799,7 +799,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   for(gf in setdiff(1:dim(grratiocolorl)[4],goodfrrat)) {
     grratiocolorl[,,1,gf] <- grratiocolorl[,,1,gf] + mrk_img
   }
-
+  
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -878,6 +878,14 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
+  ## Behavior analysis
+  ## Calculate two lines from the tracked fly: one along the body axis, and the other to the other fly
+  ## The angle between the two lines is the view angle of the fly
+  # body axis is already given as "ang" in radians but plus pi/2
+  # so all we need is the slope of the line between two flies
+  flyflyangle <- atan((trj_res$trja[frida,2] - trj_res$trja[frida,4])/(trj_res$trja[frida,1] - trj_res$trja[frida,3]))
+  viewangle <- (ang - pi/2 - flyflyangle)*180/pi # in degree
+  
   F0int <- intensity[1]
   #deltaFint <- intensity - F0int
   # df (subtract baseline)
@@ -886,12 +894,18 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
-                        a=ang[1:(length(goodfrrat)-2)])
-  p <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
+                        a=viewangle[1:(length(goodfrrat)-2)])
+  p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
-    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=d)) +
-    ggplot2::geom_line(data=datdFF0, ggplot2::aes(x=x, y=a))
-  ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
+    ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
+  
+  p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=d)) +
+    ggplot2::geom_line()
+  
+  p3 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=a)) +
+    ggplot2::geom_line()
+  
+  Rmisc::multiplot(p1, p2, p3, cols=1)
   
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
@@ -927,8 +941,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
   if(interaction == F){
     plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
-       type = "l", lty = 1, col="red",
-       axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+         type = "l", lty = 1, col="red",
+         axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
   }else{
     matplot(trj_res$trja[frida,c(1,3)]*10, -trj_res$trja[frida,c(2,4)]*10,
             type = "l", lty = 1, col=2:3,
