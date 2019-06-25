@@ -50,7 +50,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
   # Set output directory if prefix specified
   if(is.na(outdir)) {
-    outdirr <- paste0(dir, paste0(FOI, collapse="_"), "/")
+    outdirr <- dir
   } else {
     outdirr <- paste0(outdir,
                       substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
@@ -59,7 +59,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   dir.create(outdir,showWarnings=FALSE,recursive=TRUE)
   
   output_prefix <- paste0(outdir, prefix)
-  
+  if(nchar(output_prefix)>240) stop("Directory name too long")
+    
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
@@ -883,8 +884,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   ## The angle between the two lines is the view angle of the fly
   # body axis is already given as "ang" in radians but plus pi/2
   # so all we need is the slope of the line between two flies
-  flyflyangle <- atan((trj_res$trja[frida,2] - trj_res$trja[frida,4])/(trj_res$trja[frida,1] - trj_res$trja[frida,3]))
-  viewangle <- (ang - pi/2 - flyflyangle)*180/pi # in degree
+  vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
+
+  # Need to determine which fly in the arena-view is being tracked by fly-view
+  # But this may fail if the fly number switches during tracking
+  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
+  if( sum(abs(fvtrj - trj_res$trja[frida,1:2])) < sum(abs(fvtrj - trj_res$trja[frida,3:4]))){
+    # If fv is fly 1 then vecB, that is the view from the trackied fly, is from fly 1 to 2
+    vecB <- data.frame(Bx=(trj_res$trja[frida,3] - trj_res$trja[frida,1]), By=(-trj_res$trja[frida,4] + trj_res$trja[frida,2]))
+  }else{
+    vecB <- data.frame(Bx=(trj_res$trja[frida,1] - trj_res$trja[frida,3]), By=(-trj_res$trja[frida,2] + trj_res$trja[frida,4]))
+  }
+  
+  # θ ＝ atan2(AxB，A*B) in radian
+  # For now left side of the view is positive
+  theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
   
   F0int <- intensity[1]
   #deltaFint <- intensity - F0int
@@ -894,18 +908,22 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   dFF0int <- deltaFint/F0int * 100
   datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
-                        a=viewangle[1:(length(goodfrrat)-2)])
+                        a=theta[1:(length(goodfrrat)-2)])
   p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
     ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
   p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=d)) +
-    ggplot2::geom_line()
+    ggplot2::geom_line() +
+    ggplot2::ylim(0, 100)
   
   p3 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=a)) +
-    ggplot2::geom_line()
+    ggplot2::geom_line() +
+    ggplot2::ylim(-180, 180)
   
+  png(file=paste0(output_prefix, "_dFF0_dist_angle.png"), width=400, height=400)
   Rmisc::multiplot(p1, p2, p3, cols=1)
+  dev.off()
   
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
