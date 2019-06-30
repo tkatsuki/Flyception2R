@@ -925,23 +925,41 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   Rmisc::multiplot(p1, p2, p3, cols=1)
   dev.off()
   
-  df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
-  df2 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(3,4)])
-
+  if (interaction==T){
+    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+    df2 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(3,4)])
+    
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
-    geom_path(linetype=1, lwd = 0.1, color=1) +
-    geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
-    coord_fixed(ratio = 1) +
-    scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
-    scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-    scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
-    ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
-    theme(line = element_blank(),
-          text = element_blank(),
-          title = element_blank(),
-          legend.position="none",
-          rect= element_blank(),
-          plot.margin=unit(c(0,0,-1,-1),"lines"))
+      geom_path(linetype=1, lwd = 0.1, color=1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
+  }else{
+    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
+      geom_path(linetype=1, lwd = 0.1) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
+  }
     
     png(file=paste0(output_prefix, "_dFF0_trj.png"), width=400, height=400)
     p4
