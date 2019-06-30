@@ -60,7 +60,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   output_prefix <- paste0(outdir, prefix)
   if(nchar(output_prefix)>240) stop("Directory name too long")
-    
+  
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
@@ -885,7 +885,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   # body axis is already given as "ang" in radians but plus pi/2
   # so all we need is the slope of the line between two flies
   vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
-
+  
   # Need to determine which fly in the arena-view is being tracked by fly-view
   # But this may fail if the fly number switches during tracking
   fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
@@ -906,24 +906,47 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
-  datdFF0 <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=dFF0int, 
+  datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
                         a=theta[1:(length(goodfrrat)-2)])
-  p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=y)) +
+  p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=f)) +
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
     ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
-  p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=d)) +
+  p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=d)) +
     ggplot2::geom_line() +
     ggplot2::ylim(0, 100)
   
-  p3 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=x, y=a)) +
+  p3 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=a)) +
     ggplot2::geom_line() +
     ggplot2::ylim(-180, 180)
   
   png(file=paste0(output_prefix, "_dFF0_dist_angle.png"), width=400, height=400)
   Rmisc::multiplot(p1, p2, p3, cols=1)
   dev.off()
+  
+  df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+  df2 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(3,4)])
+
+    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
+    geom_path(linetype=1, lwd = 0.1, color=1) +
+    geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
+    coord_fixed(ratio = 1) +
+    scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+    scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+    scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+    ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+    theme(line = element_blank(),
+          text = element_blank(),
+          title = element_blank(),
+          legend.position="none",
+          rect= element_blank(),
+          plot.margin=unit(c(0,0,-1,-1),"lines"))
+    
+    png(file=paste0(output_prefix, "_dFF0_trj.png"), width=400, height=400)
+    p4
+    dev.off()
+
   
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
