@@ -886,16 +886,20 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   # so all we need is the slope of the line between two flies
   vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
   
-  # Need to determine which fly in the arena-view is being tracked by fly-view
-  # But this may fail if the fly number switches during tracking
+  # Determine which fly in the arena-view is being tracked by fly-view
   fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
-  if( sum(abs(fvtrj - trj_res$trja[frida,1:2])) < sum(abs(fvtrj - trj_res$trja[frida,3:4]))){
-    # If fv is fly 1 then vecB, that is the view from the trackied fly, is from fly 1 to 2
-    vecB <- data.frame(Bx=(trj_res$trja[frida,3] - trj_res$trja[frida,1]), By=(-trj_res$trja[frida,4] + trj_res$trja[frida,2]))
-  }else{
-    vecB <- data.frame(Bx=(trj_res$trja[frida,1] - trj_res$trja[frida,3]), By=(-trj_res$trja[frida,2] + trj_res$trja[frida,4]))
-  }
+  dist1 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
+  dist2 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
   
+  # Set fly1 always being the tracked fly and create trajectories for each fly
+  which(dist1 < dist2)
+  fly1trja <- trj_res$trja[frida,1:2]
+  fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
+  fly2trja <- trj_res$trja[frida,3:4]
+  fly2trja[which(dist1 > dist2), ] <- trj_res$trja[frida,1:2][which(dist1 > dist2),]
+  
+  vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
+
   # θ ＝ atan2(AxB，A*B) in radian
   # For now left side of the view is positive
   theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
@@ -926,8 +930,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   dev.off()
   
   if (interaction==T){
-    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
-    df2 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(3,4)])
+    df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
       geom_path(linetype=1, lwd = 0.1, color=1) +
