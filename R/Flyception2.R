@@ -879,31 +879,37 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
-  ## Behavior analysis
+  ## Behavior analysis. This part is relevant only when interaction=T
   ## Calculate two lines from the tracked fly: one along the body axis, and the other to the other fly
   ## The angle between the two lines is the view angle of the fly
   # body axis is already given as "ang" in radians but plus pi/2
   # so all we need is the slope of the line between two flies
-  vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
-  
-  # Determine which fly in the arena-view is being tracked by fly-view
-  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
-  dist1 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
-  dist2 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
-  
-  # Set fly1 always being the tracked fly and create trajectories for each fly
-  which(dist1 < dist2)
-  fly1trja <- trj_res$trja[frida,1:2]
-  fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
-  fly2trja <- trj_res$trja[frida,3:4]
-  fly2trja[which(dist1 > dist2), ] <- trj_res$trja[frida,1:2][which(dist1 > dist2),]
-  
-  vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
-
-  # θ ＝ atan2(AxB，A*B) in radian
-  # For now left side of the view is positive
-  theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
-  
+  if(interaction==T){
+    vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
+    
+    # Determine which fly in the arena-view is being tracked by fly-view
+    fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
+    dist1 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
+    dist2 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
+    
+    # Set fly1 always being the tracked fly and create trajectories for each fly
+    which(dist1 < dist2)
+    fly1trja <- trj_res$trja[frida,1:2]
+    fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
+    fly2trja <- trj_res$trja[frida,3:4]
+    fly2trja[which(dist1 > dist2), ] <- trj_res$trja[frida,1:2][which(dist1 > dist2),]
+    
+    vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
+    
+    # θ ＝ atan2(AxB，A*B) in radian
+    # For now left side of the view is positive
+    theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
+    
+  }else{
+    fly1trja <- trj_res$trja[frida,1:2]
+    theta <- ang
+  }
+ 
   F0int <- intensity[1]
   #deltaFint <- intensity - F0int
   # df (subtract baseline)
@@ -929,45 +935,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   Rmisc::multiplot(p1, p2, p3, cols=1)
   dev.off()
   
-  if (interaction==T){
-    df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
-    df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
-    
-    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
-      geom_path(linetype=1, lwd = 0.1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
-      coord_fixed(ratio = 1) +
-      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
-      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
-      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
-      theme(line = element_blank(),
-            text = element_blank(),
-            title = element_blank(),
-            legend.position="none",
-            rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
-  }else{
-    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
 
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
-      geom_path(linetype=1, lwd = 0.1) +
-      coord_fixed(ratio = 1) +
-      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
-      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
-      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
-      theme(line = element_blank(),
-            text = element_blank(),
-            title = element_blank(),
-            legend.position="none",
-            rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
-  }
-    
-    png(file=paste0(output_prefix, "_dFF0_trj.png"), width=400, height=400)
-    p4
-    dev.off()
 
   
   # Format string for multi ROI window sizse/offsets
@@ -1000,19 +968,45 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   
   ## Part 15. Create trajectory of the flies
   message("Creating trajectory of the flies...")
-  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
-  par(plt = c(0, 1, 0, 1), xaxs = "i", yaxs = "i")
-  if(interaction == F){
-    plot(trj_res$trja[frida,1]*10, -trj_res$trja[frida,2]*10,
-         type = "l", lty = 1, col="red",
-         axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+
+  if (interaction==T){
+    df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    
+    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
+      geom_path(linetype=1, lwd = 0.1, color=1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
-    matplot(trj_res$trja[frida,c(1,3)]*10, -trj_res$trja[frida,c(2,4)]*10,
-            type = "l", lty = 1, col=2:3,
-            axes = F, xlim = c(-240, 240), ylim = c(-220, 220))
+    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+    
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
+      geom_path(linetype=1, lwd = 0.1) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
   }
-  par(new=T)
-  plotrix::draw.ellipse(0,0,11.0795*20,10*20)
+  
+  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  p4
   dev.off()
   
   ## Part 7. Convert fmf to tif format
