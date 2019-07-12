@@ -33,7 +33,7 @@
 #' Flyception2R()
 #'
 
-Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2tif=F,
+Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, reuse=T, fmf2tif=F,
                          zoom=1.085, FOI=F, ROI=c(391, 7, 240, 240), binning=1, 
                          fluo_flash_thresh=500, fv_flash_thresh=240, av_flash_thresh=100, dist_thresh=4,
                          fl1fl2center=NA, flvfl1center=NA,
@@ -273,19 +273,22 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
                                   interaction=interaction)
   
   ## Part 4. Detect stimulus
-  message("Detecting stimulus")
-  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
-  stimulus <- which(fvtrj[,10]==1)
-  if(length(stimulus)==0){
-    fridstim <- NA
-    message(paste0("No stimulus was detected."))
-  } else {
-    stimfr <- sapply(stimulus, function(x) which.min(abs(syncing$frid-x)))
-    message(paste0("Stimuli were given at the following frames:"))
-    message(stimfr)
-    dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
-    write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
+  if(stimulus==T){
+    message("Detecting stimulus")
+    fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
+    stimtrjfr <- which(fvtrj[,8]==1)
+    if(length(stimtrjfr)==0){
+      fridstim <- NA
+      message(paste0("No stimulus was detected."))
+    } else {
+      stimfr <- sapply(stimtrjfr, function(x) which.min(abs(syncing$frid-x)))
+      message(paste0("Stimuli were given at the following frames:"))
+      message(stimfr)
+      dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
+      write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
+    }
   }
+
   
   
   ## Part 4. Detect interaction
@@ -995,13 +998,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   message("Creating trajectory of the flies...")
 
 
-  df1 <- cbind(datdFF0all, fly1trja)
-  df2 <- cbind(datdFF0all, fly2trja)
-  
+ 
   
   if (interaction==T){
-    df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
-    df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    #df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    #df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
+    df1 <- cbind(datdFF0all, fly1trja)
+    df2 <- cbind(datdFF0all, fly2trja)
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
@@ -1019,10 +1022,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
             rect= element_blank(),
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
-    df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+    #df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
+    df1 <- cbind(datdFF0all, fly1trja)
     
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
-      geom_point() +
+      #geom_point() +
       geom_path(linetype=1, lwd = 0.1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
