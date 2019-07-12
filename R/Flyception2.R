@@ -272,6 +272,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
                                   fpsfv=syncing$fpsfv,
                                   interaction=interaction)
   
+  ## Part 4. Detect stimulus
+  message("Detecting stimulus")
+  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
+  stimulus <- which(fvtrj[,10]==1)
+  if(length(stimulus)==0){
+    fridstim <- NA
+    message(paste0("No stimulus was detected."))
+  } else {
+    stimfr <- sapply(stimulus, function(x) which.min(abs(syncing$frid-x)))
+    message(paste0("Stimuli were given at the following frames:"))
+    message(stimfr)
+    dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
+    write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
+  }
+  
   
   ## Part 4. Detect interaction
   if(interaction==T){
@@ -840,13 +855,17 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   # Mean Red/Green/Ratio
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
   # LOESS Model
-  datloessint <- loess(y ~ x, data=datrawint, span=0.4)
+  datloessint <- loess(y ~ x, data=datrawint, span=0.4, control=loess.control(surface="direct"))
   redloessint <- loess(r ~ x, data=datrawint, span=0.4)
   greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
   # LOESS Predictions
   datsmoothint <- data.frame(x=goodfrrat, y=predict(datloessint))
   redsmoothint <- data.frame(x=goodfrrat, y=predict(redloessint))
   greensmoothint <- data.frame(x=goodfrrat, y=predict(greenloessint))
+  
+  #LOESS prediction of all time points
+  datsmoothintall <- data.frame(x=1:length(frid), y=predict(datloessint, 1:length(frid)))
+  
   # Smoothed Intensity
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
@@ -893,7 +912,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
     dist2 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
     
     # Set fly1 always being the tracked fly and create trajectories for each fly
-    which(dist1 < dist2)
     fly1trja <- trj_res$trja[frida,1:2]
     fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
     fly2trja <- trj_res$trja[frida,3:4]
@@ -916,6 +934,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   deltaFint <- intensity - F0int
   
   dFF0int <- deltaFint/F0int * 100
+  
+  dFF0intall <- datsmoothintall[,2]/datsmoothintall[1,2]*100
+  datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
+                        d=trj_res$flydist[frida],
+                        a=theta)
+  
+  
   datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
                         a=theta[1:(length(goodfrrat)-2)])
@@ -969,17 +994,23 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
   ## Part 15. Create trajectory of the flies
   message("Creating trajectory of the flies...")
 
+
+  df1 <- cbind(datdFF0all, fly1trja)
+  df2 <- cbind(datdFF0all, fly2trja)
+  
+  
   if (interaction==T){
     df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
     df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
-      geom_path(linetype=1, lwd = 0.1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) +
+      geom_path(linetype=2, lwd = 1, color=1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f), linetype=1, lwd = 1) +
+      #geom_point(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr)) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      scale_colour_gradientn(limits=c(20, 50), colours = "red") +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -991,6 +1022,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, reuse=T, fmf2
     df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
     
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
+      geom_point() +
       geom_path(linetype=1, lwd = 0.1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +

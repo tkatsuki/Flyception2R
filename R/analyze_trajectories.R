@@ -20,7 +20,23 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\]",replacement=""), stringsAsFactors=F)
   trja <- data.frame(sapply(trja, as.numeric)) # trajectory is in pixel coordinate
   data(map, package = "Flyception2R") # load the pixel to degree map
-
+  mapcl <- map[which(map[,3]!=0),]
+  mapfitx <- loess(ax ~ y*x, mapcl, degree=2, span=0.25, normalize=F)
+  mappoints <- list(x=seq(1, 250, 1), y=seq(1, 250, 1))
+  mapsurfacex <- predict(mapfitx, expand.grid(mappoints), se=F)
+  mapsurfacesx <- list(mappoints$x, mappoints$y,
+                              matrix(mapsurfacex, length(mappoints$x), length(mappoints$y)))
+  names(mapsurfacesx) <- c("x", "y", "z")
+  filled.contour(mapsurfacesx, col=terrain.colors(20))
+  
+  mapfity <- loess(ay ~ y*x, mapcl, degree=2, span=0.25, normalize=F)
+  mapsurfacey <- predict(mapfity, expand.grid(mappoints), se=F)
+  mapsurfacesy <- list(mappoints$y, mappoints$y,
+                       matrix(mapsurfacey, length(mappoints$x), length(mappoints$y)))
+  names(mapsurfacesy) <- c("x", "y", "z")
+  filled.contour(mapsurfacesy, col=terrain.colors(20))
+  matchedrow <- sapply(1:nrow(trja), function(x) which.min(abs((map[,3]-trja[x, 1])^2) + (map[,4]-trja[x, 2])^2))
+  
   if(interaction == F){
     matchedrow <- sapply(1:nrow(trja), function(x) which.min(abs((map[,3]-trja[x, 1])^2) + (map[,4]-trja[x, 2])^2))
     trjadeg <- map[matchedrow, 1:2]
