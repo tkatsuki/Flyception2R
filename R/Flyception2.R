@@ -4,11 +4,12 @@
 #' @param outdir path to root of directory for analysis outputs. Directory structure of data will be created under root. Default to data directory. 
 #' @param autopos logical. Perform camera alignment using FNCC?
 #' @param interaction logical. Perform interaction detection? Requires two flies.
+#' @param stimulus logical, whether or not stilumation (e.g., odor) is present, only works with data Flyception2 run in stimulation mode
 #' @param reuse logical. Reuse .RDS files?
 #' @param fmf2tif logical. Convert fly-view and arena-view fmf files into tif format?
 #' @param zoom numeric. Zoom factor between fly-view and fluo-view cameras.
 #' @param FOI a vector of two integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
-#' @param ROI a vector of four integers indicating the first and last frames to be analyzed. If not specified, all frames will be analyzed.
+#' @param ROI a vector of four integers indicating the top left corrdinate and width and height of a ROI for cropping the green channel in the fluo-view.
 #' @param binning integer. Binning of the fluo-view camera.
 #' @param fluo_flash_thresh numeric. A threshold for detecting flashes in a fluo-view video.
 #' @param fv_flash_thresh integer. A threshold for detecting flashes in a fly-view video.
@@ -19,8 +20,8 @@
 #' @param bgratio float. The ratio of background pixels to total pixels in the ROI. Pixels with intensity values below this percentile of pixels in the ROI are excluded from segmentation mask.
 #' @param ratiocutoff float. A percentile below witch ratios are removed from analysis if active region is a subset of the labeled region.
 #' @param rotate_camera integer. Angle of the fluo-view camera.
-#' @param window_size a vector of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.
-#' @param window_offset a vector of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.
+#' @param window_size a list of vectors of two integers indicating the size of a window to the brain. If not specified, an interactive dialog will pop up.
+#' @param window_offset a list of vectors of two integers indicating the position of the window to the brain as an offset from the center of the image. If not specified, an interactive dialog will pop up.
 #' @param colorRange a vector of two integers indicating the min (blue) and max (red) for pseudocolor representation.
 #' @param flash 1 if the first flash is good, 2 if the first flash is bad and the second flash is good.
 #' @param preprocess logical. True if flash detection and camera alignment need to be performed.
