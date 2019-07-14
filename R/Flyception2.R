@@ -45,6 +45,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # TO DO
   
   ## Part 0. Initialization
+  # Preprocessing ----
   # Prepare directories and paths
   if(preprocess == T) reuse <- F
   prefix <- strsplit(dir, "/")[[1]][length(strsplit(dir, "/")[[1]])]
@@ -266,13 +267,22 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
   
-  ## Part 3. Analyze trajectories
-  trj_res <- analyze_trajectories(dir=dir,
-                                  output=output_prefix,
-                                  fpsfv=syncing$fpsfv,
-                                  interaction=interaction)
+  # Analyze only part of the movie?
+  # FOI creation ----
   
-  ## Part 4. Detect stimulus
+  if(FOI[1]!=F && length(FOI)==2){
+    loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
+    frid <- syncing$frid[FOI[1]:FOI[2]]
+    frida <- syncing$frida[FOI[1]:FOI[2]]
+  }else{
+    loggit::message("All frames will be analyzed.")
+    frid <- syncing$frid
+    frida <- syncing$frida
+    FOI <- c(1, flnframe)
+  }
+  
+  ## Part 4. Detect stimulus frames
+  # Find stimulus frame ----
   if(stimulus==T){
     message("Detecting stimulus")
     fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
@@ -288,35 +298,17 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
     }
   }
+  
 
-  
-  
-  ## Part 4. Detect interaction
-  if(interaction==T){
-    loggit::message("Detecting interaction")
-    closefr <- which(trj_res$flydist < dist_thresh)
-    closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
-    write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
-  }
-  
-  ## Part 5. Image registration
+  ## Part 5. 
+  # Image registration ----
   loggit::message(sprintf("Reading %s", fluo_view_tif_ch1))
   
-  # Analyze only part of the movie?
-  if(FOI[1]!=F && length(FOI)==2){
-    flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
-    flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
-    flimg1 <- flip(flimg1) # flip images to match fly-view
-    flimg2 <- flip(flimg2) # flip images to match fly-view
-    loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
-    frid <- syncing$frid[FOI[1]:FOI[2]]
-    frida <- syncing$frida[FOI[1]:FOI[2]]
-  }else{
-    loggit::message("All frames will be analyzed.")
-    frid <- syncing$frid
-    frida <- syncing$frida
-    FOI <- c(1, flnframe)
-  }
+  # Load fluo-view camera images
+  flimg1 <- dipr::readTIFF2(fluo_view_tif_ch1, start=FOI[1], end=FOI[2])
+  flimg2 <- dipr::readTIFF2(fluo_view_tif_ch2, start=FOI[1], end=FOI[2])
+  flimg1 <- flip(flimg1) # flip images to match fly-view
+  flimg2 <- flip(flimg2) # flip images to match fly-view
   
   # Load fly-view camera images
   fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
@@ -456,7 +448,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rm(redrot)
   rm(greenrot)
   
-  ## Part 6. Image segmentation and fluorescence quantification
+  ## Part 6. 
+  # Image segmentation and fluorescence quantification ----
   # Normalize rotated imgs
   offs   <- as.integer(dim(redrottrans)[1] * (1 - 1/sqrt(2))) 
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
@@ -474,6 +467,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   hr <- dim(redval)[2]
   fr <- dim(redval)[3]
   
+  # ROI creation ----
   # If window size/offsets not passed do dialog
   if(is.na(window_size) || is.na(window_offset)) {
     # Interactively determine window size and offset to include neurons of interest
@@ -521,8 +515,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                    (hr/2 + winoffs[i,2] + winsize[i,2]/2))
     
     # Grab the Roi
-    redwindowdisp <- normalize(redval, separate=F)
-    grnwindowdisp <- normalize(grnval, separate=F)
+    redwindowdisp <- EBImage::normalize(redval, separate=F)
+    grnwindowdisp <- EBImage::normalize(grnval, separate=F)
     
     #redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- redval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
     #grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- grnval[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]
@@ -549,8 +543,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       }
       ans[2] <- readline("Check redwindow.tif. Is the window offset good (Y or N)?:")
       if(ans[2] != "Y" && ans[2] != "y") {
-        winoffs[i,1] <- as.integer(readline("Enter new x offset:"))
-        winoffs[i,2] <- as.integer(readline("Enter new y offset:"))
+        winoffs[i,1] <- as.integer(readline("Enter new x offset (positive to right):"))
+        winoffs[i,2] <- as.integer(readline("Enter new y offset (positive to down):"))
       }
       
       # Check if selected ROI is valid else set to default
@@ -568,8 +562,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                        (hr/2 + winoffs[i,2] + winsize[i,2]/2))
         
         # Gamma correction
-        redwindowdisp <- normalize(redval, separate=F)
-        grnwindowdisp <- normalize(grnval, separate=F)
+        redwindowdisp <- EBImage::normalize(redval, separate=F)
+        grnwindowdisp <- EBImage::normalize(grnval, separate=F)
         
         # Draw box around ROI
         redwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- grnwindowdisp[roiix[i,1]:roiix[i,2],roiix[i,3],] <- 1
@@ -594,6 +588,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rm(flimg2)
   rm(flimg2cntlog)
   
+  # Mask refinement ----
   # Preallocate Segment Masks and Masked Image
   seg_mask <- rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
   
@@ -855,6 +850,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
   rm(frgcombined)
   
+  # Quantification of fluorescence intensity ----
   # Mean Red/Green/Ratio
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
   # LOESS Model
@@ -873,6 +869,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
   
+
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
@@ -898,15 +895,26 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
   
-  
   saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
   
-  ## Behavior analysis. This part is relevant only when interaction=T
-  ## Calculate two lines from the tracked fly: one along the body axis, and the other to the other fly
-  ## The angle between the two lines is the view angle of the fly
-  # body axis is already given as "ang" in radians but plus pi/2
-  # so all we need is the slope of the line between two flies
+  # Behavior analysis ----
+  ## Analyze trajectories
+  trj_res <- analyze_trajectories(dir=dir,
+                                  output=output_prefix,
+                                  fpsfv=syncing$fpsfv,
+                                  interaction=interaction)
   if(interaction==T){
+    loggit::message("Detecting interaction")
+    closefr <- which(trj_res$flydist < dist_thresh)
+    closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
+    write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
+    
+    ## Behavior analysis. This part is relevant only when interaction=T
+    ## Calculate two lines from the tracked fly: one along the body axis, and the other to the other fly
+    ## The angle between the two lines is the view angle of the fly
+    # body axis is already given as "ang" in radians but plus pi/2
+    # so all we need is the slope of the line between two flies
+    
     vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
     
     # Determine which fly in the arena-view is being tracked by fly-view
@@ -922,7 +930,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
     
-    # θ ＝ atan2(AxB，A*B) in radian
+    # theta ＝ atan2(AxB，A*B) in radian
     # For now left side of the view is positive
     theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
     
@@ -930,23 +938,22 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     fly1trja <- trj_res$trja[frida,1:2]
     theta <- ang
   }
- 
-  F0int <- intensity[1]
-  #deltaFint <- intensity - F0int
-  # df (subtract baseline)
-  deltaFint <- intensity - F0int
   
+  ## Plotting ----
+  F0int <- intensity[1]
+  deltaFint <- intensity - F0int
   dFF0int <- deltaFint/F0int * 100
   
+  # Including bad frames
   dFF0intall <- datsmoothintall[,2]/datsmoothintall[1,2]*100
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
-                        d=trj_res$flydist[frida],
-                        a=theta)
-  
+                           d=trj_res$flydist[frida],
+                           a=theta)
   
   datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
                         a=theta[1:(length(goodfrrat)-2)])
+  
   p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=f)) +
     ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
     ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
@@ -963,9 +970,51 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   Rmisc::multiplot(p1, p2, p3, cols=1)
   dev.off()
   
-
-
+  # Create trajectory of the flies
+  message("Creating trajectory of the flies...")
   
+  if (interaction==T){
+    df1 <- cbind(datdFF0all, fly1trja)
+    df2 <- cbind(datdFF0all, fly2trja)
+    
+    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
+      geom_path(linetype=2, lwd = 1, color=1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f), linetype=1, lwd = 1) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(20, 50), colours = "red") +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
+  }else{
+    df1 <- cbind(datdFF0all, fly1trja)
+    
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
+      geom_path(linetype=1, lwd = 0.1) +
+      coord_fixed(ratio = 1) +
+      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
+      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
+      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      theme(line = element_blank(),
+            text = element_blank(),
+            title = element_blank(),
+            legend.position="none",
+            rect= element_blank(),
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
+  }
+  
+  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  p4
+  dev.off()
+  
+  
+  ## Output summary ----
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
   offs_str = "list("
@@ -994,58 +1043,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                     min(intensity), max(intensity), min(datsmoothint$y), max(datsmoothint$y))
   loggit::message(out_str)
   
-  ## Part 15. Create trajectory of the flies
-  message("Creating trajectory of the flies...")
-
-
- 
+  ## Convert fmf to tif format ----
   
-  if (interaction==T){
-    #df1 <- cbind(datdFF0, fly1trja[goodfrrat[1:(length(goodfrrat)-2)],])
-    #df2 <- cbind(datdFF0, fly2trja[goodfrrat[1:(length(goodfrrat)-2)],])
-    df1 <- cbind(datdFF0all, fly1trja)
-    df2 <- cbind(datdFF0all, fly2trja)
-    
-    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
-      geom_path(linetype=2, lwd = 1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f), linetype=1, lwd = 1) +
-      #geom_point(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr)) +
-      coord_fixed(ratio = 1) +
-      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
-      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(20, 50), colours = "red") +
-      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
-      theme(line = element_blank(),
-            text = element_blank(),
-            title = element_blank(),
-            legend.position="none",
-            rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
-  }else{
-    #df1 <- data.frame(datdFF0, trj_res$trja[frida[goodfrrat[1:(length(goodfrrat)-2)]],c(1,2)])
-    df1 <- cbind(datdFF0all, fly1trja)
-    
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
-      #geom_point() +
-      geom_path(linetype=1, lwd = 0.1) +
-      coord_fixed(ratio = 1) +
-      scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
-      scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
-      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
-      theme(line = element_blank(),
-            text = element_blank(),
-            title = element_blank(),
-            legend.position="none",
-            rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
-  }
-  
-  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
-  p4
-  dev.off()
-  
-  ## Part 7. Convert fmf to tif format
   if(fmf2tif==T){
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
