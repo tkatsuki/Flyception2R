@@ -323,6 +323,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
   # Match the size of the fvimgl and flimg by cropping (needs a better way though)
   fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
+
   EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
   
   # Detect beads
@@ -951,7 +952,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   dFF0int <- deltaFint/F0int * 100
   
   # Including bad frames
-  dFF0intall <- datsmoothintall[,2]/datsmoothintall[1,2]*100
+  dFF0intall <- (datsmoothintall[,2]-datsmoothintall[1,2])/datsmoothintall[1,2]*100
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
                            d=trj_res$flydist[frida],
                            a=theta)
@@ -989,7 +990,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(20, 50), colours = "red") +
+      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red")) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -1005,7 +1006,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(0, 50), colours = rainbow(50)) +
+      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red")) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
