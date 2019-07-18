@@ -45,9 +45,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # TO DO
   # - why require restart
+  # - fly-fly angle detection needs to be corrected
   # - redwindow contrast too low
   # - stim duration 2 sec
-  # - trajectory is not smooth
   # - Optimize speed
   
   ## Part 0. Initialization

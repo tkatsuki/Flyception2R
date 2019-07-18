@@ -15,7 +15,16 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   trj <- fvtrj[,c(2,3)]
   trja <- read.table(paste0(dir, list.files(dir, pattern="av-traj-")), colClasses = "character")
   trjancol <- ncol(trja)
-  trja <- trja[,2:trjancol]
+  
+  # Read trajactory coordinates from av-trj file
+  if(trjancol==3|trjancol==4){
+    trja <- trja[,2:3]
+  }else if(trjancol==6|trjancol==7){
+    trja <- trja[,c(2,3,5,6)]
+  }else {
+    stop("Unknown av-trj format")
+  }
+  
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\[",replacement=""), stringsAsFactors=F)
   trja <- as.data.frame(sapply(trja,gsub,pattern="\\]",replacement=""), stringsAsFactors=F)
   trja <- data.frame(sapply(trja, as.numeric)) # trajectory is in pixel coordinate
