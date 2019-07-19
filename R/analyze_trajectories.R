@@ -79,8 +79,8 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     trjayr <- trjyfr(trjaalpha, trjabeta)
     trjamm <- cbind(trjaxr, trjayr) # trajectory in mm
     
-    xangle <- mapsurfacesx$z[as.matrix(round(trja[,4:5]))]
-    yangle <- mapsurfacesy$z[as.matrix(round(trja[,4:5]))]
+    xangle <- mapsurfacesx$z[as.matrix(round(trja[,3:4]))]
+    yangle <- mapsurfacesy$z[as.matrix(round(trja[,3:4]))]
     trjaalpha <- pi*xangle/180
     a <- 15.174 # distance between x and y mirrors
     b <- 68.167 # distance between y center and arena surface at the center
