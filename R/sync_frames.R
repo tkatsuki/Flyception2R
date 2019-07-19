@@ -119,5 +119,5 @@ sync_frames <- function(dir, fluo_flash, fly_flash, arena_flash, output, reuse=F
     saveRDS(frida, paste0(output, "_frida.RDS"))
 
   }
-  return(list("fpsfv"=fpsfv, "elapsedtimeavflash"=elapsedtimeavflash, "frid"=frid, "frida"=frida))
+  return(list("fpsfv"=fpsfv, "elapsedtimeavflash"=elapsedtimeavflash, "frid"=frid, "frida"=frida, "fpsfl"=fpsfl))
 }

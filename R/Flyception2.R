@@ -62,11 +62,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     outdirr <- paste0(outdir,
                       substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
   }
-  outdir <- paste0(outdirr, paste0(FOI, collapse="_"), "/")
-  dir.create(outdir,showWarnings=FALSE,recursive=TRUE)
-  
-  output_prefix <- paste0(outdir, prefix)
-  if(nchar(output_prefix)>240) stop("Directory name too long")
   
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
@@ -172,7 +167,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            along=3)
       
       EBImage::writeImage(normalize(fl2fl1stack),
-                          file=paste0(output_prefix,
+                          file=paste0(outdirr, prefix,
                                       "_fl2fl1_stack.tif"))
     }
     while(!all(stringr::str_to_lower(ans)=="y")){
@@ -185,7 +180,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       
       print(EBImage::display(fl2fl1stack))
       EBImage::writeImage(normalize(fl2fl1stack),
-                          file=paste0(output_prefix,
+                          file=paste0(outdirr, prefix,
                                       "_fl2fl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center[1], center[2]))
@@ -239,7 +234,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                           .75*(EBImage::translate(flip(fl1ref), center2)),
                           along=3)
       EBImage::writeImage(normalize(fvfl1stack),
-                          file=paste0(output_prefix,
+                          file=paste0(outdirr, prefix,
                                       "_fvfl1_stack.tif"))
     }
     
@@ -251,7 +246,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       
       print(EBImage::display(fvfl1stack))
       EBImage::writeImage(normalize(fvfl1stack),
-                          file=paste0(output_prefix,
+                          file=paste0(outdirr, prefix,
                                       "_fvfl1_stack.tif"))
       
       print(sprintf("Current template center is x=%d y=%d", center2[1], center2[2]))
@@ -272,40 +267,53 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # Load preprocessed data
     load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
-  
-  # Analyze only part of the movie?
-  # FOI creation ----
-  
-  if(FOI[1]!=F && length(FOI)==2){
-    loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
-    frid <- syncing$frid[FOI[1]:FOI[2]]
-    frida <- syncing$frida[FOI[1]:FOI[2]]
-  }else{
-    loggit::message("All frames will be analyzed.")
-    frid <- syncing$frid
-    frida <- syncing$frida
-    FOI <- c(1, flnframe)
-  }
-  
-  ## Part 4. Detect stimulus frames
+ 
+  ## Detect stimulus frames
   # Find stimulus frame ----
+  stimfr <- NA
   if(stimulus==T){
     message("Detecting stimulus")
     fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
     stimtrjfr <- which(fvtrj[,8]==1)
     if(length(stimtrjfr)==0){
-      fridstim <- NA
-      message(paste0("No stimulus was detected."))
+      loggit::message(paste0("No stimulus was detected."))
     } else {
       stimfr <- sapply(stimtrjfr, function(x) which.min(abs(syncing$frid-x)))
-      message(paste0("Stimuli were given at the following frames:"))
-      message(stimfr)
+      loggit::message(paste0("Stimuli were given at the following frames:"))
+      loggit::message(stimfr)
       dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
       write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
     }
   }
   
-
+  # Analyze only part of the movie?
+  # FOI creation ----
+  # If stimulus is given override the FOI
+  if(!is.na(stimfr)){
+    # Could add multiple stim case
+    # 1 sec before stimulus, 2 sec of stimulus, 10 sec after stimulus
+    # Could make this interactive or parametric
+    FOI <- c(stimfr[1] - syncing$fpsfl*1, stimfr[1] + syncing$fpsfl*12)
+    frid <- syncing$frid[FOI[1]:FOI[2]]
+    frida <- syncing$frida[FOI[1]:FOI[2]]
+  }else{
+    if(FOI[1]!=F && length(FOI)==2){
+      frid <- syncing$frid[FOI[1]:FOI[2]]
+      frida <- syncing$frida[FOI[1]:FOI[2]]
+    }else{
+      frid <- syncing$frid
+      frida <- syncing$frida
+      FOI <- c(1, flnframe)
+    }
+  }
+  loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
+  
+  outdir <- paste0(outdirr, paste0(FOI, collapse="_"), "/")
+  dir.create(outdir,showWarnings=FALSE,recursive=TRUE)
+  
+  output_prefix <- paste0(outdir, prefix)
+  if(nchar(output_prefix)>240) stop("Directory name too long")
+  
   ## Part 5. 
   # Image registration ----
   loggit::message(sprintf("Reading %s", fluo_view_tif_ch1))
