@@ -47,7 +47,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # - why require restart
   # - fly-fly angle detection needs to be corrected
   # - redwindow contrast too low
-  # - stim duration 2 sec
   # - Optimize speed
   
   ## Part 0. Initialization
@@ -950,8 +949,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
     
   }else{
-    fly1trja <- trj_res$trja[frida,1:2]
-    theta <- ang
+    if(length(trj_res$trja)==0){
+      loggit::message("No valid trajectories found")
+      fly1trja <- data.frame(trjaxr=rep(0, length(ang)), trjayr=rep(0, length(ang)))
+      theta <- ang
+      
+    }else{
+      fly1trja <- trj_res$trja[frida,1:2]
+      theta <- ang
+    }
   }
   
   ## Plotting ----
