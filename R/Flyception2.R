@@ -397,7 +397,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Find good frames
   angdiff <- c(0, diff(ang))
-  ang_thresh <- 0.3
+  ang_thresh <- 0.02
   goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
   goodmarkerfr <- which(markernum == 3)
   
@@ -406,7 +406,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   png(file=paste0(output_prefix, "_motion.png"), width=400, height=400)
   plot(motion)
   dev.off()
-  motion_thresh <- 20
+  motion_thresh <- 2
   goodmotionfr <- which(motion < motion_thresh)
   
   LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
