@@ -375,6 +375,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   goodfr <- Reduce(intersect, list(goodmarkerfr, goodmotionfr, goodangfr, goodfocusfr))
   badix  <- badfr - (FOI[1] - 1)
   goodfr <- setdiff(goodfr,badix)
+  goodfr <- setdiff(goodfr,fluo_flash)
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
   # Save index of good frames

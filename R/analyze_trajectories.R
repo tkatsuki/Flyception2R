@@ -43,15 +43,13 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   mapsurfacesx <- list(mappoints$x, mappoints$y,
                        matrix(mapsurfacex, length(mappoints$x), length(mappoints$y)))
   names(mapsurfacesx) <- c("x", "y", "z")
-  #filled.contour(mapsurfacesx, col=terrain.colors(20))
   # create y surface
   mapfity <- loess(ay ~ y*x, mapcl, degree=2, span=0.25, normalize=F)
   mapsurfacey <- predict(mapfity, expand.grid(mappoints), se=F)
   mapsurfacesy <- list(mappoints$y, mappoints$y,
                        matrix(mapsurfacey, length(mappoints$x), length(mappoints$y)))
   names(mapsurfacesy) <- c("x", "y", "z")
-  #filled.contour(mapsurfacesy, col=terrain.colors(20))
-  
+
   if(interaction == F){
     xangle <- mapsurfacesx$z[as.matrix(round(trja[,1:2]))]
     yangle <- mapsurfacesy$z[as.matrix(round(trja[,1:2]))]
