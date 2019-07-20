@@ -158,10 +158,27 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     } else {
       ans <- c("Y","Y")
       center <- fl1fl2center
-      x <- ROI[1] + center[1]
-      y <- ROI[2] + center[2]
       
-      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+      # Detect out of bounds
+      x1 <- ROI[1] + center[1]
+      y1 <- ROI[2] + center[2]
+      x2 <- ROI[1] + ROI[3] + center[1]
+      y2 <- ROI[2] + ROI[4] + center[2]
+      
+      if(x1 < 0)
+        center[1] <- center[1] + x1    
+      if(x2 > dim(fl2refcrop)[1])
+        center[1] <- center[1] - (x2 - dim(fl2refcrop)[1])
+      
+      if(y1 < 0)
+        center[2] <- center[2] - y1  
+      if(y2 > dim(fl2refcrop)[2])
+        center[2] <- center[2] - (y2 - dim(fl2refcrop)[2])
+      
+      x <- (ROI[1] + 1) + center[1]
+      y <- (ROI[2] + 1) + center[2]
+      
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+ROI[3]-1),y:(y+ROI[4]-1)],
                            1.00*(EBImage::translate(fl1ref, center)),
                            along=3)
       
@@ -170,10 +187,27 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                                       "_fl2fl1_stack.tif"))
     }
     while(!all(stringr::str_to_lower(ans)=="y")){
-      x <- ROI[1] + center[1]
-      y <- ROI[2] + center[2]
       
-      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+240-1),y:(y+240-1)],
+      # Detect out of bounds
+      x1 <- ROI[1] + center[1]
+      y1 <- ROI[2] + center[2]
+      x2 <- ROI[1] + ROI[3] + center[1]
+      y2 <- ROI[2] + ROI[4] + center[2]
+      
+      if(x1 < 0)
+        center[1] <- center[1] + x1    
+      if(x2 > dim(fl2refcrop)[1])
+        center[1] <- center[1] - (x2 - dim(fl2refcrop)[1])
+      
+      if(y1 < 0)
+        center[2] <- center[2] - y1  
+      if(y2 > dim(fl2refcrop)[2])
+        center[2] <- center[2] - (y2 - dim(fl2refcrop)[2])
+      
+      x <- (ROI[1] + 1) + center[1]
+      y <- (ROI[2] + 1) + center[2]
+      
+      fl2fl1stack <- abind(1.00*fl2refcrop[x:(x+ROI[3]-1),y:(y+ROI[4]-1)],
                            1.00*(EBImage::translate(fl1ref, center)),
                            along=3)
       
@@ -192,7 +226,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     # Crop a second channel in fluo_view images using ImageJ
     if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
-      imageJ_crop_append(dir, outdirr, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), 240, 240)) # x and y coordinates of the top left corner, width, height
+      imageJ_crop_append(dir, outdirr, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), ROI[3], ROI[4])) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
       fluo_view_tif_ch2 <- paste0(outdirr, list.files(outdirr, pattern="ome\\.ch2\\.crop\\.tif$"))
@@ -229,7 +263,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     } else {
       ans <- c("Y","Y")
       center2 <- flvfl1center
-      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+      fvzoomcrop <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)
+      x1         <- (dim(fvzoomcrop)[1] - dim(fl1ref)[1])/2
+      x2         <- x1 + dim(fl1ref)[1] - 1
+      fvzoomcrop <- fvzoomcrop[x1:x2,x1:x2]
+      fvfl1stack <- abind(8*fvzoomcrop^2,
                           .75*(EBImage::translate(flip(fl1ref), center2)),
                           along=3)
       EBImage::writeImage(normalize(fvfl1stack),
@@ -238,8 +276,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
     
     while(!all(stringr::str_to_lower(ans)=="y")){
-      
-      fvfl1stack <- abind(8*EBImage::resize(fvref/255, dim(fvref)[1]*zoom)[11:250, 11:250]^2,
+      fvzoomcrop <- EBImage::resize(fvref/255, dim(fvref)[1]*zoom)
+      x1         <- (dim(fvzoomcrop)[1] - dim(fl1ref)[1])/2
+      x2         <- x1 + dim(fl1ref)[1] - 1
+      fvzoomcrop <- fvzoomcrop[x1:x2,x1:x2]
+      fvfl1stack <- abind(8*fvzoomcrop^2,
                           .75*(EBImage::translate(flip(fl1ref), center2)),
                           along=3)
       
@@ -325,11 +366,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Load fly-view camera images
   fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
-  
+  fvsz   <- c(ROI[3],ROI[4])
   # Apply resize and translation to align with fluo-view
   fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
-  # Match the size of the fvimgl and flimg by cropping (needs a better way though)
-  fvimgl <- fvimgl[11:250,11:250,1:dim(fvimgl)[3]]
+  x1         <- (dim(fvimgl)[1] - fvsz[1])/2
+  x2         <- x1 + fvsz[1] - 1
+  # Match the size of the fvimgl and flimg by cropping (Assume size determined by flyview)
+  fvimgl <- fvimgl[x1:x2,x1:x2,1:dim(fvimgl)[3]]
 
   EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
   
@@ -351,7 +394,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Find good frames
   angdiff <- c(0, diff(ang))
-  ang_thresh <- 0.02
+  ang_thresh <- 0.3
   goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
   goodmarkerfr <- which(markernum == 3)
   
@@ -360,7 +403,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   png(file=paste0(output_prefix, "_motion.png"), width=400, height=400)
   plot(motion)
   dev.off()
-  motion_thresh <- 2
+  motion_thresh <- 20
   goodmotionfr <- which(motion < motion_thresh)
   
   LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
@@ -378,9 +421,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   goodfr <- setdiff(goodfr,fluo_flash)
   loggit::message(paste0("Good frames were ",paste0(goodfr,collapse = " ")))
   
+  # Save good frames from each condition
+  frix <- array(1,length(quantcnt))
+  loggit::message(sprintf("Good Frames:\nmarker: %d\tmotion: %d\tangle: %d\tfocus: %d\n",
+                          sum(frix[goodmarkerfr]),sum(frix[goodmotionfr]), sum(frix[goodangfr]), sum(frix[goodfocusfr])))
+  
   # Save index of good frames
   if(FOI[1] != F) {
-    write.table(cbind(1:length(goodfr),goodfr,goodfr + (FOI[1] - 1)), paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
+    write.table(cbind(1:length(goodfr),goodfr,goodfr + (FOI[1] - 1)),
+                paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=T)
     saveRDS(goodfr + (FOI[1] - 1), paste0(output_prefix, "_gfrid.RDS"))
   } else {
     write.table(goodfr, paste0(output_prefix, "_gfrid.csv"), sep = ",", row.names=F)
@@ -842,18 +891,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rm(redrottranscol)
   rm(rottransmask)
   
+  
+  fr_width  = ROI[3]
+  fr_height = ROI[4]
   # Create side-by-side view of fly_view and fluo_view images
   frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
-  frgcombined[1:240,1:240,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[1:240,1:240,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[1:240,1:240,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[241:480,1:240,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[241:480,1:240,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[241:480,1:240,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[481:720,1:240,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
-  frgcombined[481:720,1:240,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
-  frgcombined[481:720,1:240,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
-  frgcombined[721:960,1:240,,1:dim(redrottrans)[3]] <- redcolor
+  frgcombined[1:fr_width,1:fr_height,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+  frgcombined[1:fr_width,1:fr_height,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+  frgcombined[1:fr_width,1:fr_height,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+  frgcombined[(3*fr_width + 1):(4*fr_width),1:fr_height,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
   
   redcolor100 <- redcolor[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),,]
