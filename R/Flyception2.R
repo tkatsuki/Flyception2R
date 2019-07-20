@@ -65,7 +65,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
-  if(preprocess == T | c(preprocess == F & anyNA(window_offset) ==F)) {
+  if(preprocess == T | c(preprocess == F & anyNA(window_offset) == F) | !file.exists(paste0(outdirr, prefix,"_prepdata.RData"))) {
     
     # Log function arguments
     args<-as.list(environment())
