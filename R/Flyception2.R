@@ -62,6 +62,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                       substr(dir,nchar(strsplit(dir, "/")[[1]][1]) + 2,nchar(dir)))
   }
   
+  # Create ouput directory if it doesn't exist
+  dir.create(outdirr,showWarnings=FALSE,recursive=TRUE)
+  
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
