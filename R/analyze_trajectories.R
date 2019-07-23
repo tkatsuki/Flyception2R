@@ -30,6 +30,13 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   trja <- data.frame(sapply(trja, as.numeric)) # trajectory is in pixel coordinate
   data(map, package = "Flyception2R") # load the pixel to degree map
   
+  # Offset needs to be taken into account
+  #define XVOLTPERDEGREE 0.55
+  #define YVOLTPERDEGREE 0.525
+  #define XOFFSET -0.25
+  #define YOFFSET -0.315
+  #Therefore x offset in degree is -0.592 and y offset is -1.192
+  
   ## Creating a finer map by loess fit
   names(map)[1] <- "ax"
   names(map)[2] <- "ay"
