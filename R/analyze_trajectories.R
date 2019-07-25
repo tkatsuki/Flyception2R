@@ -36,6 +36,9 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   #define XOFFSET -0.25
   #define YOFFSET -0.315
   #Therefore x offset in degree is -0.592 and y offset is -1.192
+  map[,1] <- map[,1] - 0.592
+  map[,2] <- map[,2] + 1.192
+  
   
   ## Creating a finer map by loess fit
   names(map)[1] <- "ax"
