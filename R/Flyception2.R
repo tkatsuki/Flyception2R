@@ -228,7 +228,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
     
     # Crop a second channel in fluo_view images using ImageJ
-    if(length(list.files(dir, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
+    if(length(list.files(outdirr, pattern="ome\\.ch2\\.crop\\.concat\\.tif$"))==0 || preprocess){
       imageJ_crop_append(dir, outdirr, ch=2, roi=c((1024 + ROI[1] + center[1]), (ROI[2] + center[2]), ROI[3], ROI[4])) # x and y coordinates of the top left corner, width, height
     }
     if(fluo_view_num_vids < 2) {
