@@ -11,9 +11,9 @@
 #'
 
 analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
-  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
+  fvtrj <- read.table(paste0(dir, list.files(dir, pattern="^fv-traj-")))
   trj <- fvtrj[,c(2,3)]
-  trja <- read.table(paste0(dir, list.files(dir, pattern="av-traj-")), colClasses = "character")
+  trja <- read.table(paste0(dir, list.files(dir, pattern="^av-traj-")), colClasses = "character")
   trjancol <- ncol(trja)
   
   # Read trajactory coordinates from av-trj file
