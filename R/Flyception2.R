@@ -988,9 +988,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
     
     # Determine which fly in the arena-view is being tracked by fly-view
-    fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")), colClasses = "numeric")[frid,2:3]
-    dist1 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
-    dist2 <- sqrt(rowSums((fvtrj - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
+    fly1trjfv <- trj_res$trjfv[frid,]
+    fvtrj <- read.table(paste0(dir, list.files(dir, pattern="^fv-traj-")), colClasses = "numeric")[frid,2:3]
+    dist1 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
+    dist2 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
     
     # Set fly1 always being the tracked fly and create trajectories for each fly
     fly1trja <- trj_res$trja[frida,1:2]
@@ -1007,11 +1008,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }else{
     if(length(trj_res$trja)==0){
       loggit::message("No valid trajectories found")
-      fly1trja <- data.frame(trjaxr=rep(0, length(ang)), trjayr=rep(0, length(ang)))
+      fly1trja <- data.frame(xr=rep(0, length(ang)), yr=rep(0, length(ang)))
+      fly1trjfv <- data.frame(xr=rep(0, length(ang)), yr=rep(0, length(ang)))
       theta <- ang
       
     }else{
-      fly1trja <- trj_res$trja[frida,1:2]
+      fly1trja  <- trj_res$trja[frida,1:2]
+      fly1trjfv <- trj_res$trjfv[frid,1:2]
       theta <- ang
     }
   }
@@ -1050,13 +1053,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Create trajectory of the flies
   message("Creating trajectory of the flies...")
   
+  df1 <- cbind(datdFF0all, fly1trjfv)
+  
   if (interaction==T){
-    df1 <- cbind(datdFF0all, fly1trja)
+    #df1 <- cbind(datdFF0all, fly1trja)
     df2 <- cbind(datdFF0all, fly2trja)
     
-    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*trjaxr, y=10*trjayr)) + 
+    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f), linetype=1, lwd = 1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=f), linetype=1, lwd = 1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
@@ -1069,9 +1074,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             rect= element_blank(),
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
-    df1 <- cbind(datdFF0all, fly1trja)
+    #df1 <- cbind(datdFF0all, fly1trja)
     
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*trjaxr, y=10*trjayr, color=f)) + 
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=f)) + 
       geom_path(linetype=1, lwd = 0.1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
@@ -1086,11 +1091,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }
   
-  pdf(file= paste0(output_prefix, "_trackResult.pdf"), width = 4.4, height = 4, bg = "white")
+  pdf(file= paste0(output_prefix, "_trackResult_fv.pdf"), width = 4.4, height = 4, bg = "white")
   print(p4)
   dev.off()
-  
-  
+
   ## Output summary ----
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
