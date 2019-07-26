@@ -49,46 +49,63 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   mapsurfacesy <- list(mappoints$y, mappoints$y,
                        matrix(mapsurfacey, length(mappoints$x), length(mappoints$y)))
   names(mapsurfacesy) <- c("x", "y", "z")
+  
+  get_world_traj_from_angle <- function(xangle, yangle) {
+    a     <- 15.174 # distance between x and y mirrors
+    b     <- 68.167 # distance between y center and arena surface at the center
+    c     <- 65.167 # distance between y center and top flat surface
+    alpha <- pi*xangle/180 # x mirror angle in radians
+    beta  <- pi*yangle/180 # y mirror angle in radians
 
-  if(interaction == F){
-    xangle <- mapsurfacesx$z[as.matrix(round(trja[,1:2]))]
-    yangle <- mapsurfacesy$z[as.matrix(round(trja[,1:2]))]
-    trjaalpha <- pi*xangle/180
-    a <- 15.174 # distance between x and y mirrors
-    b <- 68.167 # distance between y center and arena surface at the center
-    c <- 65.167 # distance between y center and top flat surface
-    trjahr <- (a+b)*cos(2*trjaalpha) - a
-    trjaxr <- a*tan(2*trjaalpha) + trjahr*tan(2*trjaalpha) # height should be h not b
-    trjabeta <- pi*yangle/180
-    trjyfr <- function(alpha, beta) ((a+b)*cos(2*alpha) - a)*sin(2*beta)
-    trjayr <- trjyfr(trjaalpha, trjabeta)
-    trjamm <- cbind(trjaxr, trjayr) # trajectory in mm
-  } else {
-    xangle <- mapsurfacesx$z[as.matrix(round(trja[,1:2]))]
-    yangle <- mapsurfacesy$z[as.matrix(round(trja[,1:2]))]
-    trjaalpha <- pi*xangle/180
-    a <- 15.174 # distance between x and y mirrors
-    b <- 68.167 # distance between y center and arena surface at the center
-    c <- 65.167 # distance between y center and top flat surface
-    trjahr <- (a+b)*cos(2*trjaalpha) - a
-    trjaxr <- a*tan(2*trjaalpha) + trjahr*tan(2*trjaalpha) # height should be h not b
-    trjabeta <- pi*yangle/180
-    trjyfr <- function(alpha, beta) ((a+b)*cos(2*alpha) - a)*sin(2*beta)
-    trjayr <- trjyfr(trjaalpha, trjabeta)
-    trjamm <- cbind(trjaxr, trjayr) # trajectory in mm
+    hr <- (a+b)*cos(2*alpha) - a
+    xr <- a*tan(2*alpha) + hr*tan(2*alpha)
+    yr <- hr*sin(2*beta)
     
-    xangle <- mapsurfacesx$z[as.matrix(round(trja[,3:4]))]
-    yangle <- mapsurfacesy$z[as.matrix(round(trja[,3:4]))]
-    trjaalpha <- pi*xangle/180
-    a <- 15.174 # distance between x and y mirrors
-    b <- 68.167 # distance between y center and arena surface at the center
-    c <- 65.167 # distance between y center and top flat surface
-    trjahr <- (a+b)*cos(2*trjaalpha) - a
-    trjaxr <- a*tan(2*trjaalpha) + trjahr*tan(2*trjaalpha) # height should be h not b
-    trjabeta <- pi*yangle/180
-    trjyfr <- function(alpha, beta) ((a+b)*cos(2*alpha) - a)*sin(2*beta)
-    trjayr <- trjyfr(trjaalpha, trjabeta)
-    trjamm <- cbind(trjamm, trjaxr, trjayr) # trajectory in mm
+    return(cbind(xr,yr))
+  }
+  
+  
+  if(interaction == F){
+    
+    # Use flyview trajectory for the tracked fly's angle
+    xanglefv <- fvtrj[,6]
+    yanglefv <- fvtrj[,7]
+    
+    # Lookup fly1 angle from arena view interoplated map using arena trajectory
+    xangle1 <- array(NA,length(trja[,1]))
+    xangle1[which(trja[,1] != 0)] <- mapsurfacesx$z[as.matrix(round(trja[which(trja[,1] != 0),1:2]))]
+    yangle1 <- array(NA,length(trja[,2]))
+    yangle1[which(trja[,2] != 0)] <- mapsurfacesy$z[as.matrix(round(trja[which(trja[,2] != 0),1:2]))] 
+    
+    trjfvmm <- get_world_traj_from_angle(xanglefv,yanglefv)
+    trjamm <- get_world_traj_from_angle(xangle1,yangle1)
+
+    
+  } else {
+    
+    # TODO: Save both fv and av traj for nn identity tracking.
+    
+    
+    # Use flyview trajectory for the tracked fly
+    xanglefv <- fvtrj[,6]
+    yanglefv <- fvtrj[,7]
+    
+    # Lookup fly1 angle from arena view interoplated map using arena trajectory
+    xangle1 <- array(NA,length(trja[,1]))
+    xangle1[which(trja[,1] != 0)] <- mapsurfacesx$z[as.matrix(round(trja[which(trja[,1] != 0),1:2]))]
+    yangle1 <- array(NA,length(trja[,2]))
+    yangle1[which(trja[,2] != 0)] <- mapsurfacesy$z[as.matrix(round(trja[which(trja[,2] != 0),1:2]))] 
+    
+    #  Lookup fly2 angle from arena view interoplated map using arena trajectory
+    xangle2 <- array(NA,length(trja[,3]))
+    xangle2[which(trja[,3] != 0)] <- mapsurfacesx$z[as.matrix(round(trja[which(trja[,3] != 0),3:4]))]
+    yangle2 <- array(NA,length(trja[,4]))
+    yangle2[which(trja[,4] != 0)] <- mapsurfacesy$z[as.matrix(round(trja[which(trja[,4] != 0),3:4]))]  
+    
+    trjfvmm <- get_world_traj_from_angle(xanglefv,yanglefv)
+    trjamm <- get_world_traj_from_angle(xangle1,yangle1)
+    trjamm <- cbind(trjamm,get_world_traj_from_angle(xangle2,yangle2))
+    
   }
   
   headpos <- fvtrj[,c(4,5)]
@@ -108,6 +125,6 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
   } else {
     flydist <- rep(0, nrow(trjamm))
   }
-  return(list("speed"=speed, "error"=error, "trja"=trjamm, "flydist"=flydist))
+  return(list("speed"=speed, "error"=error, "trja"=trjamm, "trjfv"=trjfvmm, "flydist"=flydist))
   
 }
