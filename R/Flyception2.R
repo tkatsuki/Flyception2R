@@ -29,6 +29,7 @@
 #' @param focus_thresh integer. A threshold for determining out-of-focus frames.
 #' @param badfr vector. A list of frames which to be manually excluded from analysis.
 #' @param ctr_offset vector. x,y offset from center of markers to center of brain window to compensate for coverslip/bead placement variation.
+#' @param baseline 1 or 2 vector frame number to use for df/f f0. If 2 vector f0 is the mean between frames relative to FOI
 #' @export
 #' @examples
 #' Flyception2R()
@@ -41,6 +42,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          bgratio=0.80, ratiocutoff=0.00,  
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
+                         baseline=NA, colorRange= c(0, 200), flash=NA, preprocess=F,
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA){
   
   # TO DO
@@ -1020,12 +1022,26 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }
   
   ## Plotting ----
-  F0int <- intensity[1]
+  if(is.na(baseline)) {
+    F0int    <- intensity[1]
+    F0loess  <- datsmoothintall[1,2]
+  } else {
+    idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
+    if(is_empty(idx)) {
+      message('Baseline frame is not analyzed... Using first frame.')
+      F0int    <- intensity[1]
+      F0loess  <- datsmoothintall[1,2]
+    } else {
+      F0int    <- mean(intensity[baseline[1]:baseline[length(baseline)]])
+      F0loess  <- datsmoothintall[1,2]
+    }
+  }
+  
   deltaFint <- intensity - F0int
   dFF0int <- deltaFint/F0int * 100
   
   # Including bad frames
-  dFF0intall <- (datsmoothintall[,2]-datsmoothintall[1,2])/datsmoothintall[1,2]*100
+  dFF0intall <- (datsmoothintall[,2]-dF0loess)/dF0loess*100
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
                            d=trj_res$flydist[frida],
                            a=theta)
