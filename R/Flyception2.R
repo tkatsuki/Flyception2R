@@ -312,7 +312,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # Load preprocessed data
     load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
- 
+  
   ## Detect stimulus frames
   # Find stimulus frame ----
   stimfr <- NA
@@ -369,8 +369,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   flimg1 <- flip(flimg1) # flip images to match fly-view
   flimg2 <- flip(flimg2) # flip images to match fly-view
   
+  # flv exposure 18 ms
+  FVOFFSET <- 9 
+  frid     <- frid + FVOFFSET
   # Load fly-view camera images
-  fvimgl <- dipr::readFMF(fly_view_fmf, frames=frid)
+  fvimgl <- dipr::readFMF(fly_view_fmf, frame=(frid)) 
+  # Determined by ROI size
   fvsz   <- c(ROI[3],ROI[4])
   # Apply resize and translation to align with fluo-view
   fvimgl <- EBImage::translate(EBImage::resize(fvimgl, dim(fvimgl)[1]*1.085, filter="bilinear"), -center2)
@@ -378,7 +382,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   x2         <- x1 + fvsz[1] - 1
   # Match the size of the fvimgl and flimg by cropping (Assume size determined by flyview)
   fvimgl <- fvimgl[x1:x2,x1:x2,1:dim(fvimgl)[3]]
-
+  
   EBImage::writeImage(fvimgl/255, file=paste0(output_prefix, "_fvimgl.tif"))
   
   # Detect beads
@@ -454,31 +458,25 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     rot[,,r] <- RNiftyReg::rotate(fvimgl[,,r], ang[r], anchor = c("center"))
   }
   
-  # Template matching
-  centers <- array(0, dim=c(dim(rot)[3],2))
-  loggit::message(paste0("Performing template matching on the flyview video..."))
-  for (c in 1:dim(rot)[3]){
-    centers[c,] <- align_cameras(source=rot[,,c],
-                                 template=rot[,,goodfr[1]],
-                                 output=output_prefix,
-                                 center=c(0, 0),
-                                 zoom=1,
-                                 autopos=T)
+  # Flyview tracking error
+  fverr <- read.table(paste0(dir, list.files(dir, pattern="^fv-traj-")), colClasses = "numeric")[(frid),4:5]
+  
+  # Use flyview trajectory file to find the error
+  fverr <- as.matrix(fverr) - 120
+  
+  # Apply rotation to flyview error vectors
+  rtr <- array(0,dim(fverr))
+  for(i in 1:length(ang)) {
+    rtr[i,] <- fverr[i,] %*% array(c(cos(ang[i]),sin(ang[i]),-sin(ang[i]),cos(ang[i])),c(2,2))
   }
+  
+  # Round rotated error to nearest pixel
+  rtr <- round(rtr)
+  centers <- rtr
   
   # Offset compensation for bead/coverslip offset
   if(!is.na(ctr_offset[1]))
     centers <- t(t(centers) + ctr_offset)
-  
-  # Translation clipping
-  TRANS_THRESH <- 30
-  for (i in 1:dim(centers)[1]){
-    rmag  <- sqrt(sum(centers[i,]**2))
-    rnorm <- centers[i,]/rmag
-    rmax  <- as.integer(rnorm*TRANS_THRESH)
-    if(rmag > TRANS_THRESH)
-      centers[i,] <- rmax
-  }
   
   # Apply translation compensation
   loggit::message(paste0("Applying translation compensation to the flyview video..."))
@@ -486,6 +484,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   for (tr in 1:dim(rottrans)[3]){
     rottrans[,,tr] <- EBImage::translate(rot[,,tr], -centers[tr,])
   }
+  
   EBImage::writeImage(rottrans/255, file=paste0(output_prefix, "_rottrans.tif"))
   rm(fvimgl)
   rm(rot)
@@ -941,7 +940,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   intensity <- zoo::rollmean(greenperredave, 3, align="left")
   datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
   
-
+  
   png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
   plot(datint)  
   dev.off()
@@ -991,7 +990,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     # Determine which fly in the arena-view is being tracked by fly-view
     fly1trjfv <- trj_res$trjfv[frid,]
-    fvtrj <- read.table(paste0(dir, list.files(dir, pattern="^fv-traj-")), colClasses = "numeric")[frid,2:3]
     dist1 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
     dist2 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
     
@@ -1000,6 +998,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
     fly2trja <- trj_res$trja[frida,3:4]
     fly2trja[which(dist1 > dist2), ] <- trj_res$trja[frida,1:2][which(dist1 > dist2),]
+    
     
     vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
     
@@ -1023,17 +1022,25 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   ## Plotting ----
   if(is.na(baseline)) {
+    # Default to using first frame
     F0int    <- intensity[1]
     F0loess  <- datsmoothintall[1,2]
   } else {
-    idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
-    if(is_empty(idx)) {
-      message('Baseline frame is not analyzed... Using first frame.')
-      F0int    <- intensity[1]
-      F0loess  <- datsmoothintall[1,2]
+    # Specify -1 to use min (Positive Change)
+    if(baseline == -1) {
+      F0int    <- min(intensity)
+      F0loess  <- min(datsmoothintall[,2])
     } else {
-      F0int    <- mean(intensity[baseline[1]:baseline[length(baseline)]])
-      F0loess  <- datsmoothintall[1,2]
+      # Specified a baseline frame or range of frames for mean
+      idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
+      if(is_empty(idx)) {
+        message('Baseline frame is not analyzed... Using first frame.')
+        F0int    <- intensity[1]
+        F0loess  <- datsmoothintall[1,2]
+      } else {
+        F0int    <- mean(intensity[baseline[1]:baseline[length(baseline)]])
+        F0loess  <- datsmoothintall[1,2]
+      }
     }
   }
   
@@ -1041,7 +1048,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   dFF0int <- deltaFint/F0int * 100
   
   # Including bad frames
-  dFF0intall <- (datsmoothintall[,2]-dF0loess)/dF0loess*100
+  dFF0intall <- (datsmoothintall[,2]-F0loess)/F0loess*100
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
                            d=trj_res$flydist[frida],
                            a=theta)
@@ -1105,12 +1112,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             legend.position="none",
             rect= element_blank(),
             plot.margin=unit(c(0,0,-1,-1),"lines"))
+    
   }
   
   pdf(file= paste0(output_prefix, "_trackResult_fv.pdf"), width = 4.4, height = 4, bg = "white")
   print(p4)
   dev.off()
-
+  
   ## Output summary ----
   # Format string for multi ROI window sizse/offsets
   wins_str = "list("
@@ -1146,7 +1154,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^fv.*fmf$")), skip=10)
     dipr::fmf2tif(paste0(dir, list.files(dir, pattern="^av.*fmf$")), skip=2)
   }
-  
   loggit::message("Cleaning up...")
   closeAllConnections()
   rm(list=setdiff(ls(), "out_str"))
