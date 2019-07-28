@@ -42,7 +42,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          bgratio=0.80, ratiocutoff=0.00,  
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
-                         baseline=NA, colorRange= c(0, 200), flash=NA, preprocess=F,
+                         baseline=NA,
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA){
   
   # TO DO
