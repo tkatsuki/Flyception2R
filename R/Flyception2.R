@@ -30,6 +30,8 @@
 #' @param badfr vector. A list of frames which to be manually excluded from analysis.
 #' @param ctr_offset vector. x,y offset from center of markers to center of brain window to compensate for coverslip/bead placement variation.
 #' @param baseline 1 or 2 vector frame number to use for df/f f0. If 2 vector f0 is the mean between frames relative to FOI
+#' @param input_range_r a vector of two integers setting the contrast range of red channel
+#' @param input_range_g a vector of two integers setting the contrast range of green channel
 #' @export
 #' @examples
 #' Flyception2R()
@@ -42,7 +44,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          bgratio=0.80, ratiocutoff=0.00,  
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
-                         baseline=NA,
+                         baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA){
   
   # TO DO
@@ -524,8 +526,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   redval <- redrottrans[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),]
   grnval <- greenrottrans[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),]
   EBImage::writeImage(normalize(rottrans[(1+offs):(dim(rottrans)[2]-offs),(1+offs):(dim(rottrans)[2]-offs),goodfr], separate=F), file=paste0(output_prefix, "_rottrans100.tif")) 
-  EBImage::writeImage(normalize(redval, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redval.tif")) 
-  EBImage::writeImage(normalize(grnval, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_grnval.tif")) 
+  EBImage::writeImage(normalize(redval, separate=F, inputRange=input_range_r), file=paste0(output_prefix, "_redval.tif")) 
+  EBImage::writeImage(normalize(grnval, separate=F, inputRange=input_range_g), file=paste0(output_prefix, "_grnval.tif")) 
   redval <- redval[,,goodfr]
   grnval <- grnval[,,goodfr]
   redval <- (redval - min(redval))/(max(redval) - min(redval))
@@ -890,7 +892,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   redrottranscol[,,1,] <- redrottrans*(1-rottransmask)
   redrottranscol[,,2,] <- redrottrans*(1-rottransmask)
   redrottranscol[,,3,] <- redrottrans*(1-rottransmask)
-  redrottranscol <- normalize(redrottranscol, separate=F, inputRange=c(180, 400))
+  redrottranscol <- normalize(redrottranscol, separate=F, inputRange=input_range_r)
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
   rm(redrottranscol)
@@ -904,20 +906,20 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   frgcombined[1:fr_width,1:fr_height,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
   frgcombined[1:fr_width,1:fr_height,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
   frgcombined[1:fr_width,1:fr_height,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=c(180, 400))
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=c(180, 300))
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
   frgcombined[(3*fr_width + 1):(4*fr_width),1:fr_height,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
   
   redcolor100 <- redcolor[(1 + offs):(dim(greenrottrans)[2]-offs),(1+offs):(dim(greenrottrans)[2]-offs),,]
   EBImage::writeImage(redcolor100, file=paste0(output_prefix, "_redcolor100.tif"))
-  EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=c(180, 400)), file=paste0(output_prefix, "_redrottrans.tif"))
+  EBImage::writeImage(normalize(redrottrans, separate=F, inputRange=input_range_r), file=paste0(output_prefix, "_redrottrans.tif"))
   rm(redrottrans)
-  EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=c(180, 300)), file=paste0(output_prefix, "_greenrottrans.tif"))
+  EBImage::writeImage(normalize(greenrottrans, separate=F, inputRange=input_range_g), file=paste0(output_prefix, "_greenrottrans.tif"))
   rm(greenrottrans)
   EBImage::writeImage(frgcombined, file=paste0(output_prefix, "_frgcombined_goodfr20_normalized.tif"))
   rm(frgcombined)
@@ -1041,7 +1043,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   dFF0int <- deltaFint/F0int * 100
   
   # Including bad frames
-  dFF0intall <- (datsmoothintall[,2]-dF0loess)/dF0loess*100
+  dFF0intall <- (datsmoothintall[,2]-F0loess)/F0loess*100
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
                            d=trj_res$flydist[frida],
                            a=theta)
