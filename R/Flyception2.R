@@ -33,6 +33,7 @@
 #' @param input_range_r a vector of two integers setting the contrast range of red channel
 #' @param input_range_g a vector of two integers setting the contrast range of green channel
 #' @param motion_thresh integer, A threshold for removing frames with motion blur
+#' @param stim_pattern a vector of 3 numbers, indicating pre-stimulus, stimulus, and post-stimulus duration
 #' @export
 #' @examples
 #' Flyception2R()
@@ -46,7 +47,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
-                         size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10){
+                         size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
+                         stim_pattern=c(1,2,10)){
   
   # TO DO
   # - why require restart
@@ -341,7 +343,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # Could add multiple stim case
     # 1 sec before stimulus, 2 sec of stimulus, 10 sec after stimulus
     # Could make this interactive or parametric
-    FOI <- c(stimfr[1] - syncing$fpsfl*1, stimfr[1] + syncing$fpsfl*12)
+    
+    FOI <- c(stimfr[1] - syncing$fpsfl*stim_pattern[1], stimfr[1] + syncing$fpsfl*(stim_pattern[2] + stim_pattern[3]))
     frid <- syncing$frid[FOI[1]:FOI[2]]
     frida <- syncing$frida[FOI[1]:FOI[2]]
   }else{
