@@ -1032,6 +1032,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     if(baseline == -1) {
       F0int    <- min(intensity)
       F0loess  <- min(datsmoothintall[,2])
+    }else if(baseline == 0) {
+        F0int    <- mean(intensity)
+        F0loess  <- mean(datsmoothintall[,2])
     } else {
       # Specified a baseline frame or range of frames for mean
       idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
