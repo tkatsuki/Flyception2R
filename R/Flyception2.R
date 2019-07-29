@@ -32,6 +32,7 @@
 #' @param baseline 1 or 2 vector frame number to use for df/f f0. If 2 vector f0 is the mean between frames relative to FOI
 #' @param input_range_r a vector of two integers setting the contrast range of red channel
 #' @param input_range_g a vector of two integers setting the contrast range of green channel
+#' @param motion_thresh integer, A threshold for removing frames with motion blur
 #' @export
 #' @examples
 #' Flyception2R()
@@ -45,7 +46,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          rotate_camera=-180, window_size=NA, window_offset=NA,
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
-                         size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA){
+                         size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10){
   
   # TO DO
   # - why require restart
@@ -277,7 +278,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       fvfl1stack <- abind(8*fvzoomcrop^2,
                           .75*(EBImage::translate(flip(fl1ref), center2)),
                           along=3)
-      EBImage::writeImage(normalize(fvfl1stack),
+      EBImage::writeImage(fvfl1stack,
                           file=paste0(outdirr, prefix,
                                       "_fvfl1_stack.tif"))
     }
@@ -292,7 +293,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                           along=3)
       
       print(EBImage::display(fvfl1stack))
-      EBImage::writeImage(normalize(fvfl1stack),
+      EBImage::writeImage(fvfl1stack,
                           file=paste0(outdirr, prefix,
                                       "_fvfl1_stack.tif"))
       
@@ -414,7 +415,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   png(file=paste0(output_prefix, "_motion.png"), width=400, height=400)
   plot(motion)
   dev.off()
-  motion_thresh <- 2
   goodmotionfr <- which(motion < motion_thresh)
   
   LoGkern <- round(dipr::LoG(9,9,1.4)*428.5)
@@ -450,7 +450,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Load arena-view camera images
   avimgl <- dipr::readFMF(arena_view_fmf, frames=frida)
   EBImage::writeImage(avimgl/255, file=paste0(output_prefix, "_avimgl.tif"))
-  EBImage::writeImage(avimgl[,,goodfr]/255, file=paste0(output_prefix, "_avimgl_goodfr.tif"))
+  #EBImage::writeImage(avimgl[,,goodfr]/255, file=paste0(output_prefix, "_avimgl_goodfr.tif"))
   rm(avimgl)
   
   # Apply rotation compensation
