@@ -34,6 +34,8 @@
 #' @param input_range_g a vector of two integers setting the contrast range of green channel
 #' @param motion_thresh integer, A threshold for removing frames with motion blur
 #' @param stim_pattern a vector of 3 numbers, indicating pre-stimulus, stimulus, and post-stimulus duration
+#' @param gen_av_trj_vid bool indicate whether to generate video with arena view tracking indicators
+#' @param fly_id zero based index number of the flyview tracked fly corresponding to the arenaview trajectory columns
 #' @export
 #' @examples
 #' Flyception2R()
@@ -48,7 +50,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
-                         stim_pattern=c(1,2,10)){
+                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0){
   
   # TO DO
   # - why require restart
@@ -839,6 +841,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
   } # end per ROI loop
   
+  loggit::message(paste0("Segmentation finished."))
+  
   # Write per roi intensity file
   write.table(rawintroi, paste0(output_prefix, "_rawintroi.csv"), sep = ",", row.names=F)
   
@@ -997,7 +1001,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   #Duplicate RDS names:
   # LOESS model
-  saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
+  # TODO: Do we need to save the model for the short video 101 frame -> 177MB
+  # saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
   
@@ -1055,6 +1060,70 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  if(gen_av_trj_vid) {
+    # Save arenaview tracked video
+    avimg   <- dipr::readFMF(arena_view_fmf, frames=frida)/255
+    nflies  <- dim(trj_res$trja)[2]/2
+    
+    # Read arena view trajectory file
+    trja   <- read.table(paste0(dir, list.files(dir, pattern="^av-traj-")))
+    fly1_col <- c(2:3) + (fly1_id)*3
+    
+    # Allocate first channel and rgb video file
+    avimgc  <-array(NA,c(dim(avimg)[c(1,2)],3,dim(avimg)[3]))
+    avimgc3 <- avimg
+    
+    if(nflies == 1) {
+
+      avpix1 <- trja[frida,fly1_col]
+      
+      for(i in 1:dim(avimgc1)[3]) {
+        
+        avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
+        
+      }
+      avimgc[,,1,] <- avimg
+      avimgc[,,2,] <- avimg
+      avimgc[,,3,] <- avimgc3
+      avimgc <- Image(avimgc, colormode="Color")
+      EBImage::writeImage(avimgc, file=paste0(output_prefix, "_arena_track.tif"))
+      
+      rm(avimg)
+      rm(avimgc)
+      rm(avimgc3)
+      
+    } else if(nflies == 2) {
+      #
+      fly2_col <- c(2:3) + (!fly1_id)*3
+        
+      # Allocate 2nd fly channel
+      avimgc1  <- avimgc3
+      
+      avpix1 <- trja[frida,fly1_col]
+      avpix2 <- trja[frida,fly2_col]
+      
+      for(i in 1:dim(avimgc1)[3]) {
+        
+        avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
+        avimgc1[,,i]   <- drawCircle(avimgc1[,,i],avpix2[i,1],avpix2[i,2],3,col=1,fill=T)
+        
+      }
+      
+      avimgc[,,1,] <- avimgc1
+      avimgc[,,2,] <- avimg
+      avimgc[,,3,] <- avimgc3
+      avimgc <- Image(avimgc, colormode="Color")
+      EBImage::writeImage(avimgc, file=paste0(output_prefix, "_arena_track.tif"))
+      
+      rm(avimg)
+      rm(avimgc)
+      rm(avimgc1)
+      rm(avimgc3)
+      
+    }
+  }
+
+
   ## Plotting ----
   if(is.na(baseline)) {
     # Default to using first frame
