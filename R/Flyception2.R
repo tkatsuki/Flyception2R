@@ -714,6 +714,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   grnave      <- vector()
   ratioave    <- vector()
   greenperred <- array(0,dim(redrois))
+  seg_masku   <- array(0,dim(redrois)) # Total untion segmentation mask
   
   # For each ROI process separately
   for(r in 1:num_rois) {
@@ -744,8 +745,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
       
       # Try per frame
-      # segmask
-      
     }
     
     # Filter red channel pixels below mean of
@@ -812,6 +811,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # Write mask for this ROI
     EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask_",r,".tif")) 
     
+    # Add segmented region to complete mask
+    seg_masku[seg_mask > 0] <- 1
+    
     # Apply final segmentation mask
     redseg   <- redseg*seg_mask
     grnseg   <- grnseg*seg_mask
@@ -852,7 +854,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   greenperredave <- rowMeans(ratioave)
   
   # Segmentation mask across ROIs
-  seg_mask       <- apply(seg_mask,MARGIN=c(1,2,3),max)
+  seg_mask       <- seg_masku
   
   # Check for finite ratio values 
   goodfrratidx   <- is.finite(greenperredave)
