@@ -336,6 +336,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  # Set input paths relative to directory parameters
+  arena_view_fmf      <- paste0(dir,tail(strsplit(arena_view_fmf,"/")[[1]],n=1))
+  fly_view_fmf        <- paste0(dir,tail(strsplit(fly_view_fmf,"/")[[1]],n=1))
+  fluo_view_tif_ch1   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch1,"/")[[1]],n=1))
+  fluo_view_tif_ch2   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch2,"/")[[1]],n=1))
+
   # Analyze only part of the movie?
   # FOI creation ----
   # If stimulus is given override the FOI
