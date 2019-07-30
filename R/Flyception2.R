@@ -744,7 +744,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       # Per frame mean of lowest (1 - bgratio) pixels
       meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
       
-      # Try per frame
     }
     
     # Filter red channel pixels below mean of
@@ -1069,15 +1068,16 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     # Read arena view trajectory file
     trja   <- read.table(paste0(dir, list.files(dir, pattern="^av-traj-")))
-    fly1_col <- c(2:3) + (fly1_id)*3
     
     # Allocate first channel and rgb video file
     avimgc  <-array(NA,c(dim(avimg)[c(1,2)],3,dim(avimg)[3]))
     avimgc3 <- avimg
     
     if(nflies == 1) {
-
-      avpix1 <- trja[frida,fly1_col]
+      
+      fly1_id  <- 0
+      fly1_col <- c(2:3) + (fly1_id)*3
+      avpix1   <- trja[frida,fly1_col]
       
       for(i in 1:dim(avimgc1)[3]) {
         
@@ -1096,6 +1096,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       
     } else if(nflies == 2) {
       #
+      fly1_col <- c(2:3) + (fly1_id)*3
       fly2_col <- c(2:3) + (!fly1_id)*3
         
       # Allocate 2nd fly channel
