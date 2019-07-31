@@ -1190,8 +1190,18 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   df1 <- cbind(datdFF0all, fly1trjfv)
   
+  if(stimulus==T){
+    event_pattern <- c(rep(0.1, syncing$fpsfl*(stim_pattern[1])), rep(1, syncing$fpsfl*(stim_pattern[2])), rep(1.5, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
+  }else if(interaction==T){
+    event_pattern <- rep(1, nrow(df1))
+    event_pattern[closefr] <- 1.5
+  }else{
+    event_pattern <- rep(1, nrow(df1))
+  }
+  
+  df1 <- cbind(df1, event_pattern)
+  
   if (interaction==T){
-    #df1 <- cbind(datdFF0all, fly1trja)
     df2 <- cbind(datdFF0all, fly2trja)
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
@@ -1209,15 +1219,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             rect= element_blank(),
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
-    #df1 <- cbind(datdFF0all, fly1trja)
-    
+
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=f)) + 
-      geom_path(linetype=1, lwd = 0.1) +
+      geom_path(linetype=1, lwd = event_pattern, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red")) +
-      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
+      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red"), na.value = "gray70") +
+      #scale_alpha(0.5) +
+      ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0), color="black") + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
             title = element_blank(),
