@@ -322,7 +322,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Find stimulus frame ----
   stimfr <- NA
   if(stimulus==T){
-    message("Detecting stimulus")
+    loggit::message("Detecting stimulus")
     fvtrj <- read.table(paste0(dir, list.files(dir, pattern="fv-traj-")))
     stimtrjfr <- which(fvtrj[,8]==1)
     if(length(stimtrjfr)==0){
@@ -334,6 +334,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       dfstim <- data.frame(flview=stimfr, flyview=syncing$frid[stimfr], arenaview=syncing$frida[stimfr])
       write.table(dfstim, paste0(dir, prefix, "_fridstim.txt"))
     }
+  }else{
+    loggit::message("Stimulus detection skipped")
   }
   
   # Analyze only part of the movie?
@@ -376,7 +378,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   flimg2 <- flip(flimg2) # flip images to match fly-view
   
   # flv exposure 18 ms
-  FVOFFSET <- 9 
+  FVOFFSET <- 0 
   frid     <- frid + FVOFFSET
   # Load fly-view camera images
   fvimgl <- dipr::readFMF(fly_view_fmf, frame=(frid)) 
