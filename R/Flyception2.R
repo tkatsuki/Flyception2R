@@ -1079,7 +1079,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       fly1_col <- c(2:3) + (fly1_id)*3
       avpix1   <- trja[frida,fly1_col]
       
-      for(i in 1:dim(avimgc1)[3]) {
+      for(i in 1:dim(avimg)[3]) {
         
         avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
         
@@ -1105,7 +1105,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       avpix1 <- trja[frida,fly1_col]
       avpix2 <- trja[frida,fly2_col]
       
-      for(i in 1:dim(avimgc1)[3]) {
+      for(i in 1:dim(avimg)[3]) {
         
         avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
         avimgc1[,,i]   <- drawCircle(avimgc1[,,i],avpix2[i,1],avpix2[i,2],3,col=1,fill=T)
