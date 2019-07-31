@@ -34,6 +34,8 @@
 #' @param input_range_g a vector of two integers setting the contrast range of green channel
 #' @param motion_thresh integer, A threshold for removing frames with motion blur
 #' @param stim_pattern a vector of 3 numbers, indicating pre-stimulus, stimulus, and post-stimulus duration
+#' @param gen_av_trj_vid bool indicate whether to generate video with arena view tracking indicators
+#' @param fly_id zero based index number of the flyview tracked fly corresponding to the arenaview trajectory columns
 #' @export
 #' @examples
 #' Flyception2R()
@@ -48,7 +50,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
-                         stim_pattern=c(1,2,10)){
+                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0){
   
   # TO DO
   # - why require restart
@@ -336,6 +338,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  # Set input paths relative to directory parameters
+  arena_view_fmf      <- paste0(dir,tail(strsplit(arena_view_fmf,"/")[[1]],n=1))
+  fly_view_fmf        <- paste0(dir,tail(strsplit(fly_view_fmf,"/")[[1]],n=1))
+  fluo_view_tif_ch1   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch1,"/")[[1]],n=1))
+  fluo_view_tif_ch2   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch2,"/")[[1]],n=1))
+
   # Analyze only part of the movie?
   # FOI creation ----
   # If stimulus is given override the FOI
@@ -663,8 +671,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Mask refinement ----
   # Preallocate Segment Masks and Masked Image
-  seg_mask <- rroithr <- greenmasked <- redmasked <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
-  
+  rroithr  <- greenrois <- redrois <- array(rep(0,wr*hr*fr),c(wr,hr,fr))
+  seg_mask <- array(rep(0,wr*hr*fr),c(wr,hr,fr,num_rois)) # Save mask for each ROI
   # Add regions to mask
   for(i in 1:num_rois) {
     
@@ -675,8 +683,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     groi     <- greenrottrans[(roiix[i,1]+offs):(roiix[i,2]+offs),(roiix[i,3]+offs):(roiix[i,4]+offs),goodfr]
     rroimed  <- EBImage::medianFilter(rroi/2^16, size=3)
     groimed  <- EBImage::medianFilter(groi/2^16, size=3)
-    redmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
-    greenmasked[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
+    redrois[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],]   <- rroimed
+    greenrois[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- groimed
     
     seg_mask_win <- array(0,dim(rroimed))
     toff <- (apply(rroimed,MARGIN=3,max) - apply(rroimed,MARGIN=3,mean))*0.4
@@ -694,133 +702,160 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     seg_mask_win <- EBImage::fillHull(seg_mask_win)
     
     # Add segmented ROI to overall mask
-    seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],] <- seg_mask_win
+    seg_mask[roiix[i,1]:roiix[i,2],roiix[i,3]:roiix[i,4],,i] <- seg_mask_win
   }
-  loggit::message(paste0("ROI masks create."))
+  loggit::message(paste0("ROI masks created."))
   
-  # Mask pixels in R/G channels
-  redseg    <- redmasked*seg_mask
-  grnseg <- greenmasked*seg_mask
+  seg_maski <- seg_mask # Each ROI's mask frames
   
-  # Allocate for per frame baseline metrics
-  minsred <- array(0,fr)
-  meanqred <- array(0,fr)
-  quantred <- array(0,fr)
+  # Allocate data frame and means
+  rawintroi   <- data.frame(frame=1:dim(redrois)[3])  
+  redave      <- vector()
+  grnave      <- vector()
+  ratioave    <- vector()
+  greenperred <- array(0,dim(redrois))
+  seg_masku   <- array(0,dim(redrois)) # Total untion segmentation mask
   
-  for(i in 1:fr) {
-    # Per Frame Pixels in Mask
-    redvalpx      <- redmasked[,,i][roimask > 0]
-    #redvalpx     <- redseg[,,i][seg_mask[,,i] > 0]
+  # For each ROI process separately
+  for(r in 1:num_rois) {
     
-    # Per frame quantile (10th percentile)
-    quantred[i]  <- quantile(redvalpx,bgratio)
+    seg_mask <- seg_maski[,,,r]      # segmentation mask
+    roimask  <- roimasks[,,r]        # ROI mask
+    roimask  <- as.vector(roimask)
+    redroi   <- redrois*roimask      # pixels in ref channel ROI
+    grnroi   <- greenrois*roimask    # pixels in cal channel ROI
+    redseg   <- redrois*seg_mask     # ref pixels segmentation mask video
+    grnseg   <- greenrois*seg_mask   # cal pixels in segmentation mask video
     
-    # Per Frame Mean of Lowest 10%
-    meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
+    # Allocate for per frame baseline metrics
+    minsred <- array(0,fr)
+    meanqred <- array(0,fr)
+    quantred <- array(0,fr)
     
-    # Per Frame Min Pixels
-    minsred[i]   <- min(redvalpx)
-  }
+    for(i in 1:fr) {
+      
+      # Per Frame Pixels in entire ROI
+      redvalpx      <- redroi[,,i][roimask > 0]
+      #redvalpx     <- redseg[,,i][seg_mask[,,i] > 0]
+      
+      # Per frame quantile (bgratio percentile)
+      quantred[i]  <- quantile(redvalpx,bgratio)
+      
+      # Per frame mean of lowest (1 - bgratio) pixels
+      meanqred[i]  <- mean(redvalpx[redvalpx < quantred[i]])
+      
+    }
+    
+    # Filter red channel pixels below mean of
+    # of the bgratio quantile across frames
+    bl <- mean(quantred,na.rm=TRUE)
+    seg_mask[redseg <= bl] <- 0
+    
+    # Morphilogical Operations:
+    # Label regions and apply area filtering
+    shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
+    thrsh_map <- apply(seg_mask,3,bwlabel)
+    thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
+    maskprops <- apply(thrsh_map,3,function(x) list(computeFeatures.shape(x)))
+    maskprops <- lapply(maskprops, "[[", 1)
+    objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thresh))
+    seg_mask  <- rmObjects(thrsh_map, objrmidx)
+    loggit::message(paste0("Removed objects smaller than ", size_thresh, " pixels in ROI ", r,"."))
+    
+    # Return filtered regions to binary mask
+    seg_mask[seg_mask > 0] <- 1
+    
+    # Mask pixels around margin of segmented area for background subtraction
+    bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
+                 - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+    
+    # Constrain bg pixels to roi
+    bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
+    
+    # Get mean background value for each channel per frame
+    bggrn    <- grnroi * bg_mask
+    bgred    <- redroi * bg_mask
+    bgarea   <- apply(bg_mask,MARGIN=3,sum)
+    bggrnave <- apply(bggrn,MARGIN=3,sum)/bgarea
+    bgredave <- apply(bgred,MARGIN=3,sum)/bgarea
+    
+    # Background subtraction per frame
+    for(i in 1:fr) {
+      redseg[,,i]   <- redroi[,,i] - bgredave[i]
+      grnseg[,,i]   <- grnroi[,,i] - bggrnave[i]
+    }
+    
+    # Filter values below background
+    redseg[redseg < 0] <- 0.0
+    grnseg[grnseg < 0] <- 0.0
+    
+    #Background subtracted Channels/Ratio Image
+    redseg      <- redseg*seg_mask
+    grnseg      <- grnseg*seg_mask
+    ratioseg    <- (grnseg/redseg)
+    
+    # Filter infinite x/0 
+    ratioseg[!is.finite(ratioseg)] <- 0.0
+    
+    # Filter out lowest ratio values in case of only subset of labeled neurons active
+    qfcutoff <- quantile(ratioseg[seg_mask>0],ratiocutoff)
+    for(i in 1:fr) {
+      # Filter pixel ratios below quantile cutoff
+      seg_mask[,,i][ratioseg[,,i] < qfcutoff] <- 0
+    }
+    
+    # Final segmentation mask
+    loggit::message(paste0("Segmentation finished for ROI ",r,"."))
+    
+    # Write mask for this ROI
+    EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask_",r,".tif")) 
+    
+    # Add segmented region to complete mask
+    seg_masku[seg_mask > 0] <- 1
+    
+    # Apply final segmentation mask
+    redseg   <- redseg*seg_mask
+    grnseg   <- grnseg*seg_mask
+    ratioseg <- (grnseg/redseg)
+    
+    # Filter infinite x/0 
+    ratioseg[!is.finite(ratioseg)] <- 0.0
+    
+    # Ratio video
+    greenperred <- greenperred + ratioseg
+    
+    # Mean of each channel in mask
+    segarea   <- apply(seg_mask,MARGIN=3,sum)
+    redavei   <- apply(redseg,MARGIN=3,sum)/segarea
+    grnavei   <- apply(grnseg,MARGIN=3,sum)/segarea
+    ratioavei <- apply(ratioseg,MARGIN=3,sum)/segarea
+    
+    # Means across both
+    redave   <- cbind(redave,redavei)
+    grnave   <- cbind(grnave,grnavei)
+    ratioave <- cbind(ratioave,ratioavei)
+    
+    # Write intensities and ratio for this ROI
+    tmp        <- data.frame(redavei,grnavei,ratioavei)
+    names(tmp) <- c(paste0("redave",i),paste0("grnave",i),paste0("ratioave",i))
+    rawintroi  <- cbind(rawintroi, tmp)
+    
+  } # end per ROI loop
   
-  # Dataframe of baseline metrics
-  bldata <- data.frame(x=goodfr, 
-                       quantred=quantred,
-                       meanqred=meanqred,
-                       minsred=minsred)
-  
-  # Save all baselines
-  saveRDS(bldata, paste0(output_prefix, "_baselines.RDS"))
-  
-  # Filter red channel below baseline
-  bl <- mean(quantred,na.rm=TRUE)
-  
-  # Red Pixels > Baseline = mean(mean(lowest 10% per frame))
-  seg_mask[redseg <= bl] <- 0
-  
-  # Mask pixels in R/G channels
-  redseg <- redseg*seg_mask
-  grnseg <- grnseg*seg_mask
-  
-  # Create F_ratio images  
-  greenperred <- grnseg/redseg
-  greenperred[is.na(greenperred)]<-0
-  
-  ratioqfilt       <- greenperred
-  qfiltcutoff      <- array(0,fr)
-  ##ratioqfiltave    <- array(0,fr)
-  
-  # Label regions and apply area filtering
-  shape_metric <- 1 #s.area s.perimeter s.radius.mean s.radius.sd s.radius.min s.radius.max
-  thrsh_map <- apply(seg_mask,3,bwlabel)
-  thrsh_map <- array(thrsh_map,dim=dim(seg_mask))
-  maskprops <- apply(thrsh_map,3,function(x) list(computeFeatures.shape(x)))
-  maskprops <- lapply(maskprops, "[[", 1)
-  objrmidx  <- lapply(maskprops,FUN=function(x) which(x[,shape_metric] <= size_thresh))
-  seg_mask  <- rmObjects(thrsh_map, objrmidx)
-  loggit::message(paste0("Removed objects smaller than ", size_thresh, " pixels."))
-  
-  # Return filtered regions to binary mask
-  seg_mask[seg_mask > 0] <- 1
   loggit::message(paste0("Segmentation finished."))
   
-  # Write segmentation mask to file
-  EBImage::writeImage(seg_mask, file=paste0(output_prefix, "_segmask.tif"))  # Only write complete mask  
+  # Write per roi intensity file
+  write.table(rawintroi, paste0(output_prefix, "_rawintroi.csv"), sep = ",", row.names=F)
   
-  # Mask pixels in R/G channels
-  #redseg      <- redmasked*seg_mask
-  #greenseg    <- greenmasked*seg_mask
-  #greenperred <- (greenmasked/redmasked)*seg_mask
+  # Mean across ROIs
+  redave         <- rowMeans(redave)
+  greenave       <- rowMeans(grnave)
+  greenperredave <- rowMeans(ratioave)
   
-  # Mask pixels around margin of segmented area for background subtraction
-  bg_mask  <- (EBImage::dilate(seg_mask,kern=makeBrush(15,shape="diamond")) 
-               - EBImage::dilate(seg_mask,kern=makeBrush(7,shape="diamond")))
+  # Segmentation mask across ROIs
+  seg_mask       <- seg_masku
   
-  # Constrain bg pixels to roi
-  bg_mask[!(bg_mask & array(roimask,dim(bg_mask)))]  <- 0
-  
-  bggrn    <- greenmasked * bg_mask
-  bgred    <- redmasked   * bg_mask
-  bgarea   <- apply(bg_mask,MARGIN=3,sum)
-  bggrnave <- apply(bggrn,MARGIN=3,sum)/bgarea
-  bgredave <- apply(bgred,MARGIN=3,sum)/bgarea
-  
-  # Background subtraction
-  for(i in 1:fr) {
-    redseg[,,i]   <- redmasked[,,i]   - bgredave[i]
-    grnseg[,,i]   <- greenmasked[,,i] - bggrnave[i]
-  }
-  
-  #Background subtracted Channels/Ratio Image
-  redseg      <- redseg*seg_mask
-  grnseg      <- grnseg*seg_mask
-  greenperred <- (grnseg/redseg)
-  
-  greenperred[!is.finite(greenperred)] <- 0.0
-  greenperred[greenperred < 0]         <- 0.0
-  
-  # Filter out lowest ratio values in case of only subset of labeled neurons active
-  qfcutoff         <- quantile(greenperred[seg_mask>0],ratiocutoff)
-  for(i in 1:fr) {
-    # Get ratio qauntile for each frame
-    ##qfiltcutoff[i] <- quantile(greenperred[,,i][seg_mask[,,i] > 0],0.25)
-    # Filter pixel ratios below quantile cutoff
-    seg_mask[,,i][greenperred[,,i] < qfcutoff] <- 0
-    #ratioqfiltave[i] <- sum(ratioqfilt[,,i])/sum(ratioqfilt[,,i]>qfiltcutoff[i])
-  }
-  
-  # Ratio thresholded Channel/Ratio Images
-  redseg      <- redseg*seg_mask
-  grnseg      <- grnseg*seg_mask
-  greenperred <- (grnseg/redseg)
-  greenperred[!is.finite(greenperred)] <- 0.0
-  greenperred[greenperred < 0]         <- 0.0
-  
-  # Mean of each channel in mask
-  segarea        <- apply(seg_mask,MARGIN=3,sum)
-  redave         <- apply(redseg,MARGIN=3,sum)/segarea
-  greenave       <- apply(grnseg,MARGIN=3,sum)/segarea
-  greenperredave <- apply(greenperred,MARGIN=3,sum)/segarea
-  
+  # Check for finite ratio values 
   goodfrratidx   <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat      <- goodfr[goodfrratidx]
@@ -833,7 +868,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   gprimage <- greenperred
   gprimage[gprimage >= 1]         <- 0.99 # Threshold ratios > 1 for heatmap
   
-  # Pad segmentation mask for un-analyzed frames with 0 mask
+  # Full length segmentation mask (0 for frames not analyzed)
   seg_mask_all <- array(0, dim=c(dim(seg_mask)[c(1,2)],dim(rottrans)[3]))
   for(sfr in 1:length(goodfrrat)) {
     seg_mask_all[,,goodfrrat[sfr]] <- seg_mask[,,sfr]
@@ -967,7 +1002,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   #Duplicate RDS names:
   # LOESS model
-  saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
+  # TODO: Do we need to save the model for the short video 101 frame -> 177MB
+  # saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
   
@@ -1025,6 +1061,72 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  if(gen_av_trj_vid) {
+    # Save arenaview tracked video
+    avimg   <- dipr::readFMF(arena_view_fmf, frames=frida)/255
+    nflies  <- dim(trj_res$trja)[2]/2
+    
+    # Read arena view trajectory file
+    trja   <- read.table(paste0(dir, list.files(dir, pattern="^av-traj-")))
+    
+    # Allocate first channel and rgb video file
+    avimgc  <-array(NA,c(dim(avimg)[c(1,2)],3,dim(avimg)[3]))
+    avimgc3 <- avimg
+    
+    if(nflies == 1) {
+      
+      fly1_id  <- 0
+      fly1_col <- c(2:3) + (fly1_id)*3
+      avpix1   <- trja[frida,fly1_col]
+      
+      for(i in 1:dim(avimg)[3]) {
+        
+        avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
+        
+      }
+      avimgc[,,1,] <- avimg
+      avimgc[,,2,] <- avimg
+      avimgc[,,3,] <- avimgc3
+      avimgc <- Image(avimgc, colormode="Color")
+      EBImage::writeImage(avimgc, file=paste0(output_prefix, "_arena_track.tif"))
+      
+      rm(avimg)
+      rm(avimgc)
+      rm(avimgc3)
+      
+    } else if(nflies == 2) {
+      #
+      fly1_col <- c(2:3) + (fly1_id)*3
+      fly2_col <- c(2:3) + (!fly1_id)*3
+        
+      # Allocate 2nd fly channel
+      avimgc1  <- avimgc3
+      
+      avpix1 <- trja[frida,fly1_col]
+      avpix2 <- trja[frida,fly2_col]
+      
+      for(i in 1:dim(avimg)[3]) {
+        
+        avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
+        avimgc1[,,i]   <- drawCircle(avimgc1[,,i],avpix2[i,1],avpix2[i,2],3,col=1,fill=T)
+        
+      }
+      
+      avimgc[,,1,] <- avimgc1
+      avimgc[,,2,] <- avimg
+      avimgc[,,3,] <- avimgc3
+      avimgc <- Image(avimgc, colormode="Color")
+      EBImage::writeImage(avimgc, file=paste0(output_prefix, "_arena_track.tif"))
+      
+      rm(avimg)
+      rm(avimgc)
+      rm(avimgc1)
+      rm(avimgc3)
+      
+    }
+  }
+
+
   ## Plotting ----
   if(is.na(baseline)) {
     # Default to using first frame
@@ -1036,8 +1138,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       F0int    <- min(intensity)
       F0loess  <- min(datsmoothintall[,2])
     }else if(baseline == 0) {
-        F0int    <- mean(intensity)
-        F0loess  <- mean(datsmoothintall[,2])
+      F0int    <- mean(intensity)
+      F0loess  <- mean(datsmoothintall[,2])
     } else {
       # Specified a baseline frame or range of frames for mean
       idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
