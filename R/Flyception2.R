@@ -345,7 +345,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   fly_view_fmf        <- paste0(dir,tail(strsplit(fly_view_fmf,"/")[[1]],n=1))
   fluo_view_tif_ch1   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch1,"/")[[1]],n=1))
   fluo_view_tif_ch2   <- paste0(outdirr,tail(strsplit(fluo_view_tif_ch2,"/")[[1]],n=1))
-
+  
   # Analyze only part of the movie?
   # FOI creation ----
   # If stimulus is given override the FOI
@@ -355,6 +355,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # Could make this interactive or parametric
     
     FOI <- c(stimfr[1] - syncing$fpsfl*stim_pattern[1], stimfr[1] + syncing$fpsfl*(stim_pattern[2] + stim_pattern[3]))
+    if(FOI[1]<1) FOI[1] <- 1
+    if(FOI[2]>flnframe) FOI[2] <- flnframe
     frid <- syncing$frid[FOI[1]:FOI[2]]
     frida <- syncing$frida[FOI[1]:FOI[2]]
   }else{
@@ -1100,7 +1102,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       #
       fly1_col <- c(2:3) + (fly1_id)*3
       fly2_col <- c(2:3) + (!fly1_id)*3
-        
+      
       # Allocate 2nd fly channel
       avimgc1  <- avimgc3
       
@@ -1127,8 +1129,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       
     }
   }
-
-
+  
+  
   ## Plotting ----
   if(is.na(baseline)) {
     # Default to using first frame
@@ -1219,7 +1221,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             rect= element_blank(),
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
-
+    
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=f)) + 
       geom_path(linetype=1, lwd = event_pattern, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
