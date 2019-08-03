@@ -1166,6 +1166,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
                            d=trj_res$flydist[frida],
                            a=theta)
+  write_csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
   datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
