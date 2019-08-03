@@ -36,6 +36,7 @@
 #' @param stim_pattern a vector of 3 numbers, indicating pre-stimulus, stimulus, and post-stimulus duration
 #' @param gen_av_trj_vid bool indicate whether to generate video with arena view tracking indicators
 #' @param fly_id zero based index number of the flyview tracked fly corresponding to the arenaview trajectory columns
+#' @param process_all logical. True if both preprocess and main process to be executed
 #' @export
 #' @examples
 #' Flyception2R()
@@ -50,7 +51,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
-                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0){
+                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0, process_all=F){
   
   # TO DO
   # - why require restart
@@ -72,12 +73,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }
   
   # Create ouput directory if it doesn't exist
-  dir.create(outdirr,showWarnings=FALSE,recursive=TRUE)
+  dir.create(outdirr, showWarnings=FALSE, recursive=TRUE)
   
   # Start logging 
   loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
   
-  if(preprocess == T | c(preprocess == F & anyNA(window_offset) == F) | !file.exists(paste0(outdirr, prefix,"_prepdata.RData"))) {
+  if(preprocess == T | process_all == T | !file.exists(paste0(outdirr, prefix,"_prepdata.RData"))) {
     
     # Log function arguments
     args<-as.list(environment())
