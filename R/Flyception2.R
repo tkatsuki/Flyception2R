@@ -979,15 +979,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   #LOESS prediction of all time points
   datsmoothintall <- data.frame(x=1:length(frid), y=predict(datloessint, 1:length(frid)))
   
-  # Smoothed Intensity
-  intensity <- zoo::rollmean(greenperredave, 3, align="left")
-  datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
-  
-  
-  png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
-  plot(datint)  
-  dev.off()
-  
   png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
   par(mar = c(5,5,2,5))
   plot(datrawint$x, datrawint$y, type="p", pch=16, ylab="F_ratio", xlab="frame", cex=0.5)
