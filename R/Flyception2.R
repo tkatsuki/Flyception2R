@@ -895,9 +895,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rottransmask[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),] <- seg_mask_all
   
   rottranscolor <- array(0, dim=c(dim(rottrans)[c(1,2)], 3, dim(rottrans)[3]))
-  rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
-  rottranscolor[,,2,] <- rottrans/255*(1-rottransmask)
-  rottranscolor[,,3,] <- rottrans/255*(1-rottransmask)
+  rottranscolor[,,3,] <-rottranscolor[,,2,] <-rottranscolor[,,1,] <- rottrans/255*(1-rottransmask)
   
   grratiocolorl <- rottranscolor*0
   grratiocolorl[(1+offs):(dim(redrottrans)[2]-offs),(1+offs):(dim(redrottrans)[2]-offs),,] <- grratiocolor
@@ -931,9 +929,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # overlay red channel and F_ratio color image
   redrottranscol <- array(0, dim=c(dim(redrottrans)[c(1,2)], 3, dim(redrottrans)[3]))
-  redrottranscol[,,1,] <- redrottrans*(1-rottransmask)
-  redrottranscol[,,2,] <- redrottrans*(1-rottransmask)
-  redrottranscol[,,3,] <- redrottrans*(1-rottransmask)
+  redrottranscol[,,3,] <-redrottranscol[,,2,] <-redrottranscol[,,1,] <- redrottrans*(1-rottransmask)
   redrottranscol <- normalize(redrottranscol, separate=F, inputRange=input_range_r)
   redcolor <- redrottranscol + grratiocolorl
   redcolor <- Image(redcolor, colormode="Color")
@@ -945,15 +941,16 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   fr_height = ROI[4]
   # Create side-by-side view of fly_view and fluo_view images
   frgcombined <- array(dim=c(dim(rottrans)[1]*4, dim(rottrans)[2], 3, dim(rottrans)[3]))
-  frgcombined[1:fr_width,1:fr_height,1,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[1:fr_width,1:fr_height,2,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[1:fr_width,1:fr_height,3,1:dim(rottrans)[3]] <- normalize(rottrans, separate=F)
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,2,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
-  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,3,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,2,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
-  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,3,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
+  frgcombined[1:fr_width,1:fr_height,3,1:dim(rottrans)[3]] <- 
+    frgcombined[1:fr_width,1:fr_height,2,1:dim(rottrans)[3]] <- 
+    frgcombined[1:fr_width,1:fr_height,1,1:dim(rottrans)[3]] <- 
+    normalize(rottrans, separate=F)
+  frgcombined[(fr_width+1):(2*fr_width),1:fr_height,3,1:dim(redrottrans)[3]] <-
+    frgcombined[(fr_width+1):(2*fr_width),1:fr_height,2,1:dim(redrottrans)[3]] <-
+    frgcombined[(fr_width+1):(2*fr_width),1:fr_height,1,1:dim(redrottrans)[3]] <- normalize(redrottrans, separate=F, inputRange=input_range_r)
+  frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,3,1:dim(greenrottrans)[3]] <-
+    frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,2,1:dim(greenrottrans)[3]] <-
+    frgcombined[(2*fr_width+1):(3*fr_width),1:fr_height,1,1:dim(greenrottrans)[3]] <- normalize(greenrottrans, separate=F, inputRange=input_range_g)
   frgcombined[(3*fr_width + 1):(4*fr_width),1:fr_height,,1:dim(redrottrans)[3]] <- redcolor
   frgcombined <-  Image(frgcombined, colormode="Color")
   
