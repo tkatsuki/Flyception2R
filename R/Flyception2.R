@@ -318,6 +318,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     if(preprocess == T) return()
   } else {
     # Load preprocessed data
+    loggit::message("Loading preprocessed data")
     load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
   
