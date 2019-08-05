@@ -51,7 +51,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          colorRange= c(0, 200), flash=NA, preprocess=F,
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
-                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0, process_all=F){
+                         stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0, process_all=F, 
+                         loess_span=0.4){
   
   # TO DO
   # - why require restart
@@ -986,9 +987,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Mean Red/Green/Ratio
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
   # LOESS Model
-  datloessint <- loess(y ~ x, data=datrawint, span=0.4, control=loess.control(surface="direct"))
-  redloessint <- loess(r ~ x, data=datrawint, span=0.4)
-  greenloessint <- loess(g ~ x, data=datrawint, span=0.4)
+  datloessint <- loess(y ~ x, data=datrawint, span=loess_span, control=loess.control(surface="direct"))
+  redloessint <- loess(r ~ x, data=datrawint, span=loess_span)
+  greenloessint <- loess(g ~ x, data=datrawint, span=loess_span)
   # LOESS Predictions
   datsmoothint <- data.frame(x=goodfrrat, y=predict(datloessint))
   redsmoothint <- data.frame(x=goodfrrat, y=predict(redloessint))
@@ -1181,7 +1182,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                         a=theta[1:(length(goodfrrat)-2)])
   
   p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=f)) +
-    ggplot2::geom_smooth(method="loess", span = 0.4, level=0.95) +
+    ggplot2::geom_smooth(method="loess", span = loess_span, level=0.95) +
     ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
   
   p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=d)) +
