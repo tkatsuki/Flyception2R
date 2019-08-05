@@ -318,7 +318,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     if(preprocess == T) return()
   } else {
     # Load preprocessed data
-    loggit::message("Loading preprocessed data")
+    loggit::message(paste0("Loading preprocessed data"))
     load(paste0(outdirr, prefix,"_prepdata.RData"))
   }
   
@@ -341,6 +341,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }else{
     loggit::message("Stimulus detection skipped")
   }
+  
+  if(stimulus==T) event_pattern <- c(rep(0.1, syncing$fpsfl*(stim_pattern[1])), rep(1, syncing$fpsfl*(stim_pattern[2])), rep(1.5, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
+  
   
   # Set input paths relative to directory parameters
   arena_view_fmf      <- paste0(dir,tail(strsplit(arena_view_fmf,"/")[[1]],n=1))
@@ -926,6 +929,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     grratiocolorl[,,1,gf] <- grratiocolorl[,,1,gf] + mrk_img
   }
   
+  if(stimulus == T){
+    stim_mrk_img <- array(0,dim(grratiocolorl)[c(1,2)])
+    stim_mrk_dim <- 19
+    stim_mrk_ctr <- (stim_mrk_dim-1)/2
+    stim_mrk_r  <- 5
+    stim_mrk_sym <- array(0,c(stim_mrk_dim,stim_mrk_dim))
+    stim_mrk_sym <- drawCircle(stim_mrk_sym,stim_mrk_ctr,stim_mrk_ctr,stim_mrk_r,1,fill=T)
+
+    stim_mrk_img[1:stim_mrk_dim,1:stim_mrk_dim]<-stim_mrk_sym
+    
+    for(ef in which(event_pattern==1)) {
+      grratiocolorl[,,2,ef] <- grratiocolorl[,,2,ef] + stim_mrk_img
+    }
+  }
+  
   rm(rottranscolor)
   
   # overlay red channel and F_ratio color image
@@ -1183,9 +1201,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   df1 <- cbind(datdFF0all, fly1trjfv)
   
-  if(stimulus==T){
-    event_pattern <- c(rep(0.1, syncing$fpsfl*(stim_pattern[1])), rep(1, syncing$fpsfl*(stim_pattern[2])), rep(1.5, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
-  }else if(interaction==T){
+  if(interaction==T){
     event_pattern <- rep(1, nrow(df1))
     event_pattern[closefr] <- 1.5
   }else{
