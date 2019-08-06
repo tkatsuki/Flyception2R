@@ -1054,7 +1054,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                                   interaction=interaction)
   if(interaction==T){
     loggit::message("Detecting interaction")
-    closefr <- which(trj_res$flydist < dist_thresh)
+    closefr <- which(trj_res$flydist[frida] < dist_thresh)
     closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
     write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
     
