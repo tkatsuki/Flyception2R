@@ -494,7 +494,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }
   
   # Round rotated error to nearest pixel
-  rtr <- round(rtr)
+  rtr    <- round(rtr)
   centers <- rtr
   
   # Offset compensation for bead/coverslip offset
@@ -937,7 +937,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     stim_mrk_r  <- 5
     stim_mrk_sym <- array(0,c(stim_mrk_dim,stim_mrk_dim))
     stim_mrk_sym <- drawCircle(stim_mrk_sym,stim_mrk_ctr,stim_mrk_ctr,stim_mrk_r,1,fill=T)
-
+    
     stim_mrk_img[1:stim_mrk_dim,1:stim_mrk_dim]<-stim_mrk_sym
     
     for(ef in which(event_pattern==1)) {
@@ -1012,6 +1012,27 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
   write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
+  
+  # Save a frame map for the sequence
+  
+  # Save index of good frames
+  if(FOI[1] != F) {
+    # Write out frame map:
+    flframe                  <- FOI[1]:FOI[2]
+    good                     <- array(0,length(frid))
+    good[flframe==goodfrrat] <- 1
+    fmap                     <- cbind(flframe,frid,frida,good)
+    colnames(fmap)           <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
+  } else {
+    flframe                  <- 1:length(frid)
+    good                     <- array(0,length(frid))
+    good[flframe==goodfrrat] <- 1
+    fmap                     <- cbind(flframe,frid,frida,good)
+    colnames(fmap)           <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
+  }
+  
   
   #Duplicate RDS names:
   # LOESS model
