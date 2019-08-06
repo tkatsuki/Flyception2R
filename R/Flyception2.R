@@ -880,6 +880,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   greenperred    <- greenperred[,,goodfrratidx]
   seg_mask       <- seg_mask[,,goodfrratidx]
   
+  # TODO: Raw result placeholder 
+  intensity <- zoo::rollmean(greenperredave, 3, align="left")
+  
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
   gprimage[gprimage >= 1]         <- 0.99 # Threshold ratios > 1 for heatmap
