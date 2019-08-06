@@ -1020,8 +1020,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
   
-  saveRDS(datint, paste0(output_prefix, "_datint.RDS"))
-  
   # Behavior analysis ----
   ## Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
