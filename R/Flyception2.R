@@ -866,7 +866,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   ratrawall <- redrawall <- grnrawall <- array(NA,length(frid))
   ratrawall[goodfr] <- greenperredave
   redrawall[goodfr] <- redave
-  grnrawall[goodfr] <- grnave
+  grnrawall[goodfr] <- greenave
   
   # Segmentation mask across ROIs
   seg_mask       <- seg_masku
