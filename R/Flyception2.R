@@ -1027,18 +1027,18 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Save a frame map for the sequence
   if(FOI[1] != F) {
     # Write out frame map:
-    flframe                  <- FOI[1]:FOI[2]
-    good                     <- array(0,length(frid))
-    good[flframe==goodfrrat] <- 1
-    fmap                     <- cbind(flframe,frid,frida,good)
-    colnames(fmap)           <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    flframe           <- FOI[1]:FOI[2]
+    good              <- array(0,length(frid))
+    good[goodfrrat]   <- 1
+    fmap              <- cbind(flframe,frid,frida,good)
+    colnames(fmap)    <- c("fluo_frame","fly_frame","arena_frame","good_frame")
     write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
   } else {
-    flframe                  <- 1:length(frid)
-    good                     <- array(0,length(frid))
-    good[flframe==goodfrrat] <- 1
-    fmap                     <- cbind(flframe,frid,frida,good)
-    colnames(fmap)           <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    flframe           <- 1:length(frid)
+    good              <- array(0,length(frid))
+    good[goodfrrat]   <- 1
+    fmap              <- cbind(flframe,frid,frida,good)
+    colnames(fmap)    <- c("fluo_frame","fly_frame","arena_frame","good_frame")
     write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
   }
   
