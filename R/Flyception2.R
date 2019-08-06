@@ -427,7 +427,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Find good frames
   angdiff <- c(0, diff(ang))
-  ang_thresh <- 0.02
+  ang_thresh <- 0.1
   goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
   goodmarkerfr <- which(markernum == 3)
   
