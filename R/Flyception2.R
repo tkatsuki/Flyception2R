@@ -1240,11 +1240,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   df1 <- cbind(datdFF0all, fly1trjfv)
   
-  if(interaction==T){
-    event_pattern <- rep(1, nrow(df1))
-    event_pattern[closefr] <- 1.5
-  }else{
-    event_pattern <- rep(1, nrow(df1))
+  if(stimulus != T){
+    if(interaction==T){
+      event_pattern <- rep(1, nrow(df1))
+      event_pattern[closefr] <- 2
+    }else{
+      event_pattern <- rep(1, nrow(df1))
+    }
   }
   
   df1 <- cbind(df1, event_pattern)
