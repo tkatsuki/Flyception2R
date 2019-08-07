@@ -863,7 +863,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   greenperredave <- rowMeans(ratioave,na.rm=TRUE)
   
   # Raw intentsities all
-  ratrawall <- redrawall <- grnrawall <- array(NA,length(frid))
+  dFF0intall <- ratrawall <- redrawall <- grnrawall <- array(NA,length(frid))
   ratrawall[goodfr] <- greenperredave
   redrawall[goodfr] <- redave
   grnrawall[goodfr] <- greenave
@@ -881,7 +881,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   seg_mask       <- seg_mask[,,goodfrratidx]
   
   # TODO: Raw result placeholder 
-  intensity <- zoo::rollmean(greenperredave, 3, align="left")
+  intensity <- zoo::rollmean(greenperredave, 3, fill=NA)
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
@@ -1168,6 +1168,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   
   ## Plotting ----
+  # F0 calculation
   if(is.na(baseline)) {
     # Default to using first frame
     F0int    <- intensity[1]
@@ -1194,11 +1195,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  # rollmean smoothed. Distinguish from loess smoothed
   deltaFint <- intensity - F0int
   dFF0int <- deltaFint/F0int * 100
+  dFF0intall[goodfrrat] <- dFF0int
   
   # Including bad frames
-  dFF0intall <- (datsmoothintall[,2]-F0loess)/F0loess*100
+  dFF0loessall <- (datsmoothintall[,2]-F0loess)/F0loess*100
   datdFF0all <- data.frame(n=1:length(frida), 
                            flframe=flframe,
                            avframe=frida,
@@ -1206,12 +1209,33 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            ratrawall=ratrawall,
                            redrawall=redrawall,
                            grnrawall=grnrawall,
+                           dFF0intall=dFF0intall,
                            fratloess=datsmoothintall[,2],
                            fredloess=redsmoothintall,
                            fgrnloess=grnsmoothintall,
-                           dFFloess=dFF0intall, 
+                           dFFloess=dFF0loessall, 
                            f1f2dist=trj_res$flydist[frida],
                            f1f2angle=theta)
+  
+  if(stimulus != T){
+    if(interaction==T){
+      event_pattern <- rep(1, nrow(datdFF0all))
+      event_pattern[closefr] <- 2
+    }else{
+      event_pattern <- rep(1, nrow(datdFF0all))
+    }
+  }
+  
+  # Calculate z-score
+  mu <- mean(datdFF0all$ratrawall[which(event_pattern == 0.1)], na.rm=T)
+  sigma <- sd(datdFF0all$ratrawall[which(event_pattern == 0.1)], na.rm=T)
+  z_score <- (datdFF0all$ratrawall - mu)/sigma
+
+  
+  p1zscoreloess <- p1zscore %>%
+    mutate(loess = predict(loess(zscore ~ x, span=0.2, control=loess.control(surface="direct"))))
+  
+  datdFF0all <- cbind(datdFF0all, event_pattern)
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
@@ -1240,15 +1264,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   df1 <- cbind(datdFF0all, fly1trjfv)
   
-  if(stimulus != T){
-    if(interaction==T){
-      event_pattern <- rep(1, nrow(df1))
-      event_pattern[closefr] <- 2
-    }else{
-      event_pattern <- rep(1, nrow(df1))
-    }
-  }
-  
+  #df1 <- cbind(df1, event_pattern)[100:800,] # change trajectory length here
   df1 <- cbind(df1, event_pattern)
   
   if (interaction==T){
@@ -1271,7 +1287,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }else{
     
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=dFFloess)) + 
-      geom_path(linetype=1, lwd = event_pattern, linejoin="round", lineend="round") +
+      geom_path(linetype=1, lwd = df1$event_pattern, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
