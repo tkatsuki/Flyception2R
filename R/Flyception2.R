@@ -427,7 +427,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Find good frames
   angdiff <- c(0, diff(ang))
-  ang_thresh <- 0.02
+  ang_thresh <- 0.1
   goodangfr <- which(angdiff < ang_thresh & angdiff > -ang_thresh)
   goodmarkerfr <- which(markernum == 3)
   
@@ -494,7 +494,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }
   
   # Round rotated error to nearest pixel
-  rtr <- round(rtr)
+  rtr    <- round(rtr)
   centers <- rtr
   
   # Offset compensation for bead/coverslip offset
@@ -857,15 +857,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Write per roi intensity file
   write.table(rawintroi, paste0(output_prefix, "_rawintroi.csv"), sep = ",", row.names=F)
   
-  # Mean across ROIs
-  redave         <- rowMeans(redave)
-  greenave       <- rowMeans(grnave)
-  greenperredave <- rowMeans(ratioave)
+  # Mean across ROIs (FOI length)
+  redave         <- rowMeans(redave,na.rm=TRUE)
+  greenave       <- rowMeans(grnave,na.rm=TRUE)
+  greenperredave <- rowMeans(ratioave,na.rm=TRUE)
+  
+  # Raw intentsities all
+  ratrawall <- redrawall <- grnrawall <- array(NA,length(frid))
+  ratrawall[goodfr] <- greenperredave
+  redrawall[goodfr] <- redave
+  grnrawall[goodfr] <- greenave
   
   # Segmentation mask across ROIs
   seg_mask       <- seg_masku
   
-  # Check for finite ratio values 
+  # Check for finite ratio values (reduced lenght no NA)
   goodfrratidx   <- is.finite(greenperredave)
   greenperredave <- greenperredave[goodfrratidx]
   goodfrrat      <- goodfr[goodfrratidx]
@@ -873,6 +879,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   greenave       <- greenave[goodfrratidx]
   greenperred    <- greenperred[,,goodfrratidx]
   seg_mask       <- seg_mask[,,goodfrratidx]
+  
+  # TODO: Raw result placeholder 
+  intensity <- zoo::rollmean(greenperredave, 3, align="left")
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
@@ -937,7 +946,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     stim_mrk_r  <- 5
     stim_mrk_sym <- array(0,c(stim_mrk_dim,stim_mrk_dim))
     stim_mrk_sym <- drawCircle(stim_mrk_sym,stim_mrk_ctr,stim_mrk_ctr,stim_mrk_r,1,fill=T)
-
+    
     stim_mrk_img[1:stim_mrk_dim,1:stim_mrk_dim]<-stim_mrk_sym
     
     for(ef in which(event_pattern==1)) {
@@ -984,8 +993,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rm(frgcombined)
   
   # Quantification of fluorescence intensity ----
-  # Mean Red/Green/Ratio
+
+  # Mean Red/Green/Ratio (Analyzed Frames)
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
+  
   # LOESS Model
   datloessint <- loess(y ~ x, data=datrawint, span=loess_span, control=loess.control(surface="direct"))
   redloessint <- loess(r ~ x, data=datrawint, span=loess_span)
@@ -997,15 +1008,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   #LOESS prediction of all time points
   datsmoothintall <- data.frame(x=1:length(frid), y=predict(datloessint, 1:length(frid)))
-  
-  # Smoothed Intensity
-  intensity <- zoo::rollmean(greenperredave, 3, align="left")
-  datint <- data.frame(x=goodfrrat[1:(length(goodfrrat)-2)], y=intensity)
-  
-  
-  png(file=paste0(output_prefix, "_datint.png"), width=400, height=400)
-  plot(datint)  
-  dev.off()
+  redsmoothintall <- predict(redloessint, 1:length(frid))
+  grnsmoothintall <- predict(greenloessint, 1:length(frid))
   
   png(file=paste0(output_prefix, "_datsmoothint.png"), width=400, height=400)
   par(mar = c(5,5,2,5))
@@ -1019,16 +1023,32 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   mtext(side = 4, line = 3, 'Fluorescence intensity')
   dev.off()
   
+  
+  # Save a frame map for the sequence
+  if(FOI[1] != F) {
+    # Write out frame map:
+    flframe           <- FOI[1]:FOI[2]
+    good              <- array(0,length(frid))
+    good[goodfrrat]   <- 1
+    fmap              <- cbind(flframe,frid,frida,good)
+    colnames(fmap)    <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
+  } else {
+    flframe           <- 1:length(frid)
+    good              <- array(0,length(frid))
+    good[goodfrrat]   <- 1
+    fmap              <- cbind(flframe,frid,frida,good)
+    colnames(fmap)    <- c("fluo_frame","fly_frame","arena_frame","good_frame")
+    write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
+  }
+  
+
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
   write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
   
-  #Duplicate RDS names:
-  # LOESS model
-  # TODO: Do we need to save the model for the short video 101 frame -> 177MB
-  # saveRDS(datloessint, paste0(output_prefix, "_datloessintmodel.RDS"))
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
-  
+
   # Behavior analysis ----
   ## Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
@@ -1037,7 +1057,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                                   interaction=interaction)
   if(interaction==T){
     loggit::message("Detecting interaction")
-    closefr <- which(trj_res$flydist < dist_thresh)
+    closefr <- which(trj_res$flydist[frida] < dist_thresh)
     closefrid <- sapply(closefr, function(x) which.min(abs(syncing$frida-x)))
     write.table(closefrid, paste0(output_prefix, "_closefrid.txt"))
     
@@ -1179,10 +1199,21 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Including bad frames
   dFF0intall <- (datsmoothintall[,2]-F0loess)/F0loess*100
-  datdFF0all <- data.frame(n=1:length(frida), f=dFF0intall, 
-                           d=trj_res$flydist[frida],
-                           a=theta)
-  write_csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
+  datdFF0all <- data.frame(n=1:length(frida), 
+                           flframe=flframe,
+                           avframe=frida,
+                           fvframe=frid,
+                           ratrawall=ratrawall,
+                           redrawall=redrawall,
+                           grnrawall=grnrawall,
+                           fratloess=datsmoothintall[,2],
+                           fredloess=redsmoothintall,
+                           fgrnloess=grnsmoothintall,
+                           dFFloess=dFF0intall, 
+                           f1f2dist=trj_res$flydist[frida],
+                           f1f2angle=theta)
+  
+  write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
   datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
                         d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
@@ -1223,11 +1254,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=f), linetype=1, lwd = 1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=fratloess), linetype=1, lwd = 1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red")) +
+      scale_colour_gradientn(limits=c(40, max(df1$fratloess)), colours = c("blue", "red")) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -1237,12 +1268,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
     
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=f)) + 
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=fratloess)) + 
       geom_path(linetype=1, lwd = event_pattern, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$f)), colours = c("blue", "red"), na.value = "gray70") +
+      scale_colour_gradientn(limits=c(40, max(df1$fratloess)), colours = c("blue", "red"), na.value = "gray70") +
       #scale_alpha(0.5) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0), color="black") + # Add an ellipse
       theme(line = element_blank(),
