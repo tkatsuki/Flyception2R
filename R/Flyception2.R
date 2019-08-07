@@ -1265,7 +1265,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             title = element_blank(),
             legend.position="none",
             rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
+            plot.margin=unit(c(1,1,1,1),"lines"))
   }else{
     
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=fratloess)) + 
@@ -1281,7 +1281,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             title = element_blank(),
             legend.position="none",
             rect= element_blank(),
-            plot.margin=unit(c(0,0,-1,-1),"lines"))
+            plot.margin=unit(c(1,1,1,1),"lines"))
     
   }
   
