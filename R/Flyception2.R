@@ -1199,7 +1199,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Including bad frames
   dFF0intall <- (datsmoothintall[,2]-F0loess)/F0loess*100
-  datdFF0all <- data.frame(n=1:length(frida), 
+  # Output all interesting data to output
+  
+  goodix            <- array(0,length(frida)) # Generate list of good frames
+  goodix[goodfrrat] <- 1
+  
+  datdFF0all <- data.frame(n=1:length(frida),
+                           goodfrix=goodix,
                            flframe=flframe,
                            avframe=frida,
                            fvframe=frid,
@@ -1211,7 +1217,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            fgrnloess=grnsmoothintall,
                            dFFloess=dFF0intall, 
                            f1f2dist=trj_res$flydist[frida],
-                           f1f2angle=theta)
+                           f1f2angle=theta,
+                           f1angle=ang,
+                           row.names=FALSE) # TODO: Add trajectories / behavior
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
