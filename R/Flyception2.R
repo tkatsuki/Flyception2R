@@ -1256,11 +1256,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=fratloess), linetype=1, lwd = 1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=dFFloess), linetype=1, lwd = 1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$fratloess)), colours = c("blue", "red")) +
+      scale_colour_gradientn(limits=c(40, max(df1$dFFloess)), colours = c("blue", "red")) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0)) + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -1270,12 +1270,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             plot.margin=unit(c(1,1,1,1),"lines"))
   }else{
     
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=fratloess)) + 
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=dFFloess)) + 
       geom_path(linetype=1, lwd = event_pattern, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$fratloess)), colours = c("blue", "red"), na.value = "gray70") +
+      scale_colour_gradientn(limits=c(40, max(df1$dFFloess)), colours = c("blue", "red"), na.value = "gray70") +
       #scale_alpha(0.5) +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0), color="black") + # Add an ellipse
       theme(line = element_blank(),
