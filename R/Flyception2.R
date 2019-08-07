@@ -343,7 +343,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     loggit::message("Stimulus detection skipped")
   }
   
-  if(stimulus==T) event_pattern <- c(rep(1, syncing$fpsfl*(stim_pattern[1])), rep(2, syncing$fpsfl*(stim_pattern[2])), rep(3, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
+  if(stimulus==T) event_pattern <- c(rep(0.1, syncing$fpsfl*(stim_pattern[1])), rep(1, syncing$fpsfl*(stim_pattern[2])), rep(1.5, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
   
   
   # Set input paths relative to directory parameters
@@ -1098,7 +1098,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       fly1_id  <- 0
       fly1_col <- c(2:3) + (fly1_id)*3
       avpix1   <- trja[frida,fly1_col]
-      avpix1 <- fly1trjfv
+      
       for(i in 1:dim(avimg)[3]) {
         
         avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
