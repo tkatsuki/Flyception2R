@@ -1219,7 +1219,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            f1f2dist=trj_res$flydist[frida],
                            f1f2angle=theta,
                            f1angle=ang,
-                           row.names=FALSE) # TODO: Add trajectories / behavior
+                           row.names='n') # TODO: Add trajectories / behavior
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
