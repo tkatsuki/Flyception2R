@@ -1098,9 +1098,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       fly1_id  <- 0
       fly1_col <- c(2:3) + (fly1_id)*3
       avpix1   <- trja[frida,fly1_col]
-      #avpix1 <- fly1trjfv
-      # TODO: need to convert back to arena pixel
-      
+      avpix1 <- fly1trjfv
       for(i in 1:dim(avimg)[3]) {
         
         avimgc3[,,i]   <- drawCircle(avimgc3[,,i],avpix1[i,1],avpix1[i,2],3,col=1,fill=T)
@@ -1236,7 +1234,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             title = element_blank(),
             legend.position="none",
             rect= element_blank(),
-            plot.margin=unit(c(1,1,1,1),"lines"))
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
   }else{
     
     p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=f)) + 
@@ -1252,7 +1250,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             title = element_blank(),
             legend.position="none",
             rect= element_blank(),
-            plot.margin=unit(c(1,1,1,1),"lines"))
+            plot.margin=unit(c(0,0,-1,-1),"lines"))
     
   }
   
