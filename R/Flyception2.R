@@ -719,7 +719,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   seg_maski <- seg_mask # Each ROI's mask frames
   
   # Allocate data frame and means
-  rawintroi   <- data.frame(frame=1:dim(redrois)[3])  
+  rawintroi   <- data.frame(frame=1:length(frid))  
   redave      <- vector()
   grnave      <- vector()
   ratioave    <- vector()
@@ -846,8 +846,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     ratioave <- cbind(ratioave,ratioavei)
     
     # Write intensities and ratio for this ROI
-    tmp        <- data.frame(redavei,grnavei,ratioavei)
-    names(tmp) <- c(paste0("redave",i),paste0("grnave",i),paste0("ratioave",i))
+    redout <- grnout <- ratout <- array(0,length(frid))
+    redout[goodfr] <- redavei
+    grnout[goodfr] <- grnavei
+    ratout[goodfr] <- ratioavei
+    
+    tmp        <- data.frame(redout,grnout,ratout)
+    names(tmp) <- c(paste0("redave",r),paste0("grnave",r),paste0("ratioave",r))
     rawintroi  <- cbind(rawintroi, tmp)
     
   } # end per ROI loop
@@ -993,7 +998,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   rm(frgcombined)
   
   # Quantification of fluorescence intensity ----
-
+  
   # Mean Red/Green/Ratio (Analyzed Frames)
   datrawint <- data.frame(x=goodfrrat, y=greenperredave, r=redave, g=greenave)
   
@@ -1042,13 +1047,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     write.csv(fmap,paste0(output_prefix,"_frame_map.csv"),row.names = F)
   }
   
-
+  
   saveRDS(datrawint, paste0(output_prefix, "_datrawint.RDS"))
   write.table(datrawint, paste0(output_prefix, "_datrawint.csv"), sep = ",", row.names=F)
   
   # Dataframe LOESS predications
   saveRDS(datsmoothint, paste0(output_prefix, "_datloessint.RDS")) 
-
+  
   # Behavior analysis ----
   ## Analyze trajectories
   trj_res <- analyze_trajectories(dir=dir,
@@ -1067,37 +1072,52 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # body axis is already given as "ang" in radians but plus pi/2
     # so all we need is the slope of the line between two flies
     
-    vecA <- data.frame(Ax=-sin(ang), Ay=-cos(ang)) # direction of the fly being tracked relative to the X axis
-    
-    # Determine which fly in the arena-view is being tracked by fly-view
+    # Use offline tracker for good arena trajectory file or
+    # integrate offline login into online tracker
     fly1trjfv <- trj_res$trjfv[frid,]
-    dist1 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,1:2])^2)) # distance between the tracked fly and fly1 in the arena trj
-    dist2 <- sqrt(rowSums((fly1trjfv - trj_res$trja[frida,3:4])^2)) # distance between the tracked fly and fly2 in the arena trj
+    fly1trjavmm <- trj_res$trja[frida,1:2]
+    fly2trjavmm <- trj_res$trja[frida,3:4]
     
-    # Set fly1 always being the tracked fly and create trajectories for each fly
-    fly1trja <- trj_res$trja[frida,1:2]
-    fly1trja[which(dist1 > dist2), ] <- trj_res$trja[frida,3:4][which(dist1 > dist2),]
-    fly2trja <- trj_res$trja[frida,3:4]
-    fly2trja[which(dist1 > dist2), ] <- trj_res$trja[frida,1:2][which(dist1 > dist2),]
+    # Get angles
+    # Angle in degrees facing toward Fluoview
+    angdf1  <- ang*180/pi - 15 + 90
     
+    # Normalize fv angle to -180 - 180
+    angdf1n       <- (angdf1 + 360) %% 360
+    ixf1          <- angdf1n > 180 & !is.na(angdf1n)
+    angdf1n[ixf1] <- angdf1n[ixf1] - 360 # FIX THE OFFSET:
     
-    vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
+    # Vector from male to female
+    f1f2vec       <- fly2trjavmm - fly1trjavmm
     
-    # theta ＝ atan2(AxB，A*B) in radian
-    # For now left side of the view is positive
-    theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
+    # Norm of fly1 to fly vector (distance)
+    f1f2norm      <- sqrt(rowSums(f1f2vec^2))
+    
+    # x,y components of unit vector from fly1 to fly2
+    f1f2x         <- f1f2vec[,1]/f1f2norm
+    f1f2y         <- f1f2vec[,2]/f1f2norm
+    
+    # Angle vector from fly1 to fly2
+    angdf1f2      <- atan2(f1f2y,f1f2x) * 180/pi
+    
+    # Angle between fly1 heading and fly2 centroid
+    theta         <- -angdf1 + angdf1f2
+    
+    # Normalize fv angle to -180 - 180
+    theta         <- (theta + 360) %% 360
+    ixt           <- theta > 180 & !is.na(theta)
+    theta[ixt]    <- theta[ixt] - 360
     
   }else{
     if(length(trj_res$trja)==0){
       loggit::message("No valid trajectories found")
-      fly1trja <- data.frame(xr=rep(0, length(ang)), yr=rep(0, length(ang)))
+      fly1trja  <- data.frame(xr=rep(0, length(ang)), yr=rep(0, length(ang)))
       fly1trjfv <- data.frame(xr=rep(0, length(ang)), yr=rep(0, length(ang)))
-      theta <- ang
-      
-    }else{
+      theta     <- array(0,length(ang))
+    }else{ # Single Fly
       fly1trja  <- trj_res$trja[frida,1:2]
       fly1trjfv <- trj_res$trjfv[frid,1:2]
-      theta <- ang
+      theta     <- array(0,length(ang))
     }
   }
   
@@ -1204,7 +1224,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   goodix            <- array(0,length(frida)) # Generate list of good frames
   goodix[goodfrrat] <- 1
   
-  datdFF0all <- data.frame(n=1:length(frida),
+  datdFF0all <- data.frame(index=1:length(frida),
                            goodfrix=goodix,
                            flframe=flframe,
                            avframe=frida,
@@ -1215,11 +1235,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            fratloess=datsmoothintall[,2],
                            fredloess=redsmoothintall,
                            fgrnloess=grnsmoothintall,
-                           dFFloess=dFF0intall, 
+                           dFFloess=dFF0intall,
                            f1f2dist=trj_res$flydist[frida],
+                           ang=ang,
                            f1f2angle=theta,
-                           f1angle=ang,
-                           row.names='n') # TODO: Add trajectories / behavior
+                           row.names='index') # TODO: Add trajectories / behavior
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
@@ -1258,7 +1278,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   df1 <- cbind(df1, event_pattern)
   
   if (interaction==T){
-    df2 <- cbind(datdFF0all, fly2trja)
+    df2 <- cbind(datdFF0all, fly2trjavmm)
     
     p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
