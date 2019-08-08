@@ -1248,7 +1248,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     ggplot2::geom_smooth(method="loess", span = loess_span, level=0.95, na.rm=T) +
     ggplot2::ggsave(filename = paste0(output_prefix, "_zscore.pdf"), width = 8, height = 8)
   
-  p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=f)) +
   p2 <- ggplot2::ggplot(data=datdFF0all, ggplot2::aes(x=t, y=f1f2dist)) +
     ggplot2::geom_line() +
     ggplot2::ylim(0, 100)
