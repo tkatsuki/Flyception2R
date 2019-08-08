@@ -1072,8 +1072,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     # body axis is already given as "ang" in radians but plus pi/2
     # so all we need is the slope of the line between two flies
     
-    # Determine which fly in the arena-view is being tracked by fly-view
-    
+    # Use offline tracker for good arena trajectory file or
+    # integrate offline login into online tracker
     fly1trjfv <- trj_res$trjfv[frid,]
     fly1trjavmm <- trj_res$trja[frida,1:2]
     fly2trjavmm <- trj_res$trja[frida,3:4]
@@ -1107,11 +1107,6 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     theta         <- (theta + 360) %% 360
     ixt           <- theta > 180 & !is.na(theta)
     theta[ixt]    <- theta[ixt] - 360
-
-    #vecB <- data.frame(Bx=(fly2trja[,1] - fly1trja[,1]), By=(-fly2trja[,2] + fly1trja[,2]))
-    # theta ＝ atan2(AxB，A*B) in radian
-    # For now left side of the view is positive
-    #theta <- 180/pi*atan2((vecA[,1]*vecB[,2] - vecA[,2]*vecB[,1]), (vecA[,1]*vecB[,1] + vecA[,2]*vecB[,2]))
     
   }else{
     if(length(trj_res$trja)==0){
@@ -1229,7 +1224,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   goodix            <- array(0,length(frida)) # Generate list of good frames
   goodix[goodfrrat] <- 1
   
-  datdFF0all <- data.frame(n=1:length(frida),
+  datdFF0all <- data.frame(index=1:length(frida),
                            goodfrix=goodix,
                            flframe=flframe,
                            avframe=frida,
@@ -1244,8 +1239,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            f1f2dist=trj_res$flydist[frida],
                            ang=ang,
                            f1f2angle=theta,
-                           dist2=f1f2norm,
-                           row.names='n') # TODO: Add trajectories / behavior
+                           row.names='index') # TODO: Add trajectories / behavior
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
