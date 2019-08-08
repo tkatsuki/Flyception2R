@@ -719,7 +719,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   seg_maski <- seg_mask # Each ROI's mask frames
   
   # Allocate data frame and means
-  rawintroi   <- data.frame(frame=1:dim(redrois)[3])  
+  rawintroi   <- data.frame(frame=1:length(frid))  
   redave      <- vector()
   grnave      <- vector()
   ratioave    <- vector()
@@ -846,7 +846,12 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     ratioave <- cbind(ratioave,ratioavei)
     
     # Write intensities and ratio for this ROI
-    tmp        <- data.frame(redavei,grnavei,ratioavei)
+    redout <- grnout <- ratout <- array(0,length(frid))
+    redout[goodfr] <- redavei
+    grnout[goodfr] <- grnavei
+    ratout[goodfr] <- ratioavei
+    
+    tmp        <- data.frame(redout,grnout,ratout)
     names(tmp) <- c(paste0("redave",r),paste0("grnave",r),paste0("ratioave",r))
     rawintroi  <- cbind(rawintroi, tmp)
     
