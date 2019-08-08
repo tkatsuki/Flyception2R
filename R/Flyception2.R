@@ -847,7 +847,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     # Write intensities and ratio for this ROI
     tmp        <- data.frame(redavei,grnavei,ratioavei)
-    names(tmp) <- c(paste0("redave",i),paste0("grnave",i),paste0("ratioave",i))
+    names(tmp) <- c(paste0("redave",r),paste0("grnave",r),paste0("ratioave",r))
     rawintroi  <- cbind(rawintroi, tmp)
     
   } # end per ROI loop
