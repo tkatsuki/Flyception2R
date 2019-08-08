@@ -846,7 +846,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     ratioave <- cbind(ratioave,ratioavei)
     
     # Write intensities and ratio for this ROI
-    redout <- grnout <- ratout <- array(0,length(frid))
+    redout <- grnout <- ratout <- array(NA,length(frid))
     redout[goodfr] <- redavei
     grnout[goodfr] <- grnavei
     ratout[goodfr] <- ratioavei
