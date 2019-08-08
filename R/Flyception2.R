@@ -343,7 +343,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     loggit::message("Stimulus detection skipped")
   }
   
-  if(stimulus==T) event_pattern <- c(rep(0.1, syncing$fpsfl*(stim_pattern[1])), rep(1, syncing$fpsfl*(stim_pattern[2])), rep(1.5, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
+  if(stimulus==T) event_pattern <- c(rep(1, syncing$fpsfl*(stim_pattern[1])), rep(2, syncing$fpsfl*(stim_pattern[2])), rep(3, syncing$fpsfl*(stim_pattern[3]) + 1)) # FOI needs to be fixed
   
   
   # Set input paths relative to directory parameters
@@ -881,7 +881,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   seg_mask       <- seg_mask[,,goodfrratidx]
   
   # TODO: Raw result placeholder 
-  intensity <- zoo::rollmean(greenperredave, 3, fill=NA)
+  intensity <- zoo::rollmean(greenperredave, 3, align="left", fill="extend")
   
   # Temp copy of ratio image for heatmap
   gprimage <- greenperred
@@ -949,7 +949,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     
     stim_mrk_img[1:stim_mrk_dim,1:stim_mrk_dim]<-stim_mrk_sym
     
-    for(ef in which(event_pattern==1)) {
+    for(ef in which(event_pattern==2)) {
       grratiocolorl[,,2,ef] <- grratiocolorl[,,2,ef] + stim_mrk_img
     }
   }
@@ -1101,6 +1101,17 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     }
   }
   
+  if(stimulus != T){
+    if(interaction==T){
+      event_pattern <- rep(1, length(frida))
+      event_pattern[closefr] <- 2
+    }else{
+      event_pattern <- rep(1, length(frida))
+    }
+  }
+  
+  
+  ## Generate av trj video ----
   if(gen_av_trj_vid) {
     # Save arenaview tracked video
     avimg   <- dipr::readFMF(arena_view_fmf, frames=frida)/255
@@ -1176,11 +1187,11 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   } else {
     # Specify -1 to use min (Positive Change)
     if(baseline == -1) {
-      F0int    <- min(intensity)
-      F0loess  <- min(datsmoothintall[,2])
+      F0int    <- min(intensity, na.rm=T)
+      F0loess  <- min(datsmoothintall[,2], na.rm=T)
     }else if(baseline == 0) {
-      F0int    <- mean(intensity)
-      F0loess  <- mean(datsmoothintall[,2])
+      F0int    <- mean(intensity, na.rm=T)
+      F0loess  <- mean(datsmoothintall[,2], na.rm=T)
     } else {
       # Specified a baseline frame or range of frames for mean
       idx      <- intersect(baseline[1]:baseline[length(baseline)],goodfr)
@@ -1200,9 +1211,15 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   dFF0int <- deltaFint/F0int * 100
   dFF0intall[goodfrrat] <- dFF0int
   
+  # Calculate z-score
+  mu <- mean(dFF0intall[which(event_pattern == 1)], na.rm=T)
+  sigma <- sd(dFF0intall[which(event_pattern == 1)], na.rm=T)
+  z_score <- (dFF0intall - mu)/sigma
+  
   # Including bad frames
   dFF0loessall <- (datsmoothintall[,2]-F0loess)/F0loess*100
   datdFF0all <- data.frame(n=1:length(frida), 
+                           t=1/syncing$fpsfl*(1:length(frida)),
                            flframe=flframe,
                            avframe=frida,
                            fvframe=frid,
@@ -1215,58 +1232,44 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                            fgrnloess=grnsmoothintall,
                            dFFloess=dFF0loessall, 
                            f1f2dist=trj_res$flydist[frida],
-                           f1f2angle=theta)
-  
-  if(stimulus != T){
-    if(interaction==T){
-      event_pattern <- rep(1, nrow(datdFF0all))
-      event_pattern[closefr] <- 2
-    }else{
-      event_pattern <- rep(1, nrow(datdFF0all))
-    }
-  }
-  
-  # Calculate z-score
-  mu <- mean(datdFF0all$ratrawall[which(event_pattern == 0.1)], na.rm=T)
-  sigma <- sd(datdFF0all$ratrawall[which(event_pattern == 0.1)], na.rm=T)
-  z_score <- (datdFF0all$ratrawall - mu)/sigma
+                           f1f2angle=theta,
+                           z_score=z_score)
 
-  
-  p1zscoreloess <- p1zscore %>%
-    mutate(loess = predict(loess(zscore ~ x, span=0.2, control=loess.control(surface="direct"))))
-  
+  z_scoreloess <- predict(loess(z_score ~ n, data=datdFF0all, span=loess_span, control=loess.control(surface="direct")), 1:length(frida))
+  datdFF0all <- cbind(datdFF0all, z_scoreloess)
   datdFF0all <- cbind(datdFF0all, event_pattern)
+  activity <- array(NA,length(frid))
+  activity[which(datdFF0all$z_scoreloess > 2)] <- T
+  datdFF0all <- cbind(datdFF0all, activity)
   
   write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
   
-  datdFF0 <- data.frame(n=goodfrrat[1:(length(goodfrrat)-2)], f=dFF0int, 
-                        d=trj_res$flydist[frida[goodfrrat[1:(length(goodfrrat)-2)]]],
-                        a=theta[1:(length(goodfrrat)-2)])
+  p1 <- ggplot2::ggplot(data=datdFF0all, ggplot2::aes(x=t, y=z_score)) +
+    ggplot2::geom_smooth(method="loess", span = loess_span, level=0.95, na.rm=T) +
+    ggplot2::ggsave(filename = paste0(output_prefix, "_zscore.pdf"), width = 8, height = 8)
   
   p1 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=f)) +
-    ggplot2::geom_smooth(method="loess", span = loess_span, level=0.95) +
-    ggplot2::ggsave(filename = paste0(output_prefix, "_dFF0int.pdf"), width = 8, height = 8)
-  
-  p2 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=d)) +
+  p2 <- ggplot2::ggplot(data=datdFF0all, ggplot2::aes(x=t, y=f1f2dist)) +
     ggplot2::geom_line() +
     ggplot2::ylim(0, 100)
   
-  p3 <- ggplot2::ggplot(data=datdFF0, ggplot2::aes(x=n, y=a)) +
+  p3 <- ggplot2::ggplot(data=datdFF0all, ggplot2::aes(x=t, y=f1f2angle)) +
     ggplot2::geom_line() +
     ggplot2::ylim(-180, 180)
   
-  png(file=paste0(output_prefix, "_dFF0_dist_angle.png"), width=400, height=400)
+  png(file=paste0(output_prefix, "_zscore_dist_angle.png"), width=1024, height=1024)
+  Rmisc::multiplot(p1, p2, p3, cols=1)
+  dev.off()
+  pdf(file=paste0(output_prefix, "_zscore_dist_angle.pdf"), width=4, height=4)
   Rmisc::multiplot(p1, p2, p3, cols=1)
   dev.off()
   
   # Create trajectory of the flies
   message("Creating trajectory of the flies...")
   
+  df1 <- cbind(datdFF0all, fly1trjfv)[50:800,]
   df1 <- cbind(datdFF0all, fly1trjfv)
-  
-  #df1 <- cbind(df1, event_pattern)[100:800,] # change trajectory length here
-  df1 <- cbind(df1, event_pattern)
-  
+
   if (interaction==T){
     df2 <- cbind(datdFF0all, fly2trja)
     
@@ -1286,13 +1289,14 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             plot.margin=unit(c(1,1,1,1),"lines"))
   }else{
     
-    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*xr, y=10*yr, color=dFFloess)) + 
-      geom_path(linetype=1, lwd = df1$event_pattern, linejoin="round", lineend="round") +
+    p4 <- ggplot(data=df1, aes(x=10*xr, y=10*yr, color=z_scoreloess )) + 
+      geom_path(lwd = 1, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
-      scale_colour_gradientn(limits=c(40, max(df1$dFFloess)), colours = c("blue", "red"), na.value = "gray70") +
-      #scale_alpha(0.5) +
+      scale_colour_gradientn(limits=c(2, max(df1$z_scoreloess )), colours = c("blue", "red"), na.value = "gray70") +
+      geom_path(data=df1[which(df1$event_pattern==1),], aes(x=10*xr, y=10*yr), color="white", lwd = 1.2, linetype = 3, linejoin="round", lineend="round") +
+      geom_path(data=df1[which(df1$event_pattern==3),], aes(x=10*xr, y=10*yr), color="white", lwd = 1.2, linetype = 2, linejoin="round", lineend="round") +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0), color="black") + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -1304,6 +1308,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   }
   
   pdf(file= paste0(output_prefix, "_trackResult_fv.pdf"), width = 4.4, height = 4, bg = "white")
+  print(p4)
+  dev.off()
+  
+  png(file= paste0(output_prefix, "_trackResult_fv.png"), width = 1024, height = 1024, bg = "white")
   print(p4)
   dev.off()
   
