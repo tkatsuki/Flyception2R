@@ -21,6 +21,8 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     trja <- trja[,2:3]
   }else if(trjancol==6|trjancol==7){
     trja <- trja[,c(2,3,5,6)]
+  }else if(trjancol==5) {
+    trja <- trja[,c(2,3,4,5)]
   }else {
     stop("Unknown av-trj format")
   }
