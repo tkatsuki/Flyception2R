@@ -1243,32 +1243,43 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   goodix            <- array(0,length(frida)) # Generate list of good frames
   goodix[goodfrrat] <- 1
   
-  datdFF0all <- data.frame(index=1:length(frida),
-                           goodfrix=goodix,
-                           t=1/syncing$fpsfl*(1:length(frida)),
-                           flframe=flframe,
-                           avframe=frida,
-                           fvframe=frid,
-                           ratrawall=ratrawall,
-                           redrawall=redrawall,
-                           grnrawall=grnrawall,
-                           dFF0intall=dFF0intall,
-                           fratloess=datsmoothintall[,2],
-                           fredloess=redsmoothintall,
-                           fgrnloess=grnsmoothintall,
-                           dFFloess=dFF0loessall, 
-                           f1f2dist=trj_res$flydist[frida],
-                           f1f2angle=theta,
-                           z_score=z_score)
-
+  datdFF0all <- cbind(
+    data.frame(index=1:length(frida),                   # Frame index
+               goodfrix=goodix,                         # Good frame flag
+               t=1/syncing$fpsfl*(1:length(frida)),     # Time (s)
+               flframe=flframe,                         # Fluoview frame number
+               avframe=frida,                           # Arenaview frame number
+               fvframe=frid,                            # Flyview frame number
+               ratrawall=ratrawall,                     # Average raw ratio 
+               redrawall=redrawall,                     # Average raw red 
+               grnrawall=grnrawall),                    # Averave raw green
+    
+    rawintroi[,2:ncol(rawintroi)],                      # Individual ROI raw activity
+    
+    data.frame(dFF0intall=dFF0intall,                   # Moving average (k = 3) DF/F0 F0=baseline
+               fratloess=datsmoothintall[,2],           # Loess prediction ratio all frames
+               fredloess=redsmoothintall,               # Loess prediction red all frames
+               fgrnloess=grnsmoothintall,               # Loess prediction green all frames
+               dFFloess=dFF0loessall,                   # DF/F0 of Loess prediction all frames
+               z_score=z_score,                         # z-score of activity
+               f1f2dist=trj_res$flydist[frida],         # Distance between flies
+               f1angle=ang,                             # Heading of fly1 in the arena
+               f1f2angle=theta),                        # Angle from tracked fly heading to 2nd fly centroid
+    
+    trj_res$trja[frida,],                               # Arena view trajectory
+    trj_res$trjfv[frid,])                               # Flyview Trajectory
+  
+  
+  
   z_scoreloess <- predict(loess(z_score ~ index, data=datdFF0all, span=loess_span, control=loess.control(surface="direct")), 1:length(frida))
   datdFF0all <- cbind(datdFF0all, z_scoreloess)
   datdFF0all <- cbind(datdFF0all, event_pattern)
-  activity <- array(NA,length(frid))
-  activity[which(datdFF0all$z_scoreloess > 2)] <- T
+  activity <- array(0,length(frid))
+  activity[which(datdFF0all$z_scoreloess > 2)] <- 1
   datdFF0all <- cbind(datdFF0all, activity)
   
-  write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"))
+  
+  write.csv(datdFF0all, paste0(output_prefix, "_datdFF0all.csv"), row.names=F)
   
   p1 <- ggplot2::ggplot(data=datdFF0all, ggplot2::aes(x=t, y=z_score)) +
     ggplot2::geom_smooth(method="loess", span = loess_span, level=0.95, na.rm=T) +
@@ -1292,15 +1303,13 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   # Create trajectory of the flies
   message("Creating trajectory of the flies...")
   
-  df1 <- cbind(datdFF0all, fly1trjfv)[50:800,]
-  df1 <- cbind(datdFF0all, fly1trjfv)
-
+  df1 <- datdFF0all
+  
   if (interaction==T){
-    df2 <- cbind(datdFF0all, fly2trjavmm)
     
-    p4 <- ggplot2::ggplot(data=df2, ggplot2::aes(x=10*xr, y=10*yr)) + 
+    p4 <- ggplot2::ggplot(data=df1, ggplot2::aes(x=10*f2avx, y=10*f2avy)) + 
       geom_path(linetype=2, lwd = 1, color=1) +
-      geom_path(data=df1,  ggplot2::aes(x=10*xr, y=10*yr, color=dFFloess), linetype=1, lwd = 1) +
+      geom_path(data=df1,  ggplot2::aes(x=10*f1avx, y=10*f1avy, color=dFFloess), linetype=1, lwd = 1) +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
@@ -1314,7 +1323,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
             plot.margin=unit(c(1,1,1,1),"lines"))
   }else{
     
-    p4 <- ggplot(data=df1, aes(x=10*xr, y=10*yr, color=z_scoreloess )) + 
+    p4 <- ggplot(data=df1, aes(x=10*f1fvx, y=10*f1fvy, color=z_scoreloess )) + 
       geom_path(lwd = 1, linejoin="round", lineend="round") +
       coord_fixed(ratio = 1) +
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
