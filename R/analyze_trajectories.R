@@ -21,6 +21,8 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     trja <- trja[,2:3]
   }else if(trjancol==6|trjancol==7){
     trja <- trja[,c(2,3,5,6)]
+  }else if(trjancol==5) {
+    trja <- trja[,c(2,3,4,5)]
   }else {
     stop("Unknown av-trj format")
   }
@@ -66,7 +68,7 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     c     <- 65.167 # distance between y center and top flat surface
     alpha <- pi*xangle/180 # x mirror angle in radians
     beta  <- pi*yangle/180 # y mirror angle in radians
-
+    
     hr <- (a+b)*cos(2*alpha) - a
     xr <- a*tan(2*alpha) + hr*tan(2*alpha)
     yr <- hr*sin(2*beta)
@@ -88,8 +90,8 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     yangle1[which(trja[,2] != 0)] <- mapsurfacesy$z[as.matrix(round(trja[which(trja[,2] != 0),1:2]))] 
     
     trjfvmm <- get_world_traj_from_angle(xanglefv,yanglefv)
-    trjamm <- get_world_traj_from_angle(xangle1,yangle1)
-
+    trjamm  <- get_world_traj_from_angle(xangle1,yangle1)
+    trjamm  <- cbind(trjamm, array(NA,c(nrow(trjamm),2))) # Pad NA for second fly
     
   } else {
     
@@ -117,6 +119,9 @@ analyze_trajectories <- function(dir, output, fpsfv, interaction=F){
     trjamm <- cbind(trjamm,get_world_traj_from_angle(xangle2,yangle2))
     
   }
+  
+  colnames(trjfvmm) <- c('f1fvx','f1fvy')
+  colnames(trjamm) <- c('f1avx','f1avy','f2avx','f2avy')
   
   headpos <- fvtrj[,c(4,5)]
   distance <- dipr::trackDistance(trj)
