@@ -1329,8 +1329,8 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       scale_x_continuous(limits=c(-240, 240), expand=c(0,0)) +
       scale_y_reverse(limits=c(220, -220), expand=c(0,0)) +
       scale_colour_gradientn(limits=c(2, max(df1$z_scoreloess )), colours = c("blue", "red"), na.value = "gray70") +
-      geom_path(data=df1[which(df1$event_pattern==1),], aes(x=10*xr, y=10*yr), color="white", lwd = 1.2, linetype = 3, linejoin="round", lineend="round") +
-      geom_path(data=df1[which(df1$event_pattern==3),], aes(x=10*xr, y=10*yr), color="white", lwd = 1.2, linetype = 2, linejoin="round", lineend="round") +
+      geom_path(data=df1[which(df1$event_pattern==1),], aes(x=10*f1fvx, y=10*f1fvy), color="white", lwd = 1.2, linetype = 3, linejoin="round", lineend="round") +
+      geom_path(data=df1[which(df1$event_pattern==3),], aes(x=10*f1fvx, y=10*f1fvy), color="white", lwd = 1.2, linetype = 2, linejoin="round", lineend="round") +
       ggforce::geom_ellipse(aes(x0 = 0, y0 = 0, a = 11.0795*20, b = 10*20, angle = 0), color="black") + # Add an ellipse
       theme(line = element_blank(),
             text = element_blank(),
@@ -1345,7 +1345,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   print(p4)
   dev.off()
   
-  png(file= paste0(output_prefix, "_trackResult_fv.png"), width = 1024, height = 1024, bg = "white")
+  png(file= paste0(output_prefix, "_trackResult_fv.png"), width = 512, height = 512, bg = "white")
   print(p4)
   dev.off()
   
