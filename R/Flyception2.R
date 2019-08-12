@@ -481,21 +481,14 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
     rot[,,r] <- RNiftyReg::rotate(fvimgl[,,r], ang[r], anchor = c("center"))
   }
   
-  # Flyview tracking error
-  fverr <- read.table(paste0(dir, list.files(dir, pattern="^fv-traj-")), colClasses = "numeric")[(frid),4:5]
-  
-  # Use flyview trajectory file to find the error
-  fverr <- as.matrix(fverr) - 120
+  # Use calculated moment as error for translation compensation
+  fverr <- ang_res[[2]] - 120
   
   # Apply rotation to flyview error vectors
-  rtr <- array(0,dim(fverr))
+  centers <- array(0,dim(fverr))
   for(i in 1:length(ang)) {
-    rtr[i,] <- fverr[i,] %*% array(c(cos(ang[i]),sin(ang[i]),-sin(ang[i]),cos(ang[i])),c(2,2))
+    centers[i,] <- fverr[i,] %*% array(c(cos(ang[i]),sin(ang[i]),-sin(ang[i]),cos(ang[i])),c(2,2))
   }
-  
-  # Round rotated error to nearest pixel
-  rtr    <- round(rtr)
-  centers <- rtr
   
   # Offset compensation for bead/coverslip offset
   if(!is.na(ctr_offset[1]))
