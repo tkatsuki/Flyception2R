@@ -37,6 +37,8 @@
 #' @param gen_av_trj_vid bool indicate whether to generate video with arena view tracking indicators
 #' @param fly_id zero based index number of the flyview tracked fly corresponding to the arenaview trajectory columns
 #' @param process_all logical. True if both preprocess and main process to be executed
+#' @param loess_span numeric. set loess span
+#' @param alternate logical. True if lasers are alternated
 #' @export
 #' @examples
 #' Flyception2R()
@@ -52,11 +54,10 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
                          baseline=NA, input_range_r=c(180, 400), input_range_g=c(180, 300),
                          size_thresh=5, focus_thresh=950, badfr=NA, ctr_offset=NA, motion_thresh=10,
                          stim_pattern=c(1,2,10), gen_av_trj_vid=F, fly1_id=0, process_all=F, 
-                         loess_span=0.4){
+                         loess_span=0.4, alternate=F){
   
   # TO DO
   # - why require restart
-  # - fly-fly angle detection needs to be corrected
   # - redwindow contrast too low
   # - Optimize speed
   
@@ -375,6 +376,9 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
       FOI <- c(1, flnframe)
     }
   }
+  if(alternate == T){
+    if((FOI[2] - FOI[1] + 1) %% 2 == 0) stop("For alternating laser choose even number of frames")
+  }
   loggit::message(sprintf("Fluo-view frames from %d to %d will be analyzed.", FOI[1], FOI[2]))
   
   outdir <- paste0(outdirr, paste0(FOI, collapse="_"), "/")
@@ -393,6 +397,22 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   flimg1 <- flip(flimg1) # flip images to match fly-view
   flimg2 <- flip(flimg2) # flip images to match fly-view
   
+  if(alternate == T){
+    # # Green or red channel?
+    flimg1int <- colMeans(flimg1, dim=2)
+    if(flimg1int[1] < mean(flimg1int)){
+      greenfr <- seq(2, dim(flimg1)[3], 2)
+      redfr <- seq(1, dim(flimg2)[3], 2)
+    } else {
+      greenfr <- seq(1, dim(flimg1)[3], 2)
+      redfr <- seq(2, dim(flimg2)[3], 2)
+    }
+    
+    flimg1[,,redfr] <- flimg1[,,greenfr]
+    flimg2[,,greenfr] <- flimg2[,,redfr]
+    
+  }
+
   # flv exposure 18 ms
   FVOFFSET <- 0 
   frid     <- frid + FVOFFSET
@@ -455,7 +475,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   
   # Save good frames from each condition
   frix <- array(1,length(quantcnt))
-  loggit::message(sprintf("Good Frames:\nmarker: %d\tmotion: %d\tangle: %d\tfocus: %d\n",
+  loggit::message(sprintf("Good Frames:\nmarker: %d\tmotion: %d\ta ngle: %d\tfocus: %d\n",
                           sum(frix[goodmarkerfr]),sum(frix[goodmotionfr]), sum(frix[goodangfr]), sum(frix[goodfocusfr])))
   
   # Save index of good frames
