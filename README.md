@@ -15,8 +15,9 @@ The following commands will install packages necessary for running Flyception2R.
 
 ```
 install.packages(c("devtools", "ggplot2", "RNiftyReg", "zoo", "loggit"))
-source("https://bioconductor.org/biocLite.R")
-biocLite(c("BiocInstaller", "EBImage"))
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("EBImage")
 library(devtools)
 install.Rtools()
 devtools::install_github("tkatsuki/dipr")
