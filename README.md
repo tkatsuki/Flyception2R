@@ -26,14 +26,14 @@ library(Flyception2R)
 ```
 
 ## Usage example
-The function Flyception2R processes and analyzes the data automatically or interactively depending on the inputs to the command. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
+The function Flyception2R can process and analyze data acquired with Flyception2 automatically or interactively. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
 
 To run the following example, first download the data (~13GB) from the link below. The data consists of 100sec recordings from a P1-GCaMP6s,tdTomato male fly.
 
 https://www.dropbox.com/sh/okey9zkuhpw44zb/AABmV_mT09rPtAWEU7lgcd-Ua?dl=0
 
 ```
-dir <- "/PATH/TO/DATA/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/"
+dir <- "/PATH/TO/DATA/demo_data/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/" # do not forget the slash at the end
 Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
 ```
 
