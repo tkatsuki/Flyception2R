@@ -26,15 +26,15 @@ library(Flyception2R)
 ```
 
 ## Usage example
-The function Flyception2R can process and analyze data acquired with Flyception2 automatically or interactively. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
+The function Flyception2R() can process and analyze data acquired with Flyception2 semi-automatically. The minimal input needed to run Flyception2R() is the location of the directory that contains the Flyception2 video files, although you would normally want to specify which frames of the video to be analyzed, otherwise it will analyze the entire video and likely run out of memory. The following usage example demonstrates how to analyze and interpret Flyception2 data using a real 100sec recording from a male fly that expressed GCaMP6s and tdTomato in the P1 neurons during courtship.
 
-To run the following example, first download the data (~13GB) from the link below. The data consists of 100sec recordings from a P1-GCaMP6s,tdTomato male fly.
+To run the following example, first download the data (~13GB) from the link below.
 
 https://www.dropbox.com/sh/okey9zkuhpw44zb/AABmV_mT09rPtAWEU7lgcd-Ua?dl=0
 
 ```
-dir <- "/PATH/TO/DATA/demo_data/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/" # do not forget the slash at the end
-Flyception2R(dir=dir, FOI=c(4242, 4556), interaction=F, flash=1)
+dir <- "/PATH/TO/DATA/demo_data/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/" # don't forget the slash at the end
+Flyception2R(dir=dir, FOI=c(4242, 4556), flash=1)
 ```
 
 Because the marker position, hence the center of the image, relative to the fly brain varies from fly to fly, the position of the window (ROI) for segmenting neurons needs to be manually adjusted. Flyception2R will ask you if the window_size and window_offset are acceptable. Check the file ```_redwindow.tif``` and adjust the window size or offset so that the neurons of your interest are in the window (see example below). When you want to move the window up, decrease the y value. When you want to move the window left, decrease the x value. You can create multiple ROIs if you wish.
