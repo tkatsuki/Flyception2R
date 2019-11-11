@@ -19,14 +19,18 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("EBImage")
 library(devtools)
-install.Rtools()
+install.Rtools() # only for Windows
 devtools::install_github("tkatsuki/dipr")
 devtools::install_github("tkatsuki/Flyception2R")
 library(Flyception2R)
 ```
 
 ## Usage example
-The function Flyception2R automatically processes and analyzes the data except for the one step mentioned below. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
+The function Flyception2R processes and analyzes the data automatically or interactively depending on the inputs to the command. Normally, you just need to specify which frames of a video file you want to analyze. Then the results will be saved in a folder named with the frame range.
+
+To run the following example, first download the data (~13GB) from the link below. The data consists of 100sec recordings from a P1-GCaMP6s,tdTomato male fly.
+
+https://www.dropbox.com/sh/okey9zkuhpw44zb/AABmV_mT09rPtAWEU7lgcd-Ua?dl=0
 
 ```
 dir <- "/PATH/TO/DATA/P1_GCaMP6s_tdTomato_06182018_CW_Dual_Laser/P1-Gal4_UAS-GCaMP6s_tdTomato_12/"
@@ -60,3 +64,4 @@ Number of good frames was 197
 Check ```_frgcombined_goodfr20_normalized.tif``` that the neurons are correctly segmented.
 
 ![frgcombined](https://github.com/tkatsuki/Flyception2R/blob/master/frgcombined.png)
+
