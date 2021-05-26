@@ -78,7 +78,7 @@ Flyception2R <- function(dir, outdir=NA, autopos=T, interaction=T, stimulus=F, r
   dir.create(outdirr, showWarnings=FALSE, recursive=TRUE)
   
   # Start logging 
-  loggit::setLogFile(paste0(outdirr, prefix, "_log.json"))
+  loggit::set_logfile(paste0(outdirr, prefix, "_log.json"))
   
   if(preprocess == T | process_all == T | !file.exists(paste0(outdirr, prefix,"_prepdata.RData"))) {
     
