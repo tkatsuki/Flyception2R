@@ -14,7 +14,7 @@ Set ImageJ (and Fiji if present) to save Tiff in Intel byte order from Edit -> O
 The following commands will install packages necessary for running Flyception2R.
 
 ```
-install.packages(c("devtools", "ggplot2", "RNiftyReg", "zoo", "loggit", "installr"))
+install.packages(c("devtools", "ggplot2", "RNiftyReg", "zoo", "loggit", "installr", "Rmisc", "ggforce"))
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("EBImage")
